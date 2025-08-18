@@ -1,0 +1,68 @@
+// A basic representation of the Home Assistant object
+export interface HomeAssistant {
+  states: { [entity_id: string]: HassEntity };
+  entities: { [entity_id: string]: HassEntityRegistryDisplayEntry };
+  localize: (key: string, ...args: unknown[]) => string;
+  language: string;
+  callWS: <T>(message: { type: string; [key: string]: unknown }) => Promise<T>;
+  themes?: {
+    darkMode?: boolean;
+    [key: string]: unknown;
+  };
+  // You can expand this with more properties from the hass object if needed
+}
+
+// A basic representation of a Home Assistant entity state object
+export interface HassEntity {
+  entity_id: string;
+  state: string;
+  attributes: {
+    friendly_name?: string;
+    unit_of_measurement?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface HassEntityRegistryDisplayEntry {
+  entity_id: string;
+  display_precision?: number;
+}
+
+// A basic representation of a Lovelace card
+export interface LovelaceCard extends HTMLElement {
+  hass?: HomeAssistant;
+  editMode?: boolean;
+  setConfig(config: LovelaceCardConfig): void;
+  getCardSize?(): number | Promise<number>;
+}
+
+// A basic representation of a Lovelace card configuration
+export interface LovelaceCardConfig {
+  type: string;
+  [key: string]: unknown;
+}
+
+export interface LovelaceCardEditor extends HTMLElement {
+  hass?: HomeAssistant;
+  setConfig(config: LovelaceCardConfig): void;
+}
+
+export interface FeedEntry {
+  title: string;
+  link: string;
+  summary?: string;
+  description?: string;
+  published: string;
+  image?: string;
+  [key: string]: unknown;
+}
+
+export interface RssAccordionConfig extends LovelaceCardConfig {
+  title?: string;
+  entity: string;
+  max_items?: number;
+  allow_multiple?: boolean;
+  strip_summary_images?: boolean;
+  initial_open?: boolean;
+  new_pill_duration_minutes?: number;
+}

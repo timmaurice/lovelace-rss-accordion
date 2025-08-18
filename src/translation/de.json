@@ -1,0 +1,16 @@
+{
+  "editor": {
+    "title": "Titel (Optional)",
+    "entity": "Feed-Entität",
+    "max_items": "Maximale Einträge",
+    "max_items_placeholder": "Alle Einträge",
+    "allow_multiple": "Erlaube das Öffnen mehrerer Einträge",
+    "strip_summary_images": "Bilder aus der Zusammenfassung entfernen",
+    "initial_open": "Neuesten Eintrag bei Laden öffnen",
+    "new_pill_duration_minutes": "Dauer für 'NEU'-Anzeige (Minuten)"
+  },
+  "card": {
+    "to_news_article": "Zum Nachrichtenartikel",
+    "new_pill": "NEU"
+  }
+}

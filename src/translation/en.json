@@ -1,0 +1,16 @@
+{
+  "editor": {
+    "title": "Title (Optional)",
+    "entity": "Feed Entity",
+    "max_items": "Maximum Items",
+    "max_items_placeholder": "All items",
+    "allow_multiple": "Allow multiple items to be open",
+    "strip_summary_images": "Remove images from summary",
+    "initial_open": "Open latest item on load",
+    "new_pill_duration_minutes": "Duration for 'NEW' pill (minutes)"
+  },
+  "card": {
+    "to_news_article": "To the news article",
+    "new_pill": "NEW"
+  }
+}

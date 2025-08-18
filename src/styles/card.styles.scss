@@ -1,0 +1,113 @@
+.card-content {
+  padding: 16px;
+}
+.warning {
+  color: var(--error-color);
+  padding: 16px;
+}
+
+.accordion-header {
+  cursor: pointer;
+  font-weight: bold;
+  list-style: none; /* Remove default marker */
+  padding: 12px 0;
+  padding-left: 20px;
+  position: relative;
+  &::-webkit-details-marker {
+    display: none; /* For Chrome/Safari */
+  }
+
+  &::before {
+    content: '▸';
+    left: 0;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: transform 0.2s ease-in-out;
+  }
+  .header-main {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+
+    .title-link {
+      color: var(--primary-text-color);
+      cursor: default;
+      pointer-events: none;
+      text-decoration: none;
+
+      &:visited {
+        color: var(--secondary-text-color);
+      }
+    }
+
+    .new-pill {
+      background-color: var(--primary-color);
+      border-radius: 10px;
+      color: var(--text-primary-color);
+      flex-shrink: 0;
+      font-size: 0.7em;
+      font-weight: bold;
+      margin-left: 8px;
+      padding: 2px 8px;
+    }
+  }
+}
+
+.accordion-content {
+  color: var(--secondary-text-color);
+  font-size: 0.9em;
+  max-height: 0;
+  overflow: hidden;
+  padding: 0 0 0 20px;
+  transition:
+    max-height 0.3s ease-out,
+    padding-bottom 0.3s ease-out;
+
+  .item-published {
+    color: var(--secondary-text-color);
+    font-size: 1em;
+    margin-bottom: 8px;
+    padding-top: 12px;
+  }
+
+  .item-image {
+    border-radius: var(--ha-card-border-radius, 4px);
+    display: block;
+    height: auto;
+    margin-bottom: 8px;
+    max-width: 100%;
+  }
+
+  .item-link {
+    color: var(--primary-color);
+    display: inline-block;
+    font-weight: bold;
+    margin-top: 8px;
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.accordion-item {
+  border-bottom: 1px solid var(--divider-color);
+  &:last-of-type {
+    border-bottom: none;
+  }
+
+  &[open] {
+    > .accordion-header::before {
+      transform: translateY(-50%) rotate(90deg);
+    }
+
+    > .accordion-content {
+      padding-bottom: 12px;
+      transition:
+        max-height 0.4s ease-in,
+        padding-bottom 0.4s ease-in;
+    }
+  }
+}
