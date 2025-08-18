@@ -47,6 +47,7 @@ type LovelaceCardConstructor = {
 export class RssAccordion extends LitElement implements LovelaceCard {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private _config!: RssAccordionConfig;
+  private _resizeObserver?: ResizeObserver;
 
   public setConfig(config: RssAccordionConfig): void {
     if (!config || !config.entity) {
@@ -105,56 +106,172 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return (this._config.title ? 1 : 0) + (displayItems || 1);
   }
 
-  protected firstUpdated(): void {
-    if (this._config?.initial_open) {
-      const firstItem = this.shadowRoot?.querySelector<HTMLDetailsElement>('.accordion-item');
-      if (firstItem && !firstItem.open) {
-        firstItem.open = true;
-      }
+  public connectedCallback(): void {
+    super.connectedCallback();
+    // Using ResizeObserver is more performant than a window resize event listener
+    // as it only triggers when the element's size actually changes.
+    if (!this._resizeObserver) {
+      this._resizeObserver = new ResizeObserver(() => this._handleResize());
+    }
+    this._resizeObserver.observe(this);
+  }
+
+  public disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
     }
   }
 
-  private _handleToggle(e: Event): void {
-    const details = e.target as HTMLDetailsElement;
-    const content = details.querySelector('.accordion-content') as HTMLElement | null;
-    if (!content) return;
+  private _handleResize(): void {
+    this.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item[open]').forEach((details) => {
+      const content = details.querySelector<HTMLElement>('.accordion-content');
+      if (content) {
+        // Temporarily disable transitions to avoid animating the height change on resize.
+        const originalTransition = content.style.transition;
+        content.style.transition = 'none';
 
-    if (details.open) {
-      // Handle single-open accordion
-      if (!this._config.allow_multiple) {
-        this.shadowRoot?.querySelectorAll<HTMLDetailsElement>('details.accordion-item').forEach((d) => {
-          if (d !== details) {
-            d.open = false;
-          }
+        // Recalculate and apply the new max-height.
+        // The scrollHeight property gives the full height of the content, even if it's overflowing.
+        content.style.maxHeight = `${content.scrollHeight}px`;
+
+        // Restore the transition after the browser has applied the new height.
+        // requestAnimationFrame is used to ensure this happens in the next frame.
+        requestAnimationFrame(() => {
+          content.style.transition = originalTransition;
         });
       }
-      // Animate open
-      content.style.maxHeight = content.scrollHeight + 'px';
-    } else {
-      // Animate close
-      content.style.maxHeight = '';
+    });
+  }
+
+  protected firstUpdated(): void {
+    if (this._config?.initial_open) {
+      // We need to wait for the DOM to be fully settled before we can measure scrollHeight for the animation.
+      // A timeout of 0 pushes this to the end of the event queue, after the current render cycle.
+      setTimeout(() => {
+        const firstItem = this.shadowRoot?.querySelector<HTMLDetailsElement>('.accordion-item');
+        if (firstItem && !firstItem.open) {
+          this._openAccordion(firstItem);
+        }
+      }, 0);
     }
+  }
+
+  private async _onSummaryClick(e: Event): Promise<void> {
+    e.preventDefault();
+    const details = (e.currentTarget as HTMLElement).closest<HTMLDetailsElement>('.accordion-item');
+    if (!details) return;
+
+    if (details.open) {
+      this._closeAccordion(details);
+    } else {
+      await this._openAccordion(details);
+    }
+  }
+
+  private _closeAccordion(details: HTMLDetailsElement): void {
+    details.classList.remove('loading'); // Ensure loading class is removed on close
+    const content = details.querySelector<HTMLElement>('.accordion-content');
+    if (!content) return;
+
+    content.style.maxHeight = '0px';
+
+    const onTransitionEnd = (): void => {
+      details.removeAttribute('open');
+      content.removeEventListener('transitionend', onTransitionEnd);
+    };
+    content.addEventListener('transitionend', onTransitionEnd);
+  }
+
+  private async _openAccordion(details: HTMLDetailsElement): Promise<void> {
+    const content = details.querySelector<HTMLElement>('.accordion-content');
+    if (!content) return;
+
+    if (!this._config.allow_multiple) {
+      this.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item[open]').forEach((openDetails) => {
+        if (openDetails !== details) {
+          this._closeAccordion(openDetails);
+        }
+      });
+    }
+
+    details.setAttribute('open', '');
+
+    const images = Array.from(content.querySelectorAll('img'));
+    const imagesToLoad = images.filter((img) => !img.complete);
+
+    if (imagesToLoad.length > 0) {
+      details.classList.add('loading');
+      await Promise.all(
+        imagesToLoad.map(
+          (img) =>
+            new Promise((resolve) => {
+              img.addEventListener('load', resolve, { once: true });
+              img.addEventListener('error', resolve, { once: true }); // Also resolve on error
+            }),
+        ),
+      );
+      details.classList.remove('loading');
+    }
+
+    // Use requestAnimationFrame to ensure the browser has painted the final content
+    // (with loaded images) before we measure its height.
+    requestAnimationFrame(() => {
+      content.style.maxHeight = `${content.scrollHeight}px`;
+    });
   }
 
   private _getDateTimeFormatOptions(): Intl.DateTimeFormatOptions {
-    const lang = this.hass.language.substring(0, 2);
-
-    // Default options (matches German format)
     const options: Intl.DateTimeFormatOptions = {
       year: 'numeric',
-      month: '2-digit',
+      month: 'short',
       day: '2-digit',
-      hour: '2-digit',
+      hour: 'numeric',
       minute: '2-digit',
     };
 
-    // English (US) format is different
-    if (lang === 'en') {
-      options.month = 'short';
-      options.hour12 = true;
+    // Respect the user's 12/24 hour format setting from Home Assistant
+    if (this.hass.locale) {
+      // hass.locale.time_format can be '12', '24', or 'system'.
+      // Let's be explicit. 'system' will fallback to browser default which is what we want.
+      if (this.hass.locale.time_format === '12') {
+        options.hour12 = true;
+      } else if (this.hass.locale.time_format === '24') {
+        options.hour12 = false;
+      }
+    }
+    return options;
+  }
+
+  private _getFeedItems(): FeedEntry[] {
+    const stateObj = this.hass.states[this._config.entity];
+    if (!stateObj) {
+      return [];
     }
 
-    return options;
+    // Handle sensor entities with an 'entries' attribute
+    if (stateObj.attributes.entries && Array.isArray(stateObj.attributes.entries)) {
+      return (stateObj.attributes.entries as FeedEntry[]) || [];
+    }
+
+    // Handle event entities which represent a single item
+    if (this._config.entity.startsWith('event.')) {
+      const { title, link, summary, description, image } = stateObj.attributes;
+      if (typeof title === 'string' && typeof link === 'string') {
+        return [
+          {
+            title,
+            link,
+            summary: (summary as string) ?? undefined,
+            description: (description as string) ?? undefined,
+            image: (image as string) ?? undefined,
+            published: stateObj.state,
+          },
+        ];
+      }
+    }
+
+    return [];
   }
 
   protected render(): TemplateResult {
@@ -171,28 +288,9 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       `;
     }
 
-    let entries: FeedEntry[] = [];
-    if (stateObj.attributes.entries && Array.isArray(stateObj.attributes.entries)) {
-      // Sensor entity with a list of entries
-      entries = (stateObj.attributes.entries as FeedEntry[]) || [];
-    } else if (this._config.entity.startsWith('event.')) {
-      // Event entity representing a single feed item
-      const { title, link, summary, description, image } = stateObj.attributes;
-
-      if (typeof title === 'string' && typeof link === 'string') {
-        const singleEntry: FeedEntry = {
-          title,
-          link,
-          summary: (summary as string) ?? undefined,
-          description: (description as string) ?? undefined,
-          image: (image as string) ?? undefined,
-          published: stateObj.state,
-        };
-        entries.push(singleEntry);
-      }
-    }
-    const maxItems = this._config.max_items ?? entries.length;
-    const itemsToDisplay = entries.slice(0, maxItems);
+    const allEntries = this._getFeedItems();
+    const maxItems = this._config.max_items ?? allEntries.length;
+    const itemsToDisplay = allEntries.slice(0, maxItems);
 
     if (itemsToDisplay.length === 0) {
       return html`
@@ -212,13 +310,13 @@ export class RssAccordion extends LitElement implements LovelaceCard {
             const publishedDate = new Date(item.published);
             const formattedDate = publishedDate.toLocaleString(this.hass.language, this._getDateTimeFormatOptions());
 
-            const newPillDuration = this._config.new_pill_duration_minutes ?? 30;
+            const newPillDurationHours = this._config.new_pill_duration_hours ?? 1;
             const ageInMinutes = (new Date().getTime() - publishedDate.getTime()) / (1000 * 60);
-            const isNew = ageInMinutes >= 0 && ageInMinutes < newPillDuration;
+            const isNew = ageInMinutes >= 0 && ageInMinutes < newPillDurationHours * 60;
 
             return html`
-              <details class="accordion-item" @toggle=${this._handleToggle}>
-                <summary class="accordion-header">
+              <details class="accordion-item">
+                <summary class="accordion-header" @click=${this._onSummaryClick}>
                   <div class="header-main">
                     <a class="title-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
                       ${item.title}

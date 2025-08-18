@@ -1,9 +1,17 @@
+export interface FrontendLocaleData {
+  language: string;
+  number_format: 'comma_decimal' | 'decimal_comma' | 'space_comma' | 'system';
+  time_format: '12' | '24' | 'system' | 'am_pm';
+  // You can expand this with more properties if needed
+}
+
 // A basic representation of the Home Assistant object
 export interface HomeAssistant {
   states: { [entity_id: string]: HassEntity };
   entities: { [entity_id: string]: HassEntityRegistryDisplayEntry };
   localize: (key: string, ...args: unknown[]) => string;
   language: string;
+  locale: FrontendLocaleData;
   callWS: <T>(message: { type: string; [key: string]: unknown }) => Promise<T>;
   themes?: {
     darkMode?: boolean;
@@ -64,5 +72,5 @@ export interface RssAccordionConfig extends LovelaceCardConfig {
   allow_multiple?: boolean;
   strip_summary_images?: boolean;
   initial_open?: boolean;
-  new_pill_duration_minutes?: number;
+  new_pill_duration_hours?: number;
 }

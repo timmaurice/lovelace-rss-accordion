@@ -62,8 +62,8 @@
   overflow: hidden;
   padding: 0 0 0 20px;
   transition:
-    max-height 0.3s ease-out,
-    padding-bottom 0.3s ease-out;
+    max-height 0.3s ease-in-out,
+    padding-bottom 0.3s ease-in-out;
 
   .item-published {
     color: var(--secondary-text-color);
@@ -105,9 +105,31 @@
 
     > .accordion-content {
       padding-bottom: 12px;
-      transition:
-        max-height 0.4s ease-in,
-        padding-bottom 0.4s ease-in;
     }
+  }
+}
+
+.accordion-item.loading {
+  > .accordion-header .header-main .new-pill {
+    display: none;
+  }
+
+  > .accordion-header .header-main::after {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--primary-color);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 8px;
+    flex-shrink: 0;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }

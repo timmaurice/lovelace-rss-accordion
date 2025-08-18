@@ -72,9 +72,9 @@ const t=t=>(e,o)=>{ void 0!==o?o.addInitializer((()=>{customElements.define(t,e)
  * SPDX-License-Identifier: BSD-3-Clause
  */function r(r){return n({...r,state:true,attribute:false})}
 
-var editor$2={title:"Titel (Optional)",entity:"Feed-Entität",max_items:"Maximale Einträge",max_items_placeholder:"Alle Einträge",allow_multiple:"Erlaube das Öffnen mehrerer Einträge",strip_summary_images:"Bilder aus der Zusammenfassung entfernen",initial_open:"Neuesten Eintrag bei Laden öffnen",new_pill_duration_minutes:"Dauer für 'NEU'-Anzeige (Minuten)"};var card$1={to_news_article:"Zum Nachrichtenartikel",new_pill:"NEU"};var de = {editor:editor$2,card:card$1};
+var editor$2={title:"Titel (Optional)",entity:"Feed-Entität",allow_multiple:"Erlaube das Öffnen mehrerer Einträge",initial_open:"Neuesten Eintrag bei Laden öffnen",max_items:"Maximale Einträge",max_items_placeholder:"Alle Einträge",new_pill_duration_hours:"Dauer für 'NEU'-Anzeige (Stunden)",strip_summary_images:"Bilder aus der Zusammenfassung entfernen (verwenden Sie dies, wenn Sie zwei Bilder sehen)"};var card$1={to_news_article:"Zum Nachrichtenartikel",new_pill:"NEU"};var de = {editor:editor$2,card:card$1};
 
-var editor$1={title:"Title (Optional)",entity:"Feed Entity",max_items:"Maximum Items",max_items_placeholder:"All items",allow_multiple:"Allow multiple items to be open",strip_summary_images:"Remove images from summary",initial_open:"Open latest item on load",new_pill_duration_minutes:"Duration for 'NEW' pill (minutes)"};var card={to_news_article:"To the news article",new_pill:"NEW"};var en = {editor:editor$1,card:card};
+var editor$1={title:"Title (Optional)",entity:"Feed Entity",allow_multiple:"Allow multiple items to be open",initial_open:"Open latest item on load",max_items:"Maximum Items",max_items_placeholder:"All items",new_pill_duration_hours:"Duration for 'NEW' pill (hours)",strip_summary_images:"Remove images from summary (use when you see two images)"};var card={to_news_article:"To the news article",new_pill:"NEW"};var en = {editor:editor$1,card:card};
 
 const translations = {
     de,
@@ -106,7 +106,7 @@ function localize(hass, key, placeholders = {}) {
     return key;
 }
 
-const styles$1 = i$3`﻿.card-content{padding:16px}.warning{color:var(--error-color);padding:16px}.accordion-header{cursor:pointer;font-weight:bold;list-style:none;padding:12px 0;padding-left:20px;position:relative}.accordion-header::-webkit-details-marker{display:none}.accordion-header::before{content:"▸";left:0;position:absolute;top:50%;transform:translateY(-50%);transition:transform .2s ease-in-out}.accordion-header .header-main{align-items:center;display:flex;justify-content:space-between;width:100%}.accordion-header .header-main .title-link{color:var(--primary-text-color);cursor:default;pointer-events:none;text-decoration:none}.accordion-header .header-main .title-link:visited{color:var(--secondary-text-color)}.accordion-header .header-main .new-pill{background-color:var(--primary-color);border-radius:10px;color:var(--text-primary-color);flex-shrink:0;font-size:.7em;font-weight:bold;margin-left:8px;padding:2px 8px}.accordion-content{color:var(--secondary-text-color);font-size:.9em;max-height:0;overflow:hidden;padding:0 0 0 20px;transition:max-height .3s ease-out,padding-bottom .3s ease-out}.accordion-content .item-published{color:var(--secondary-text-color);font-size:1em;margin-bottom:8px;padding-top:12px}.accordion-content .item-image{border-radius:var(--ha-card-border-radius, 4px);display:block;height:auto;margin-bottom:8px;max-width:100%}.accordion-content .item-link{color:var(--primary-color);display:inline-block;font-weight:bold;margin-top:8px;text-decoration:none}.accordion-content .item-link:hover{text-decoration:underline}.accordion-item{border-bottom:1px solid var(--divider-color)}.accordion-item:last-of-type{border-bottom:none}.accordion-item[open]>.accordion-header::before{transform:translateY(-50%) rotate(90deg)}.accordion-item[open]>.accordion-content{padding-bottom:12px;transition:max-height .4s ease-in,padding-bottom .4s ease-in}`;
+const styles$1 = i$3`﻿.card-content{padding:16px}.warning{color:var(--error-color);padding:16px}.accordion-header{cursor:pointer;font-weight:bold;list-style:none;padding:12px 0;padding-left:20px;position:relative}.accordion-header::-webkit-details-marker{display:none}.accordion-header::before{content:"▸";left:0;position:absolute;top:50%;transform:translateY(-50%);transition:transform .2s ease-in-out}.accordion-header .header-main{align-items:center;display:flex;justify-content:space-between;width:100%}.accordion-header .header-main .title-link{color:var(--primary-text-color);cursor:default;pointer-events:none;text-decoration:none}.accordion-header .header-main .title-link:visited{color:var(--secondary-text-color)}.accordion-header .header-main .new-pill{background-color:var(--primary-color);border-radius:10px;color:var(--text-primary-color);flex-shrink:0;font-size:.7em;font-weight:bold;margin-left:8px;padding:2px 8px}.accordion-content{color:var(--secondary-text-color);font-size:.9em;max-height:0;overflow:hidden;padding:0 0 0 20px;transition:max-height .3s ease-in-out,padding-bottom .3s ease-in-out}.accordion-content .item-published{color:var(--secondary-text-color);font-size:1em;margin-bottom:8px;padding-top:12px}.accordion-content .item-image{border-radius:var(--ha-card-border-radius, 4px);display:block;height:auto;margin-bottom:8px;max-width:100%}.accordion-content .item-link{color:var(--primary-color);display:inline-block;font-weight:bold;margin-top:8px;text-decoration:none}.accordion-content .item-link:hover{text-decoration:underline}.accordion-item{border-bottom:1px solid var(--divider-color)}.accordion-item:last-of-type{border-bottom:none}.accordion-item[open]>.accordion-header::before{transform:translateY(-50%) rotate(90deg)}.accordion-item[open]>.accordion-content{padding-bottom:12px}.accordion-item.loading>.accordion-header .header-main .new-pill{display:none}.accordion-item.loading>.accordion-header .header-main::after{content:"";display:inline-block;width:16px;height:16px;border:2px solid var(--primary-color);border-top-color:rgba(0,0,0,0);border-radius:50%;animation:spin 1s linear infinite;margin-left:8px;flex-shrink:0}@keyframes spin{to{transform:rotate(360deg)}}`;
 
 const ELEMENT_NAME = 'rss-accordion';
 const EDITOR_ELEMENT_NAME = `${ELEMENT_NAME}-editor`;
@@ -162,52 +162,150 @@ let RssAccordion = class RssAccordion extends i {
         const displayItems = Math.min(numItems, maxItems);
         return (this._config.title ? 1 : 0) + (displayItems || 1);
     }
-    firstUpdated() {
-        if (this._config?.initial_open) {
-            const firstItem = this.shadowRoot?.querySelector('.accordion-item');
-            if (firstItem && !firstItem.open) {
-                firstItem.open = true;
-            }
+    connectedCallback() {
+        super.connectedCallback();
+        // Using ResizeObserver is more performant than a window resize event listener
+        // as it only triggers when the element's size actually changes.
+        if (!this._resizeObserver) {
+            this._resizeObserver = new ResizeObserver(() => this._handleResize());
+        }
+        this._resizeObserver.observe(this);
+    }
+    disconnectedCallback() {
+        super.disconnectedCallback();
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
         }
     }
-    _handleToggle(e) {
-        const details = e.target;
+    _handleResize() {
+        this.shadowRoot?.querySelectorAll('.accordion-item[open]').forEach((details) => {
+            const content = details.querySelector('.accordion-content');
+            if (content) {
+                // Temporarily disable transitions to avoid animating the height change on resize.
+                const originalTransition = content.style.transition;
+                content.style.transition = 'none';
+                // Recalculate and apply the new max-height.
+                // The scrollHeight property gives the full height of the content, even if it's overflowing.
+                content.style.maxHeight = `${content.scrollHeight}px`;
+                // Restore the transition after the browser has applied the new height.
+                // requestAnimationFrame is used to ensure this happens in the next frame.
+                requestAnimationFrame(() => {
+                    content.style.transition = originalTransition;
+                });
+            }
+        });
+    }
+    firstUpdated() {
+        if (this._config?.initial_open) {
+            // We need to wait for the DOM to be fully settled before we can measure scrollHeight for the animation.
+            // A timeout of 0 pushes this to the end of the event queue, after the current render cycle.
+            setTimeout(() => {
+                const firstItem = this.shadowRoot?.querySelector('.accordion-item');
+                if (firstItem && !firstItem.open) {
+                    this._openAccordion(firstItem);
+                }
+            }, 0);
+        }
+    }
+    async _onSummaryClick(e) {
+        e.preventDefault();
+        const details = e.currentTarget.closest('.accordion-item');
+        if (!details)
+            return;
+        if (details.open) {
+            this._closeAccordion(details);
+        }
+        else {
+            await this._openAccordion(details);
+        }
+    }
+    _closeAccordion(details) {
+        details.classList.remove('loading'); // Ensure loading class is removed on close
         const content = details.querySelector('.accordion-content');
         if (!content)
             return;
-        if (details.open) {
-            // Handle single-open accordion
-            if (!this._config.allow_multiple) {
-                this.shadowRoot?.querySelectorAll('details.accordion-item').forEach((d) => {
-                    if (d !== details) {
-                        d.open = false;
-                    }
-                });
-            }
-            // Animate open
-            content.style.maxHeight = content.scrollHeight + 'px';
+        content.style.maxHeight = '0px';
+        const onTransitionEnd = () => {
+            details.removeAttribute('open');
+            content.removeEventListener('transitionend', onTransitionEnd);
+        };
+        content.addEventListener('transitionend', onTransitionEnd);
+    }
+    async _openAccordion(details) {
+        const content = details.querySelector('.accordion-content');
+        if (!content)
+            return;
+        if (!this._config.allow_multiple) {
+            this.shadowRoot?.querySelectorAll('.accordion-item[open]').forEach((openDetails) => {
+                if (openDetails !== details) {
+                    this._closeAccordion(openDetails);
+                }
+            });
         }
-        else {
-            // Animate close
-            content.style.maxHeight = '';
+        details.setAttribute('open', '');
+        const images = Array.from(content.querySelectorAll('img'));
+        const imagesToLoad = images.filter((img) => !img.complete);
+        if (imagesToLoad.length > 0) {
+            details.classList.add('loading');
+            await Promise.all(imagesToLoad.map((img) => new Promise((resolve) => {
+                img.addEventListener('load', resolve, { once: true });
+                img.addEventListener('error', resolve, { once: true }); // Also resolve on error
+            })));
+            details.classList.remove('loading');
         }
+        // Use requestAnimationFrame to ensure the browser has painted the final content
+        // (with loaded images) before we measure its height.
+        requestAnimationFrame(() => {
+            content.style.maxHeight = `${content.scrollHeight}px`;
+        });
     }
     _getDateTimeFormatOptions() {
-        const lang = this.hass.language.substring(0, 2);
-        // Default options (matches German format)
         const options = {
             year: 'numeric',
-            month: '2-digit',
+            month: 'short',
             day: '2-digit',
-            hour: '2-digit',
+            hour: 'numeric',
             minute: '2-digit',
         };
-        // English (US) format is different
-        if (lang === 'en') {
-            options.month = 'short';
-            options.hour12 = true;
+        // Respect the user's 12/24 hour format setting from Home Assistant
+        if (this.hass.locale) {
+            // hass.locale.time_format can be '12', '24', or 'system'.
+            // Let's be explicit. 'system' will fallback to browser default which is what we want.
+            if (this.hass.locale.time_format === '12') {
+                options.hour12 = true;
+            }
+            else if (this.hass.locale.time_format === '24') {
+                options.hour12 = false;
+            }
         }
         return options;
+    }
+    _getFeedItems() {
+        const stateObj = this.hass.states[this._config.entity];
+        if (!stateObj) {
+            return [];
+        }
+        // Handle sensor entities with an 'entries' attribute
+        if (stateObj.attributes.entries && Array.isArray(stateObj.attributes.entries)) {
+            return stateObj.attributes.entries || [];
+        }
+        // Handle event entities which represent a single item
+        if (this._config.entity.startsWith('event.')) {
+            const { title, link, summary, description, image } = stateObj.attributes;
+            if (typeof title === 'string' && typeof link === 'string') {
+                return [
+                    {
+                        title,
+                        link,
+                        summary: summary ?? undefined,
+                        description: description ?? undefined,
+                        image: image ?? undefined,
+                        published: stateObj.state,
+                    },
+                ];
+            }
+        }
+        return [];
     }
     render() {
         if (!this._config || !this.hass) {
@@ -221,28 +319,9 @@ let RssAccordion = class RssAccordion extends i {
         </ha-card>
       `;
         }
-        let entries = [];
-        if (stateObj.attributes.entries && Array.isArray(stateObj.attributes.entries)) {
-            // Sensor entity with a list of entries
-            entries = stateObj.attributes.entries || [];
-        }
-        else if (this._config.entity.startsWith('event.')) {
-            // Event entity representing a single feed item
-            const { title, link, summary, description, image } = stateObj.attributes;
-            if (typeof title === 'string' && typeof link === 'string') {
-                const singleEntry = {
-                    title,
-                    link,
-                    summary: summary ?? undefined,
-                    description: description ?? undefined,
-                    image: image ?? undefined,
-                    published: stateObj.state,
-                };
-                entries.push(singleEntry);
-            }
-        }
-        const maxItems = this._config.max_items ?? entries.length;
-        const itemsToDisplay = entries.slice(0, maxItems);
+        const allEntries = this._getFeedItems();
+        const maxItems = this._config.max_items ?? allEntries.length;
+        const itemsToDisplay = allEntries.slice(0, maxItems);
         if (itemsToDisplay.length === 0) {
             return x `
         <ha-card .header=${this._config.title}>
@@ -258,12 +337,12 @@ let RssAccordion = class RssAccordion extends i {
             const processedContent = this._config.strip_summary_images ? content.replace(/<img[^>]*>/g, '') : content;
             const publishedDate = new Date(item.published);
             const formattedDate = publishedDate.toLocaleString(this.hass.language, this._getDateTimeFormatOptions());
-            const newPillDuration = this._config.new_pill_duration_minutes ?? 30;
+            const newPillDurationHours = this._config.new_pill_duration_hours ?? 1;
             const ageInMinutes = (new Date().getTime() - publishedDate.getTime()) / (1000 * 60);
-            const isNew = ageInMinutes >= 0 && ageInMinutes < newPillDuration;
+            const isNew = ageInMinutes >= 0 && ageInMinutes < newPillDurationHours * 60;
             return x `
-              <details class="accordion-item" @toggle=${this._handleToggle}>
-                <summary class="accordion-header">
+              <details class="accordion-item">
+                <summary class="accordion-header" @click=${this._onSummaryClick}>
                   <div class="header-main">
                     <a class="title-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
                       ${item.title}
@@ -392,14 +471,21 @@ let RssAccordionEditor = class RssAccordionEditor extends i {
             .placeholder=${localize(this.hass, 'component.rss-accordion.editor.max_items_placeholder')}
           ></ha-textfield>
           <ha-textfield
-            .label=${localize(this.hass, 'component.rss-accordion.editor.new_pill_duration_minutes')}
+            .label=${localize(this.hass, 'component.rss-accordion.editor.new_pill_duration_hours')}
             type="number"
             min="1"
-            .value=${this._config.new_pill_duration_minutes || ''}
-            .configValue=${'new_pill_duration_minutes'}
+            .value=${this._config.new_pill_duration_hours || ''}
+            .configValue=${'new_pill_duration_hours'}
             @input=${this._valueChanged}
-            .placeholder="30"
+            .placeholder="1"
           ></ha-textfield>
+          <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.initial_open')}>
+            <ha-switch
+              .checked=${this._config.initial_open === true}
+              .configValue=${'initial_open'}
+              @change=${this._valueChanged}
+            ></ha-switch>
+          </ha-formfield>
           <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.allow_multiple')}>
             <ha-switch
               .checked=${this._config.allow_multiple === true}
@@ -411,13 +497,6 @@ let RssAccordionEditor = class RssAccordionEditor extends i {
             <ha-switch
               .checked=${this._config.strip_summary_images === true}
               .configValue=${'strip_summary_images'}
-              @change=${this._valueChanged}
-            ></ha-switch>
-          </ha-formfield>
-          <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.initial_open')}>
-            <ha-switch
-              .checked=${this._config.initial_open === true}
-              .configValue=${'initial_open'}
               @change=${this._valueChanged}
             ></ha-switch>
           </ha-formfield>

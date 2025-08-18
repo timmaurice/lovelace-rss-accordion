@@ -2,12 +2,12 @@
   "editor": {
     "title": "Title (Optional)",
     "entity": "Feed Entity",
+    "allow_multiple": "Allow multiple items to be open",
+    "initial_open": "Open latest item on load",
     "max_items": "Maximum Items",
     "max_items_placeholder": "All items",
-    "allow_multiple": "Allow multiple items to be open",
-    "strip_summary_images": "Remove images from summary",
-    "initial_open": "Open latest item on load",
-    "new_pill_duration_minutes": "Duration for 'NEW' pill (minutes)"
+    "new_pill_duration_hours": "Duration for 'NEW' pill (hours)",
+    "strip_summary_images": "Remove images from summary (use when you see two images)"
   },
   "card": {
     "to_news_article": "To the news article",

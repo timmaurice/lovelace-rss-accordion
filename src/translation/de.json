@@ -2,12 +2,12 @@
   "editor": {
     "title": "Titel (Optional)",
     "entity": "Feed-Entität",
+    "allow_multiple": "Erlaube das Öffnen mehrerer Einträge",
+    "initial_open": "Neuesten Eintrag bei Laden öffnen",
     "max_items": "Maximale Einträge",
     "max_items_placeholder": "Alle Einträge",
-    "allow_multiple": "Erlaube das Öffnen mehrerer Einträge",
-    "strip_summary_images": "Bilder aus der Zusammenfassung entfernen",
-    "initial_open": "Neuesten Eintrag bei Laden öffnen",
-    "new_pill_duration_minutes": "Dauer für 'NEU'-Anzeige (Minuten)"
+    "new_pill_duration_hours": "Dauer für 'NEU'-Anzeige (Stunden)",
+    "strip_summary_images": "Bilder aus der Zusammenfassung entfernen (verwenden Sie dies, wenn Sie zwei Bilder sehen)"
   },
   "card": {
     "to_news_article": "Zum Nachrichtenartikel",

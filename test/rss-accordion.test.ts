@@ -21,6 +21,11 @@ describe('RssAccordion', () => {
       localize: (key: string) => key,
       states: {},
       language: 'en',
+      locale: {
+        language: 'en',
+        number_format: 'comma_decimal',
+        time_format: '12',
+      },
     } as HomeAssistant;
 
     config = {
@@ -336,7 +341,7 @@ describe('RssAccordion', () => {
       expect(newPill?.textContent).toBe('NEW');
     });
 
-    it('should not show a "NEW" pill for items 30 minutes or older', async () => {
+    it('should not show a "NEW" pill for items 1 hour or older', async () => {
       const now = new Date();
       vi.setSystemTime(now);
 
@@ -349,7 +354,7 @@ describe('RssAccordion', () => {
               title: 'Old Item',
               link: '#',
               summary: 'This is old',
-              published: new Date(now.getTime() - 31 * 60 * 1000).toISOString(),
+              published: new Date(now.getTime() - 61 * 60 * 1000).toISOString(), // 61 minutes old
             },
           ],
         },
@@ -375,13 +380,13 @@ describe('RssAccordion', () => {
               title: 'Newish Item',
               link: '#',
               summary: 'This is newish',
-              published: new Date(now.getTime() - 45 * 60 * 1000).toISOString(), // 45 minutes old
+              published: new Date(now.getTime() - 90 * 60 * 1000).toISOString(), // 90 minutes old
             },
           ],
         },
       } as HassEntity;
       element.hass = hass;
-      element.setConfig({ ...config, new_pill_duration_minutes: 60 }); // Custom duration of 60 minutes
+      element.setConfig({ ...config, new_pill_duration_hours: 2 }); // Custom duration of 2 hours
       await element.updateComplete;
 
       const newPill = element.shadowRoot?.querySelector('.new-pill');
@@ -402,17 +407,51 @@ describe('RssAccordion', () => {
               title: 'Old Item',
               link: '#',
               summary: 'This is old',
-              published: new Date(now.getTime() - 20 * 60 * 1000).toISOString(), // 20 minutes old
+              published: new Date(now.getTime() - 70 * 60 * 1000).toISOString(), // 70 minutes old
             },
           ],
         },
       } as HassEntity;
       element.hass = hass;
-      element.setConfig({ ...config, new_pill_duration_minutes: 15 }); // Custom duration of 15 minutes
+      element.setConfig({ ...config, new_pill_duration_hours: 1 }); // Custom duration of 1 hour
       await element.updateComplete;
 
       const newPill = element.shadowRoot?.querySelector('.new-pill');
       expect(newPill).toBeNull();
+    });
+  });
+
+  describe('date formatting', () => {
+    it('should use 12-hour format when hass.locale.time_format is "12"', () => {
+      hass.locale = { language: 'en', number_format: 'comma_decimal', time_format: '12' };
+      element.hass = hass;
+      element.setConfig(config);
+      const options = element['_getDateTimeFormatOptions']();
+      expect(options.hour12).toBe(true);
+    });
+
+    it('should use 24-hour format when hass.locale.time_format is "24"', () => {
+      hass.locale = { language: 'en', number_format: 'comma_decimal', time_format: '24' };
+      element.hass = hass;
+      element.setConfig(config);
+      const options = element['_getDateTimeFormatOptions']();
+      expect(options.hour12).toBe(false);
+    });
+
+    it('should use browser default when hass.locale.time_format is "system"', () => {
+      hass.locale = { language: 'en', number_format: 'comma_decimal', time_format: 'system' };
+      element.hass = hass;
+      element.setConfig(config);
+      const options = element['_getDateTimeFormatOptions']();
+      expect(options.hour12).toBeUndefined();
+    });
+
+    it('should use 2-digit day format for consistency', () => {
+      hass.locale = { language: 'en', number_format: 'comma_decimal', time_format: 'system' };
+      element.hass = hass;
+      element.setConfig(config);
+      const options = element['_getDateTimeFormatOptions']();
+      expect(options.day).toBe('2-digit');
     });
   });
 });

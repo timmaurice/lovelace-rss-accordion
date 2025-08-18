@@ -88,14 +88,21 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
             .placeholder=${localize(this.hass, 'component.rss-accordion.editor.max_items_placeholder')}
           ></ha-textfield>
           <ha-textfield
-            .label=${localize(this.hass, 'component.rss-accordion.editor.new_pill_duration_minutes')}
+            .label=${localize(this.hass, 'component.rss-accordion.editor.new_pill_duration_hours')}
             type="number"
             min="1"
-            .value=${this._config.new_pill_duration_minutes || ''}
-            .configValue=${'new_pill_duration_minutes'}
+            .value=${this._config.new_pill_duration_hours || ''}
+            .configValue=${'new_pill_duration_hours'}
             @input=${this._valueChanged}
-            .placeholder="30"
+            .placeholder="1"
           ></ha-textfield>
+          <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.initial_open')}>
+            <ha-switch
+              .checked=${this._config.initial_open === true}
+              .configValue=${'initial_open'}
+              @change=${this._valueChanged}
+            ></ha-switch>
+          </ha-formfield>
           <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.allow_multiple')}>
             <ha-switch
               .checked=${this._config.allow_multiple === true}
@@ -107,13 +114,6 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
             <ha-switch
               .checked=${this._config.strip_summary_images === true}
               .configValue=${'strip_summary_images'}
-              @change=${this._valueChanged}
-            ></ha-switch>
-          </ha-formfield>
-          <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.initial_open')}>
-            <ha-switch
-              .checked=${this._config.initial_open === true}
-              .configValue=${'initial_open'}
               @change=${this._valueChanged}
             ></ha-switch>
           </ha-formfield>
