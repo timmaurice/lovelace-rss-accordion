@@ -11,7 +11,7 @@ A custom Lovelace card for Home Assistant to display RSS feed items from a senso
 
 ## Features
 
-- Display items from a `sensor` entity (like one from the Feed Parser integration) or an `event` entity (like one from the core `feedreader` integration).
+- Display items from a `sensor` entity _(like one from the Feed Parser integration)_ or an `event` entity _(like one from the core `feedreader` integration)_.
 - Each item is displayed in a collapsible accordion.
 - Option to only allow one item to be open at a time.
 - "NEW" pill for articles published within the last 30 minutes.
@@ -23,32 +23,36 @@ A custom Lovelace card for Home Assistant to display RSS feed items from a senso
 
 ## Installation
 
-This card is available in [HACS](https://hacs.xyz/) (Home Assistant Community Store).
+### HACS (Recommended)
 
-1.  Open HACS in your Home Assistant instance.
-2.  Go to **Frontend** and click the 3-dots menu in the top right.
-3.  Select **Custom repositories** and add the URL `https://github.com/timmaurice/lovelace-rss-accordion` with category "Lovelace".
-4.  Click the **ADD** button.
-5.  The "RSS Accordion Card" will now be available for installation in HACS. Click **INSTALL**.
-6.  After installation, you need to add the resource to your Lovelace configuration. Go to **Settings** -> **Dashboards**.
-7.  Click on the 3-dots menu in the top right and select **Resources**.
-8.  Click **ADD RESOURCE** and enter `/hacsfiles/lovelace-rss-accordion/rss-accordion.js` as the URL, and select "JavaScript Module" as the resource type.
-9.  Click **CREATE**.
+This card is available in the [Home Assistant Community Store (HACS)](https://hacs.xyz/).
+
+<a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=timmaurice&repository=lovelace-rss-accordion&category=plugin" target="_blank" rel="noreferrer noopener"><img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open your Home Assistant instance and open a repository inside the Home Assistant Community Store." /></a>
+
+### Manual Installation
+
+1.  Download the `rss-accordion.js` file from the latest release.
+2.  Place it in your `config/www` directory.
+3.  Add the resource reference to your Lovelace configuration under `Settings` -> `Dashboards` -> `...` -> `Resources`.
+    - URL: `/local/rss-accordion.js`
+    - Resource Type: `JavaScript Module`
 
 You can now add the card to your dashboard.
 
 ## Configuration
 
-| Name                      | Type    | Default      | Description                                                    |
-| ------------------------- | ------- | ------------ | -------------------------------------------------------------- |
-| `type`                    | string  | **Required** | `custom:rss-accordion`                                         |
-| `entity`                  | string  | **Required** | The entity ID of your feed sensor or event.                    |
-| `title`                   | string  | `''`         | The title of the card.                                         |
-| `max_items`               | number  | All items    | The maximum number of feed items to display.                   |
-| `allow_multiple`          | boolean | `false`      | If `true`, allows multiple accordion items to be open at once. |
-| `strip_summary_images`    | boolean | `false`      | If `true`, removes `<img>` tags from the item summary.         |
-| `initial_open`            | boolean | `false`      | If `true`, the first (latest) item will be open on load.       |
-| `new_pill_duration_hours` | number  | `1`          | The duration in hours for which the "NEW" pill is shown.       |
+| Name                      | Type    | Default      | Description                                                                                             |
+| ------------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------- |
+| `type`                    | string  | **Required** | `custom:rss-accordion`                                                                                  |
+| `entity`                  | string  | **Required** | The entity ID of your feed sensor or event.                                                             |
+| `title`                   | string  | `''`         | The title of the card.                                                                                  |
+| `max_items`               | number  | All items    | The maximum number of feed items to display.                                                            |
+| `new_pill_duration_hours` | number  | `1`          | The duration in hours for which the "NEW" pill is shown on recent items.                                |
+| `image_ratio`             | string  | `auto`       | The CSS `aspect-ratio` for item images (e.g., `16/9`, `1.77`). Images are cropped to fit.               |
+| `image_fit_mode`          | string  | `cover`      | How the image should fit. `cover` (fill & crop) or `contain` (fit inside).                              |
+| `initial_open`            | boolean | `false`      | If `true`, the first/newest item will be open by default when the card loads.                           |
+| `allow_multiple`          | boolean | `false`      | If `true`, allows multiple accordion items to be open simultaneously.                                   |
+| `strip_summary_images`    | boolean | `false`      | If `true`, removes `<img>` tags from the summary. Useful if the feed includes the image in the content. |
 
 ### Examples
 
@@ -57,6 +61,9 @@ type: custom:rss-accordion
 title: Home Assistant Blog
 entity: sensor.home_assistant_blog_feed
 max_items: 5
+new_pill_duration_hours: 24
+image_ratio: 16/9
+image_fit_mode: cover
 ```
 
 ## Development
@@ -87,4 +94,4 @@ To contribute to the development, you'll need to set up a build environment.
 
 ---
 
-For further assistance or to report issues, please visit the GitHub repository.
+For further assistance or to [report issues](https://github.com/timmaurice/lovelace-rss-accordion/issues), please visit the [GitHub repository](https://github.com/timmaurice/lovelace-rss-accordion).

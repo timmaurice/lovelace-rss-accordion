@@ -9,7 +9,12 @@
     "new_pill_duration_hours": "Dauer für 'NEU'-Anzeige (Stunden)",
     "strip_summary_images": "Bilder aus der Zusammenfassung entfernen (verwenden Sie dies, wenn Sie zwei Bilder sehen)",
     "image_ratio": "Bild-Seitenverhältnis (z.B. 16/9 oder 1.77)",
-    "image_ratio_validation_message": "Ungültiges Format. Beispiel: 'auto', '16/9' oder '1.77'."
+    "image_ratio_validation_message": "Ungültiges Format. Beispiel: 'auto', '16/9' oder '1.77'.",
+    "image_fit_mode": "Bild-Anpassung",
+    "image_fit_mode_options": {
+      "cover": "Ausfüllen (Cover)",
+      "contain": "Einfassen (Contain)"
+    }
   },
   "card": {
     "to_news_article": "Zum Nachrichtenartikel",

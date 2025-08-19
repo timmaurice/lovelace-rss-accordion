@@ -105,6 +105,22 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
             .pattern=${'^auto$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)?\\s*\\/\\s*\\d+(\\.\\d+)?$'}
             .validationMessage=${localize(this.hass, 'component.rss-accordion.editor.image_ratio_validation_message')}
           ></ha-textfield>
+          <ha-select
+            .label=${localize(this.hass, 'component.rss-accordion.editor.image_fit_mode')}
+            .value=${this._config.image_fit_mode || 'cover'}
+            .configValue=${'image_fit_mode'}
+            @selected=${this._valueChanged}
+            @closed=${(ev: Event) => ev.stopPropagation()}
+            fixedMenuPosition
+            naturalMenuWidth
+          >
+            <mwc-list-item value="cover"
+              >${localize(this.hass, 'component.rss-accordion.editor.image_fit_mode_options.cover')}</mwc-list-item
+            >
+            <mwc-list-item value="contain"
+              >${localize(this.hass, 'component.rss-accordion.editor.image_fit_mode_options.contain')}</mwc-list-item
+            >
+          </ha-select>
           <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.initial_open')}>
             <ha-switch
               .checked=${this._config.initial_open === true}

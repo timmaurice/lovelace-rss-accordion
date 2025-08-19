@@ -317,6 +317,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
             const imageStyles = {
               aspectRatio: this._config.image_ratio,
+              objectFit: this._config.image_fit_mode || 'cover',
             };
 
             return html`
