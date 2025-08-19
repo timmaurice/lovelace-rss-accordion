@@ -1,5 +1,6 @@
 import { LitElement, TemplateResult, html, css, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import {
   HomeAssistant,
   LovelaceCardConfig,
@@ -314,6 +315,10 @@ export class RssAccordion extends LitElement implements LovelaceCard {
             const ageInMinutes = (new Date().getTime() - publishedDate.getTime()) / (1000 * 60);
             const isNew = ageInMinutes >= 0 && ageInMinutes < newPillDurationHours * 60;
 
+            const imageStyles = {
+              aspectRatio: this._config.image_ratio,
+            };
+
             return html`
               <details class="accordion-item">
                 <summary class="accordion-header" @click=${this._onSummaryClick}>
@@ -330,7 +335,14 @@ export class RssAccordion extends LitElement implements LovelaceCard {
                 </summary>
                 <div class="accordion-content">
                   <div class="item-published">${formattedDate}</div>
-                  ${item.image ? html`<img class="item-image" src="${item.image}" alt="${item.title}" />` : ''}
+                  ${item.image
+                    ? html`<img
+                        class="item-image"
+                        src="${item.image}"
+                        alt="${item.title}"
+                        style=${styleMap(imageStyles)}
+                      />`
+                    : ''}
                   <div class="item-summary" .innerHTML=${processedContent}></div>
                   <a class="item-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
                     ${localize(this.hass, 'component.rss-accordion.card.to_news_article')}

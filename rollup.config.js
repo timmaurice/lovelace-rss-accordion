@@ -1,7 +1,7 @@
 import process from 'node:process';
 import path from 'node:path';
 import typescript from '@rollup/plugin-typescript';
-// import terser from '@rollup/plugin-terser';
+import terser from '@rollup/plugin-terser';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import json from '@rollup/plugin-json';
 import replace from '@rollup/plugin-replace';
@@ -42,6 +42,6 @@ export default {
       sourceMap: dev,
       inlineSources: dev,
     }),
-    // !dev && terser(),
+    !dev && terser(),
   ],
 };

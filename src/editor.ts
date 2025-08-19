@@ -96,6 +96,15 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
             @input=${this._valueChanged}
             .placeholder="1"
           ></ha-textfield>
+          <ha-textfield
+            .label=${localize(this.hass, 'component.rss-accordion.editor.image_ratio')}
+            .value=${this._config.image_ratio || ''}
+            .configValue=${'image_ratio'}
+            @input=${this._valueChanged}
+            .placeholder=${'auto'}
+            .pattern=${'^auto$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)?\\s*\\/\\s*\\d+(\\.\\d+)?$'}
+            .validationMessage=${localize(this.hass, 'component.rss-accordion.editor.image_ratio_validation_message')}
+          ></ha-textfield>
           <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.initial_open')}>
             <ha-switch
               .checked=${this._config.initial_open === true}
