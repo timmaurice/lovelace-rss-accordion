@@ -124,10 +124,16 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                   naturalMenuWidth
                 >
                   <mwc-list-item value="cover"
-                    >${localize(this.hass, 'component.rss-accordion.editor.image_fit_mode_options.cover')}</mwc-list-item
+                    >${localize(
+                      this.hass,
+                      'component.rss-accordion.editor.image_fit_mode_options.cover',
+                    )}</mwc-list-item
                   >
                   <mwc-list-item value="contain"
-                    >${localize(this.hass, 'component.rss-accordion.editor.image_fit_mode_options.contain')}</mwc-list-item
+                    >${localize(
+                      this.hass,
+                      'component.rss-accordion.editor.image_fit_mode_options.contain',
+                    )}</mwc-list-item
                   >
                 </ha-select>
               `
