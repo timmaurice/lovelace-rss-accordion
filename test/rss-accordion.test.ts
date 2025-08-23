@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '../src/rss-accordion';
 import type { RssAccordion } from '../src/rss-accordion';
-import { HomeAssistant, RssAccordionConfig, HassEntity } from '../src/types';
+import { HomeAssistant, RssAccordionConfig, HassEntity, FeedEntry } from '../src/types';
 
 // Mock console.info
 vi.spyOn(console, 'info').mockImplementation(() => {});
@@ -258,51 +258,54 @@ describe('RssAccordion', () => {
     });
   });
 
-  it('should strip images from summary if configured', async () => {
-    hass.states['sensor.test_feed'] = {
-      entity_id: 'sensor.test_feed',
-      state: 'ok',
-      attributes: {
-        entries: [
-          {
-            title: 'Test 1',
-            link: '#',
-            summary: 'Summary with <img src="test.jpg"> an image.',
-            published: new Date().toISOString(),
-          },
-        ],
-      },
-    } as HassEntity;
-    element.hass = hass;
-    element.setConfig({ ...config, strip_summary_images: true });
-    await element.updateComplete;
+  describe('image handling', () => {
+    it('should strip images from summary if item.image is present', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [
+            {
+              title: 'Test 1',
+              link: '#',
+              summary: 'Summary with <img src="summary.jpg"> an image.',
+              published: new Date().toISOString(),
+              image: 'hero.jpg',
+            },
+          ],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
 
-    const content = element.shadowRoot?.querySelector('.accordion-content > .item-summary');
-    expect(content?.innerHTML).toBe('Summary with  an image.');
-  });
+      const heroImage = element.shadowRoot?.querySelector<HTMLImageElement>('.item-image');
+      expect(heroImage).not.toBeNull();
+      expect(heroImage?.src).toContain('hero.jpg');
 
-  it('should not strip images from summary by default', async () => {
-    const summaryHtml = 'Summary with <img src="test.jpg"> an image.';
-    hass.states['sensor.test_feed'] = {
-      entity_id: 'sensor.test_feed',
-      state: 'ok',
-      attributes: {
-        entries: [
-          {
-            title: 'Test 1',
-            link: '#',
-            summary: summaryHtml,
-            published: new Date().toISOString(),
-          },
-        ],
-      },
-    } as HassEntity;
-    element.hass = hass;
-    element.setConfig(config); // strip_summary_images is false/undefined
-    await element.updateComplete;
+      const content = element.shadowRoot?.querySelector('.accordion-content > .item-summary');
+      expect(content?.innerHTML).toBe('Summary with  an image.');
+    });
 
-    const content = element.shadowRoot?.querySelector('.accordion-content > .item-summary');
-    expect(content?.innerHTML).toBe(summaryHtml);
+    it('should not strip images from summary if item.image is not present', async () => {
+      const summaryHtml = 'Summary with <img src="test.jpg"> an image.';
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'Test 1', link: '#', summary: summaryHtml, published: new Date().toISOString() }],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const heroImage = element.shadowRoot?.querySelector<HTMLImageElement>('.item-image');
+      expect(heroImage).toBeNull();
+
+      const content = element.shadowRoot?.querySelector('.accordion-content > .item-summary');
+      expect(content?.innerHTML).toBe(summaryHtml);
+    });
   });
 
   describe('UI Features', () => {

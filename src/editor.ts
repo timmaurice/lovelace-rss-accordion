@@ -34,7 +34,12 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
     const configValue = target.configValue as keyof RssAccordionConfig;
     const newConfig = { ...this._config };
 
-    const value = target.tagName === 'HA-SWITCH' ? target.checked : target.value;
+    let value: string | number | boolean | undefined = target.tagName === 'HA-SWITCH' ? target.checked : target.value;
+
+    // Handle default values by deleting the key.
+    if (configValue === 'image_fit_mode' && value === 'cover') {
+      value = undefined;
+    }
 
     if (value === '' || value === false || value === undefined) {
       delete newConfig[configValue];
@@ -140,22 +145,15 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
             : ''}
           <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.initial_open')}>
             <ha-switch
-              .checked=${this._config.initial_open === true}
+              .checked=${!!this._config.initial_open}
               .configValue=${'initial_open'}
               @change=${this._valueChanged}
             ></ha-switch>
           </ha-formfield>
           <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.allow_multiple')}>
             <ha-switch
-              .checked=${this._config.allow_multiple === true}
+              .checked=${!!this._config.allow_multiple}
               .configValue=${'allow_multiple'}
-              @change=${this._valueChanged}
-            ></ha-switch>
-          </ha-formfield>
-          <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.strip_summary_images')}>
-            <ha-switch
-              .checked=${this._config.strip_summary_images === true}
-              .configValue=${'strip_summary_images'}
               @change=${this._valueChanged}
             ></ha-switch>
           </ha-formfield>

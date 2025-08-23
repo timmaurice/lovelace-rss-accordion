@@ -88,24 +88,14 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     if (!this.hass || !this._config?.entity) {
       return 1;
     }
-    const stateObj = this.hass.states[this._config.entity];
-    if (!stateObj) {
-      return 1;
-    }
 
-    let numItems = 0;
-    if (stateObj.attributes.entries && Array.isArray(stateObj.attributes.entries)) {
-      numItems = (stateObj.attributes.entries as FeedEntry[]).length;
-    } else if (this._config.entity.startsWith('event.')) {
-      const { title, link } = stateObj.attributes;
-      if (title && link) {
-        numItems = 1;
-      }
-    }
-
+    const allItems = this._getFeedItems();
+    const numItems = allItems.length;
     const maxItems = this._config.max_items ?? numItems;
     const displayItems = Math.min(numItems, maxItems);
 
+    // The card size is the number of items displayed plus one for the header if it exists.
+    // If no items are displayed, we still want a size of 1 for the "No entries" message.
     return (this._config.title ? 1 : 0) + (displayItems || 1);
   }
 
@@ -277,6 +267,17 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return [];
   }
 
+  /**
+   * Extracts an image URL from a feed item, prioritizing dedicated fields
+   * over parsing HTML content.
+   * This card only considers the dedicated `image` field for the hero image.
+   * @param item The feed entry to process.
+   * @returns The found image URL, or undefined.
+   */
+  private _getItemImage(item: FeedEntry): string | undefined {
+    return item.image;
+  }
+
   protected render(): TemplateResult {
     if (!this._config || !this.hass) {
       return html``;
@@ -307,8 +308,14 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       <ha-card .header=${this._config.title}>
         <div class="card-content">
           ${itemsToDisplay.map((item) => {
+            const imageUrl = this._getItemImage(item);
             const content = item.summary || item.description || '';
-            const processedContent = this._config.strip_summary_images ? content.replace(/<img[^>]*>/g, '') : content;
+
+            // If a hero image is being displayed from the `item.image` field,
+            // strip all images from the summary to prevent duplicates.
+            const processedContent = imageUrl
+              ? content.replace(/<img[^>]*>/gi, '')
+              : content;
 
             const publishedDate = new Date(item.published);
             const formattedDate = publishedDate.toLocaleString(this.hass.language, this._getDateTimeFormatOptions());
@@ -338,10 +345,10 @@ export class RssAccordion extends LitElement implements LovelaceCard {
                 </summary>
                 <div class="accordion-content">
                   <div class="item-published">${formattedDate}</div>
-                  ${item.image
+                  ${imageUrl
                     ? html`<img
                         class="item-image"
-                        src="${item.image}"
+                        src="${imageUrl}"
                         alt="${item.title}"
                         style=${styleMap(imageStyles)}
                       />`

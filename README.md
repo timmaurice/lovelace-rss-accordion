@@ -14,8 +14,9 @@ A custom Lovelace card for Home Assistant to display RSS feed items from a senso
 - Display items from a `sensor` entity _(like one from the Feed Parser integration)_ or an `event` entity _(like one from the core `feedreader` integration)_.
 - Each item is displayed in a collapsible accordion.
 - Option to only allow one item to be open at a time.
-- "NEW" pill for articles published within the last 30 minutes.
+- "NEW" pill for recent articles (published within the last hour by default, and configurable).
 - Visited articles are greyed out to easily distinguish them from unread ones.
+- Displays a hero image if the feed item provides a dedicated `image` URL. When a hero image is shown, any images inside the summary are hidden to prevent duplicates.
 - Option to open the first (latest) item on card load.
 - Customizable number of items to display.
 
@@ -52,7 +53,6 @@ You can now add the card to your dashboard.
 | `image_fit_mode`          | string  | `cover`      | How the image should fit. `cover` (fill & crop) or `contain` (fit inside).                              |
 | `initial_open`            | boolean | `false`      | If `true`, the first/newest item will be open by default when the card loads.                           |
 | `allow_multiple`          | boolean | `false`      | If `true`, allows multiple accordion items to be open simultaneously.                                   |
-| `strip_summary_images`    | boolean | `false`      | If `true`, removes `<img>` tags from the summary. Useful if the feed includes the image in the content. |
 
 ### Examples
 

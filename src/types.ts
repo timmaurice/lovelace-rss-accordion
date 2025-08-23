@@ -70,7 +70,6 @@ export interface RssAccordionConfig extends LovelaceCardConfig {
   entity: string;
   max_items?: number;
   allow_multiple?: boolean;
-  strip_summary_images?: boolean;
   image_ratio?: string;
   image_fit_mode?: 'cover' | 'contain';
   initial_open?: boolean;
