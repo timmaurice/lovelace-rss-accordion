@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '../src/rss-accordion';
 import type { RssAccordion } from '../src/rss-accordion';
-import { HomeAssistant, RssAccordionConfig, HassEntity, FeedEntry } from '../src/types';
+import { HomeAssistant, RssAccordionConfig, HassEntity } from '../src/types';
 
 // Mock console.info
 vi.spyOn(console, 'info').mockImplementation(() => {});
