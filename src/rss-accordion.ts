@@ -94,9 +94,22 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const maxItems = this._config.max_items ?? numItems;
     const displayItems = Math.min(numItems, maxItems);
 
+    let size = (this._config.title ? 1 : 0) + (displayItems || 1);
+
+    if (this._config.show_channel_info) {
+      const stateObj = this.hass.states[this._config.entity];
+      const channel = stateObj?.attributes.channel as Record<string, unknown> | undefined;
+      if (
+        channel &&
+        (channel.title || channel.description || channel.subtitle || channel.image)
+      ) {
+        size += 2; // Add 2 for the channel info block
+      }
+    }
+
     // The card size is the number of items displayed plus one for the header if it exists.
     // If no items are displayed, we still want a size of 1 for the "No entries" message.
-    return (this._config.title ? 1 : 0) + (displayItems || 1);
+    return size;
   }
 
   public connectedCallback(): void {
@@ -292,6 +305,12 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       `;
     }
 
+    const channel = stateObj.attributes.channel as Record<string, unknown> | undefined;
+    const channelTitle = channel?.title as string | undefined;
+    const channelLink = channel?.link as string | undefined;
+    const channelDescription = (channel?.description || channel?.subtitle) as string | undefined;
+    const channelImage = channel?.image as string | undefined;
+
     const allEntries = this._getFeedItems();
     const maxItems = this._config.max_items ?? allEntries.length;
     const itemsToDisplay = allEntries.slice(0, maxItems);
@@ -307,15 +326,31 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return html`
       <ha-card .header=${this._config.title}>
         <div class="card-content">
+          ${this._config.show_channel_info && (channelTitle || channelDescription || channelImage)
+            ? html`
+                <div class="channel-info">
+                  ${channelImage
+                    ? html`<img class="channel-image" src="${channelImage}" alt="${channelTitle || 'Channel Image'}" />`
+                    : ''}
+                  <div class="channel-text">
+                    ${channelTitle ? html`<h2 class="channel-title">${channelTitle}</h2>` : ''}
+                    ${channelDescription ? html`<p class="channel-description">${channelDescription}</p>` : ''}
+                    ${channelLink
+                      ? html`<a class="channel-link" href="${channelLink}" target="_blank" rel="noopener noreferrer"
+                          >${localize(this.hass, 'component.rss-accordion.card.visit_channel')}</a
+                        >`
+                      : ''}
+                  </div>
+                </div>
+              `
+            : ''}
           ${itemsToDisplay.map((item) => {
             const imageUrl = this._getItemImage(item);
             const content = item.summary || item.description || '';
 
             // If a hero image is being displayed from the `item.image` field,
             // strip all images from the summary to prevent duplicates.
-            const processedContent = imageUrl
-              ? content.replace(/<img[^>]*>/gi, '')
-              : content;
+            const processedContent = imageUrl ? content.replace(/<img[^>]*>/gi, '') : content;
 
             const publishedDate = new Date(item.published);
             const formattedDate = publishedDate.toLocaleString(this.hass.language, this._getDateTimeFormatOptions());

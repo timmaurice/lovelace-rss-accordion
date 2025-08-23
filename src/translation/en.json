@@ -14,10 +14,12 @@
     "image_fit_mode_options": {
       "cover": "Cover (fill & crop)",
       "contain": "Contain (fit inside)"
-    }
+    },
+    "show_channel_info": "Show Channel Info (from 'channel' attribute)"
   },
   "card": {
     "to_news_article": "To the news article",
-    "new_pill": "NEW"
+    "new_pill": "NEW",
+    "visit_channel": "Visit channel"
   }
 }

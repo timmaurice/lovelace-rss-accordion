@@ -1,20 +1,72 @@
 .card-content {
   padding: 16px;
 }
+
 .warning {
   color: var(--error-color);
   padding: 16px;
 }
 
+.channel-info {
+  align-items: center;
+  border-bottom: 1px solid var(--divider-color);
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+  padding-bottom: 16px;
+
+  .channel-image {
+    border-radius: 50%;
+    flex-shrink: 0;
+    height: 60px;
+    object-fit: cover;
+    width: 60px;
+  }
+
+  .channel-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    /* Prevents text from overflowing */
+  }
+
+  .channel-title {
+    color: var(--primary-text-color);
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 0 0 4px 0;
+  }
+
+  .channel-description {
+    color: var(--secondary-text-color);
+    font-size: 0.9em;
+    margin: 0 0 8px 0;
+  }
+
+  .channel-link {
+    color: var(--primary-color);
+    font-weight: bold;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
 .accordion-header {
   cursor: pointer;
   font-weight: bold;
-  list-style: none; /* Remove default marker */
+  list-style: none;
+  /* Remove default marker */
   padding: 12px 0;
   padding-left: 20px;
   position: relative;
+
   &::-webkit-details-marker {
-    display: none; /* For Chrome/Safari */
+    display: none;
+    /* For Chrome/Safari */
   }
 
   &::before {
@@ -25,6 +77,7 @@
     transform: translateY(-50%);
     transition: transform 0.2s ease-in-out;
   }
+
   .header-main {
     align-items: center;
     display: flex;
@@ -86,6 +139,7 @@
     font-weight: bold;
     margin-top: 8px;
     text-decoration: none;
+
     &:hover {
       text-decoration: underline;
     }
@@ -94,6 +148,7 @@
 
 .accordion-item {
   border-bottom: 1px solid var(--divider-color);
+
   &:last-of-type {
     border-bottom: none;
   }
@@ -115,16 +170,16 @@
   }
 
   > .accordion-header .header-main::after {
+    animation: spin 1s linear infinite;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    border-top-color: transparent;
     content: '';
     display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--primary-color);
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-left: 8px;
     flex-shrink: 0;
+    height: 16px;
+    margin-left: 8px;
+    width: 16px;
   }
 }
 

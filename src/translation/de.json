@@ -14,10 +14,12 @@
     "image_fit_mode_options": {
       "cover": "Ausfüllen (Cover)",
       "contain": "Einfassen (Contain)"
-    }
+    },
+    "show_channel_info": "Kanal-Infos anzeigen (vom 'channel'-Attribut)"
   },
   "card": {
     "to_news_article": "Zum Nachrichtenartikel",
-    "new_pill": "NEU"
+    "new_pill": "NEU",
+    "visit_channel": "Kanal besuchen"
   }
 }

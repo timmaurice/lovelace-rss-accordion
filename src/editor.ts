@@ -157,6 +157,13 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
               @change=${this._valueChanged}
             ></ha-switch>
           </ha-formfield>
+          <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_info')}>
+            <ha-switch
+              .checked=${!!this._config.show_channel_info}
+              .configValue=${'show_channel_info'}
+              @change=${this._valueChanged}
+            ></ha-switch>
+          </ha-formfield>
         </div>
       </ha-card>
     `;
