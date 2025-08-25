@@ -99,10 +99,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     if (this._config.show_channel_info) {
       const stateObj = this.hass.states[this._config.entity];
       const channel = stateObj?.attributes.channel as Record<string, unknown> | undefined;
-      if (
-        channel &&
-        (channel.title || channel.description || channel.subtitle || channel.image)
-      ) {
+      if (channel && (channel.title || channel.description || channel.subtitle || channel.image)) {
         size += 2; // Add 2 for the channel info block
       }
     }

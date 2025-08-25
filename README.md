@@ -4,7 +4,7 @@
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/timmaurice/lovelace-rss-accordion?style=flat-square)
 [![GH-downloads](https://img.shields.io/github/downloads/timmaurice/lovelace-rss-accordion/total?style=flat-square)](https://github.com/timmaurice/lovelace-rss-accordion/releases)
 [![GH-last-commit](https://img.shields.io/github/last-commit/timmaurice/lovelace-rss-accordion.svg?style=flat-square)](https://github.com/timmaurice/lovelace-rss-accordion/commits/master)
-[![GH-code-size](https://img.shields.io/github/languages/code-size/timmaurice/lovelace-rss-accordion.svg?color=red&style=flat-square)](https://github.com/timmaurice/lovelace-rss-accordion)
+[![GH-code-size](https://img.shields.io/github/languages/code-size/timmaurice/lovelace-rss-accordion.svg?style=flat-square)](https://github.com/timmaurice/lovelace-rss-accordion)
 ![GitHub](https://img.shields.io/github/license/timmaurice/lovelace-rss-accordion?style=flat-square)
 
 A custom Lovelace card for Home Assistant to display RSS feed items from a sensor ([feedparser](https://github.com/custom-components/feedparser)) or event entity ([feedreader](https://www.home-assistant.io/integrations/feedreader/)) in an accordion style.
@@ -43,17 +43,17 @@ You can now add the card to your dashboard.
 
 ## Configuration
 
-| Name                      | Type    | Default      | Description                                                                                                                                                                           |
-| ------------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`                    | string  | **Required** | `custom:rss-accordion`                                                                                                                                                                |
-| `entity`                  | string  | **Required** | The entity ID of your feed sensor or event.                                                                                                                                           |
-| `title`                   | string  | `''`         | The title of the card.                                                                                                                                                                |
-| `max_items`               | number  | All items    | The maximum number of feed items to display.                                                                                                                                          |
-| `new_pill_duration_hours` | number  | `1`          | The duration in hours for which the "NEW" pill is shown on recent items.                                                                                                              |
-| `image_ratio`             | string  | `auto`       | The CSS `aspect-ratio` for item images (e.g., `16/9`, `1.77`). Images are cropped to fit.                                                                                             |
-| `image_fit_mode`          | string  | `cover`      | How the image should fit. `cover` (fill & crop) or `contain` (fit inside).                                                                                                            |
-| `initial_open`            | boolean | `false`      | If `true`, the first/newest item will be open by default when the card loads.                                                                                                         |
-| `allow_multiple`          | boolean | `false`      | If `true`, allows multiple accordion items to be open simultaneously.                                                                                                                 |
+| Name                      | Type    | Default      | Description                                                                                                                                                                                          |
+| ------------------------- | ------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`                    | string  | **Required** | `custom:rss-accordion`                                                                                                                                                                               |
+| `entity`                  | string  | **Required** | The entity ID of your feed sensor or event.                                                                                                                                                          |
+| `title`                   | string  | `''`         | The title of the card.                                                                                                                                                                               |
+| `max_items`               | number  | All items    | The maximum number of feed items to display.                                                                                                                                                         |
+| `new_pill_duration_hours` | number  | `1`          | The duration in hours for which the "NEW" pill is shown on recent items.                                                                                                                             |
+| `image_ratio`             | string  | `auto`       | The CSS `aspect-ratio` for item images (e.g., `16/9`, `1.77`). Images are cropped to fit.                                                                                                            |
+| `image_fit_mode`          | string  | `cover`      | How the image should fit. `cover` (fill & crop) or `contain` (fit inside).                                                                                                                           |
+| `initial_open`            | boolean | `false`      | If `true`, the first/newest item will be open by default when the card loads.                                                                                                                        |
+| `allow_multiple`          | boolean | `false`      | If `true`, allows multiple accordion items to be open simultaneously.                                                                                                                                |
 | `show_channel_info`       | boolean | `false`      | If `true`, displays the channel's info (title, description, image) above the feed items. This requires the sensor to have a `channel` attribute object, as provided by the `feedparser` integration. |
 
 ### Examples
