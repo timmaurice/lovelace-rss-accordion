@@ -1,5 +1,11 @@
 {
   "editor": {
+    "groups": {
+      "core": "Core Configuration",
+      "feed": "Feed Items & Behavior",
+      "item_images": "Item Images",
+      "channel": "Channel Information"
+    },
     "title": "Title (Optional)",
     "entity": "Feed Entity",
     "allow_multiple": "Allow multiple items to be open",
@@ -15,11 +21,14 @@
       "cover": "Cover (fill & crop)",
       "contain": "Contain (fit inside)"
     },
-    "show_channel_info": "Show Channel Info (from 'channel' attribute)"
+    "show_channel_info": "Show Channel Info (from 'channel' attribute)",
+    "show_channel_published_date": "Show channel's last update time",
+    "crop_channel_image": "Display channel image as a cropped circle"
   },
   "card": {
     "to_news_article": "To the news article",
     "new_pill": "NEW",
-    "visit_channel": "Visit channel"
+    "visit_channel": "Visit channel",
+    "last_updated": "Last updated"
   }
 }

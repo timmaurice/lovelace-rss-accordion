@@ -457,4 +457,126 @@ describe('RssAccordion', () => {
       expect(options.day).toBe('2-digit');
     });
   });
+
+  describe('channel info rendering', () => {
+    beforeEach(() => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'Item 1', link: '#', published: new Date().toISOString() }],
+          channel: {
+            title: 'My Channel',
+            description: 'My Channel Description',
+            image: 'http://example.com/channel.png',
+            link: 'http://example.com/channel',
+            published: new Date('2023-01-01T10:00:00Z').toISOString(),
+          },
+        },
+      } as HassEntity;
+    });
+
+    it('should not render channel info by default', async () => {
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const channelInfo = element.shadowRoot?.querySelector('.channel-info');
+      expect(channelInfo).toBeNull();
+    });
+
+    it('should render channel info when show_channel_info is true', async () => {
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true });
+      await element.updateComplete;
+
+      const channelInfo = element.shadowRoot?.querySelector('.channel-info');
+      expect(channelInfo).not.toBeNull();
+      expect(channelInfo?.querySelector('.channel-title')?.textContent).toBe('My Channel');
+      expect(channelInfo?.querySelector('.channel-description')?.textContent).toBe('My Channel Description');
+      expect(channelInfo?.querySelector<HTMLImageElement>('.channel-image')?.src).toBe(
+        'http://example.com/channel.png',
+      );
+      expect(channelInfo?.querySelector<HTMLAnchorElement>('.channel-link')?.href).toBe('http://example.com/channel');
+    });
+
+    it('should not render channel published date by default', async () => {
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true });
+      await element.updateComplete;
+
+      const channelPublished = element.shadowRoot?.querySelector('.channel-published');
+      expect(channelPublished).toBeNull();
+    });
+
+    it('should render channel published date when show_published_date is true', async () => {
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true, show_published_date: true });
+      await element.updateComplete;
+
+      const channelPublished = element.shadowRoot?.querySelector('.channel-published');
+      expect(channelPublished).not.toBeNull();
+      expect(channelPublished?.textContent).toContain('Last updated');
+      expect(channelPublished?.textContent).toContain('Jan'); // From '2023-01-01'
+    });
+
+    it('should add cropped-image class when crop_channel_image is true', async () => {
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true, crop_channel_image: true });
+      await element.updateComplete;
+
+      const channelInfo = element.shadowRoot?.querySelector('.channel-info');
+      expect(channelInfo?.classList.contains('cropped-image')).toBe(true);
+    });
+
+    it('should correctly calculate card size with channel info', () => {
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true });
+      // 1 for item + 2 for channel info
+      expect(element.getCardSize()).toBe(3);
+    });
+  });
+
+  describe('accordion interaction', () => {
+    beforeEach(async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'Test 1', link: '#', summary: 'Summary 1', published: new Date().toISOString() }],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+    });
+
+    it('should not toggle accordion when the title link is clicked', async () => {
+      const details = element.shadowRoot?.querySelector<HTMLDetailsElement>('.accordion-item');
+      const titleLink = details?.querySelector<HTMLAnchorElement>('a.title-link');
+
+      expect(details?.open).toBe(false);
+
+      const clickEvent = new MouseEvent('click', { bubbles: true, composed: true });
+      const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault');
+
+      titleLink?.dispatchEvent(clickEvent);
+      await element.updateComplete;
+
+      expect(details?.open).toBe(false);
+      expect(preventDefaultSpy).not.toHaveBeenCalled();
+    });
+
+    it('should toggle accordion when the summary area (not the link) is clicked', async () => {
+      const details = element.shadowRoot?.querySelector<HTMLDetailsElement>('.accordion-item');
+      const summary = details?.querySelector<HTMLElement>('.accordion-header');
+
+      expect(details?.open).toBe(false);
+
+      summary?.click();
+      await element.updateComplete;
+
+      expect(details?.open).toBe(true);
+    });
+  });
 });

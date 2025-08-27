@@ -1,5 +1,11 @@
 {
   "editor": {
+    "groups": {
+      "core": "Grundeinstellungen",
+      "feed": "Feed-Einträge & Verhalten",
+      "item_images": "Bilder der Einträge",
+      "channel": "Kanalinformationen"
+    },
     "title": "Titel (Optional)",
     "entity": "Feed-Entität",
     "allow_multiple": "Erlaube das Öffnen mehrerer Einträge",
@@ -15,11 +21,14 @@
       "cover": "Ausfüllen (Cover)",
       "contain": "Einfassen (Contain)"
     },
-    "show_channel_info": "Kanal-Infos anzeigen (vom 'channel'-Attribut)"
+    "show_channel_info": "Kanal-Infos anzeigen (vom 'channel'-Attribut)",
+    "show_channel_published_date": "Letzte Aktualisierung des Kanals anzeigen",
+    "crop_channel_image": "Kanalbild als zugeschnittenen Kreis anzeigen"
   },
   "card": {
     "to_news_article": "Zum Nachrichtenartikel",
     "new_pill": "NEU",
-    "visit_channel": "Kanal besuchen"
+    "visit_channel": "Kanal besuchen",
+    "last_updated": "Zuletzt aktualisiert"
   }
 }

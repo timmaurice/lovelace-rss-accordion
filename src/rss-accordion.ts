@@ -96,16 +96,23 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     let size = (this._config.title ? 1 : 0) + (displayItems || 1);
 
-    if (this._config.show_channel_info) {
-      const stateObj = this.hass.states[this._config.entity];
-      const channel = stateObj?.attributes.channel as Record<string, unknown> | undefined;
-      if (channel && (channel.title || channel.description || channel.subtitle || channel.image)) {
-        size += 2; // Add 2 for the channel info block
-      }
+    const stateObj = this.hass.states[this._config.entity];
+    const channel = stateObj?.attributes.channel as Record<string, unknown> | undefined;
+
+    const showChannelBlock =
+      this._config.show_channel_info &&
+      channel &&
+      (channel.title ||
+        channel.description ||
+        channel.subtitle ||
+        channel.image ||
+        channel.link ||
+        (this._config.show_published_date && channel.published));
+
+    if (showChannelBlock) {
+      size += 2; // Add 2 for the channel info block
     }
 
-    // The card size is the number of items displayed plus one for the header if it exists.
-    // If no items are displayed, we still want a size of 1 for the "No entries" message.
     return size;
   }
 
@@ -160,8 +167,15 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     }
   }
 
-  private async _onSummaryClick(e: Event): Promise<void> {
+  private async _onSummaryClick(e: MouseEvent): Promise<void> {
+    const target = e.target as Element;
+    // If the click is on the link itself, or a child of the link, let the browser handle it.
+    if (target.closest && target.closest('a.title-link')) {
+      return;
+    }
+
     e.preventDefault();
+
     const details = (e.currentTarget as HTMLElement).closest<HTMLDetailsElement>('.accordion-item');
     if (!details) return;
 
@@ -288,6 +302,99 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return item.image;
   }
 
+  private _renderChannelInfo(
+    channelTitle: string | undefined,
+    channelDescription: string | undefined,
+    channelImage: string | undefined,
+    channelLink: string | undefined,
+    channelPublished: string | undefined,
+    formattedChannelPublished: string | undefined,
+  ): TemplateResult {
+    if (
+      !this._config.show_channel_info ||
+      !(
+        channelTitle ||
+        channelDescription ||
+        channelImage ||
+        channelLink ||
+        (this._config.show_published_date && channelPublished)
+      )
+    ) {
+      return html``;
+    }
+
+    return html`
+      <div class="channel-info ${this._config.crop_channel_image ? 'cropped-image' : ''}">
+        ${this._config.show_channel_info && channelImage
+          ? html`<img class="channel-image" src="${channelImage}" alt="${channelTitle || 'Channel Image'}" />`
+          : ''}
+        <div class="channel-text">
+          ${this._config.show_channel_info && channelTitle ? html`<h2 class="channel-title">${channelTitle}</h2>` : ''}
+          ${this._config.show_published_date && formattedChannelPublished
+            ? html`<p class="channel-published">
+                <span class="label">${localize(this.hass, 'component.rss-accordion.card.last_updated')}:</span>
+                ${formattedChannelPublished}
+              </p>`
+            : ''}
+          ${this._config.show_channel_info && channelDescription
+            ? html`<p class="channel-description">${channelDescription}</p>`
+            : ''}
+          ${this._config.show_channel_info && channelLink
+            ? html`<a class="channel-link" href="${channelLink}" target="_blank" rel="noopener noreferrer"
+                >${localize(this.hass, 'component.rss-accordion.card.visit_channel')}</a
+              >`
+            : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderItem(item: FeedEntry): TemplateResult {
+    const imageUrl = this._getItemImage(item);
+    const content = item.summary || item.description || '';
+
+    // If a hero image is being displayed from the `item.image` field,
+    // strip all images from the summary to prevent duplicates.
+    const processedContent = imageUrl ? content.replace(/<img[^>]*>/gi, '') : content;
+
+    const publishedDate = new Date(item.published);
+    const formattedDate = publishedDate.toLocaleString(this.hass.language, this._getDateTimeFormatOptions());
+
+    const newPillDurationHours = this._config.new_pill_duration_hours ?? 1;
+    const ageInMinutes = (new Date().getTime() - publishedDate.getTime()) / (1000 * 60);
+    const isNew = ageInMinutes >= 0 && ageInMinutes < newPillDurationHours * 60;
+
+    const imageStyles = {
+      aspectRatio: this._config.image_ratio,
+      objectFit: this._config.image_fit_mode || 'cover',
+    };
+
+    return html`
+      <details class="accordion-item">
+        <summary class="accordion-header" @click=${this._onSummaryClick}>
+          <div class="header-main">
+            <a class="title-link" href="${item.link}" target="_blank" rel="noopener noreferrer"> ${item.title} </a>
+            <div class="header-badges">
+              ${isNew
+                ? html`<span class="new-pill">${localize(this.hass, 'component.rss-accordion.card.new_pill')}</span>`
+                : ''}
+            </div>
+          </div>
+        </summary>
+        <div class="accordion-content">
+          <div class="item-published">${formattedDate}</div>
+          ${imageUrl
+            ? html`<img class="item-image" src="${imageUrl}" alt="${item.title}" style=${styleMap(imageStyles)} />`
+            : ''}
+          <div class="item-summary" .innerHTML=${processedContent}></div>
+          <a class="item-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
+            ${localize(this.hass, 'component.rss-accordion.card.to_news_article')}
+          </a>
+        </div>
+      </details>
+    `;
+  }
+
   protected render(): TemplateResult {
     if (!this._config || !this.hass) {
       return html``;
@@ -307,6 +414,10 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const channelLink = channel?.link as string | undefined;
     const channelDescription = (channel?.description || channel?.subtitle) as string | undefined;
     const channelImage = channel?.image as string | undefined;
+    const channelPublished = channel?.published as string | undefined;
+    const formattedChannelPublished = channelPublished
+      ? new Date(channelPublished).toLocaleString(this.hass.language, this._getDateTimeFormatOptions())
+      : undefined;
 
     const allEntries = this._getFeedItems();
     const maxItems = this._config.max_items ?? allEntries.length;
@@ -323,76 +434,15 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return html`
       <ha-card .header=${this._config.title}>
         <div class="card-content">
-          ${this._config.show_channel_info && (channelTitle || channelDescription || channelImage)
-            ? html`
-                <div class="channel-info">
-                  ${channelImage
-                    ? html`<img class="channel-image" src="${channelImage}" alt="${channelTitle || 'Channel Image'}" />`
-                    : ''}
-                  <div class="channel-text">
-                    ${channelTitle ? html`<h2 class="channel-title">${channelTitle}</h2>` : ''}
-                    ${channelDescription ? html`<p class="channel-description">${channelDescription}</p>` : ''}
-                    ${channelLink
-                      ? html`<a class="channel-link" href="${channelLink}" target="_blank" rel="noopener noreferrer"
-                          >${localize(this.hass, 'component.rss-accordion.card.visit_channel')}</a
-                        >`
-                      : ''}
-                  </div>
-                </div>
-              `
-            : ''}
-          ${itemsToDisplay.map((item) => {
-            const imageUrl = this._getItemImage(item);
-            const content = item.summary || item.description || '';
-
-            // If a hero image is being displayed from the `item.image` field,
-            // strip all images from the summary to prevent duplicates.
-            const processedContent = imageUrl ? content.replace(/<img[^>]*>/gi, '') : content;
-
-            const publishedDate = new Date(item.published);
-            const formattedDate = publishedDate.toLocaleString(this.hass.language, this._getDateTimeFormatOptions());
-
-            const newPillDurationHours = this._config.new_pill_duration_hours ?? 1;
-            const ageInMinutes = (new Date().getTime() - publishedDate.getTime()) / (1000 * 60);
-            const isNew = ageInMinutes >= 0 && ageInMinutes < newPillDurationHours * 60;
-
-            const imageStyles = {
-              aspectRatio: this._config.image_ratio,
-              objectFit: this._config.image_fit_mode || 'cover',
-            };
-
-            return html`
-              <details class="accordion-item">
-                <summary class="accordion-header" @click=${this._onSummaryClick}>
-                  <div class="header-main">
-                    <a class="title-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
-                      ${item.title}
-                    </a>
-                    ${isNew
-                      ? html`<span class="new-pill"
-                          >${localize(this.hass, 'component.rss-accordion.card.new_pill')}</span
-                        >`
-                      : ''}
-                  </div>
-                </summary>
-                <div class="accordion-content">
-                  <div class="item-published">${formattedDate}</div>
-                  ${imageUrl
-                    ? html`<img
-                        class="item-image"
-                        src="${imageUrl}"
-                        alt="${item.title}"
-                        style=${styleMap(imageStyles)}
-                      />`
-                    : ''}
-                  <div class="item-summary" .innerHTML=${processedContent}></div>
-                  <a class="item-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
-                    ${localize(this.hass, 'component.rss-accordion.card.to_news_article')}
-                  </a>
-                </div>
-              </details>
-            `;
-          })}
+          ${this._renderChannelInfo(
+            channelTitle,
+            channelDescription,
+            channelImage,
+            channelLink,
+            channelPublished,
+            formattedChannelPublished,
+          )}
+          ${itemsToDisplay.map((item) => this._renderItem(item))}
         </div>
       </ha-card>
     `;

@@ -3,3 +3,35 @@
   flex-direction: column;
   gap: 16px;
 }
+
+.group {
+  border: 1px solid var(--divider-color);
+  border-radius: var(--ha-card-border-radius, 4px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.group-header {
+  color: var(--primary-text-color);
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.row {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+
+.row>* {
+  flex: 1 1 50%;
+  min-width: 0;
+}
+
+ha-formfield {
+  padding-bottom: 8px;
+}

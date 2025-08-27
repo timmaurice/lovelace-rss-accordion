@@ -16,11 +16,10 @@
   padding-bottom: 16px;
 
   .channel-image {
-    border-radius: 50%;
-    flex-shrink: 0;
-    height: 60px;
-    object-fit: cover;
-    width: 60px;
+    border-radius: 0;
+    height: auto;
+    object-fit: contain;
+    width: calc(50% - 8px);
   }
 
   .channel-text {
@@ -44,6 +43,17 @@
     margin: 0 0 8px 0;
   }
 
+  .channel-published {
+    color: var(--secondary-text-color);
+    font-size: 0.85em;
+    margin: -4px 0 8px 0;
+
+    .label {
+      font-weight: bold;
+      margin-right: 4px;
+    }
+  }
+
   .channel-link {
     color: var(--primary-color);
     font-weight: bold;
@@ -52,6 +62,20 @@
     &:hover {
       text-decoration: underline;
     }
+  }
+}
+
+.channel-info.cropped-image {
+  align-items: center;
+  flex-direction: row;
+
+  .channel-image {
+    border-radius: 50%;
+    flex-shrink: 0;
+    height: 60px;
+    margin-bottom: 0;
+    object-fit: cover;
+    width: 60px;
   }
 }
 
@@ -84,11 +108,20 @@
     justify-content: space-between;
     width: 100%;
 
+    .header-badges {
+      align-items: center;
+      display: flex;
+      flex-shrink: 0;
+      gap: 8px;
+      margin-left: 8px;
+    }
+
     .title-link {
       color: var(--primary-text-color);
       cursor: default;
       pointer-events: none;
       text-decoration: none;
+      white-space: normal; /* Allow titles to wrap */
 
       &:visited {
         color: var(--secondary-text-color);
@@ -99,10 +132,8 @@
       background-color: var(--primary-color);
       border-radius: 10px;
       color: var(--text-primary-color);
-      flex-shrink: 0;
       font-size: 0.7em;
       font-weight: bold;
-      margin-left: 8px;
       padding: 2px 8px;
     }
   }
@@ -122,7 +153,6 @@
     color: var(--secondary-text-color);
     font-size: 1em;
     margin-bottom: 8px;
-    padding-top: 12px;
   }
 
   .item-image {
