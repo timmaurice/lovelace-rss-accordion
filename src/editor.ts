@@ -75,11 +75,17 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
     const stateObj = newEntityId ? this.hass.states[newEntityId] : undefined;
     const channel = stateObj?.attributes.channel as Record<string, unknown> | undefined;
 
-    if (!channel?.published) {
-      delete newConfig.show_published_date;
-    }
-    if (!channel?.image) {
+    if (!channel) {
+      delete newConfig.show_channel_info;
       delete newConfig.crop_channel_image;
+      delete newConfig.show_published_date;
+    } else {
+      if (!channel.published) {
+        delete newConfig.show_published_date;
+      }
+      if (!channel.image) {
+        delete newConfig.crop_channel_image;
+      }
     }
 
     fireEvent(this, 'config-changed', { config: newConfig });
@@ -199,40 +205,44 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
             </div>
           </div>
 
-          <div class="group">
-            <div class="group-header">${localize(this.hass, 'component.rss-accordion.editor.groups.channel')}</div>
-            <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_info')}>
-              <ha-switch
-                .checked=${!!this._config.show_channel_info}
-                .configValue=${'show_channel_info'}
-                @change=${this._valueChanged}
-              ></ha-switch>
-            </ha-formfield>
-            ${this._config.show_channel_info && channelImage
-              ? html`
-                  <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.crop_channel_image')}>
+          ${channel
+            ? html`
+                <div class="group">
+                  <div class="group-header">${localize(this.hass, 'component.rss-accordion.editor.groups.channel')}</div>
+                  <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_info')}>
                     <ha-switch
-                      .checked=${!!this._config.crop_channel_image}
-                      .configValue=${'crop_channel_image'}
+                      .checked=${!!this._config.show_channel_info}
+                      .configValue=${'show_channel_info'}
                       @change=${this._valueChanged}
                     ></ha-switch>
                   </ha-formfield>
-                `
-              : ''}
-            ${this._config.show_channel_info && channelPublished
-              ? html`
-                  <ha-formfield
-                    .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_published_date')}
-                  >
-                    <ha-switch
-                      .checked=${!!this._config.show_published_date}
-                      .configValue=${'show_published_date'}
-                      @change=${this._valueChanged}
-                    ></ha-switch>
-                  </ha-formfield>
-                `
-              : ''}
-          </div>
+                  ${this._config.show_channel_info && channelImage
+                    ? html`
+                        <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.crop_channel_image')}>
+                          <ha-switch
+                            .checked=${!!this._config.crop_channel_image}
+                            .configValue=${'crop_channel_image'}
+                            @change=${this._valueChanged}
+                          ></ha-switch>
+                        </ha-formfield>
+                      `
+                    : ''}
+                  ${this._config.show_channel_info && channelPublished
+                    ? html`
+                        <ha-formfield
+                          .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_published_date')}
+                        >
+                          <ha-switch
+                            .checked=${!!this._config.show_published_date}
+                            .configValue=${'show_published_date'}
+                            @change=${this._valueChanged}
+                          ></ha-switch>
+                        </ha-formfield>
+                      `
+                    : ''}
+                </div>
+              `
+            : ''}
         </div>
       </ha-card>
     `;
