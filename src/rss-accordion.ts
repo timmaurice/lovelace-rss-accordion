@@ -352,10 +352,11 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   private _renderItem(item: FeedEntry): TemplateResult {
     const imageUrl = this._getItemImage(item);
     const content = item.summary || item.description || '';
+    const showImage = this._config.show_item_image !== false && !!imageUrl;
 
     // If a hero image is being displayed from the `item.image` field,
     // strip all images from the summary to prevent duplicates.
-    const processedContent = imageUrl ? content.replace(/<img[^>]*>/gi, '') : content;
+    const processedContent = showImage ? content.replace(/<img[^>]*>/gi, '') : content;
 
     const publishedDate = new Date(item.published);
     const formattedDate = publishedDate.toLocaleString(this.hass.language, this._getDateTimeFormatOptions());
@@ -383,8 +384,20 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         </summary>
         <div class="accordion-content">
           <div class="item-published">${formattedDate}</div>
-          ${imageUrl
-            ? html`<img class="item-image" src="${imageUrl}" alt="${item.title}" style=${styleMap(imageStyles)} />`
+          ${showImage
+            ? html`<img
+                class="item-image"
+                src="${imageUrl as string}"
+                alt="${item.title}"
+                style=${styleMap(imageStyles)}
+              />`
+            : ''}
+          ${this._config.show_audio_player !== false && item.audio
+            ? html`
+                <div class="audio-player-container">
+                  <audio controls .src=${item.audio as string}></audio>
+                </div>
+              `
             : ''}
           <div class="item-summary" .innerHTML=${processedContent}></div>
           <a class="item-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
@@ -450,6 +463,14 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
   static styles = css`
     ${unsafeCSS(styles)}
+    .audio-player-container {
+      margin-bottom: 1em;
+    }
+    .audio-player-container audio {
+      width: 100%;
+      height: 40px;
+      border-radius: 50px;
+    }
   `;
 }
 

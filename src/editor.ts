@@ -1,6 +1,6 @@
 import { LitElement, html, css, TemplateResult, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { HomeAssistant, LovelaceCardEditor, RssAccordionConfig } from './types';
+import { HomeAssistant, LovelaceCardEditor, RssAccordionConfig, FeedEntry } from './types';
 import { localize } from './localize';
 import { fireEvent } from './utils';
 import editorStyles from './styles/editor.styles.scss';
@@ -41,7 +41,21 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
       value = undefined;
     }
 
-    if (value === '' || value === false || value === undefined) {
+    if (configValue === 'show_item_image') {
+      if (value) {
+        delete newConfig.show_item_image;
+      } else {
+        newConfig.show_item_image = false;
+        delete newConfig.image_ratio;
+        delete newConfig.image_fit_mode;
+      }
+    } else if (configValue === 'show_audio_player') {
+      if (value) {
+        delete newConfig.show_audio_player;
+      } else {
+        newConfig.show_audio_player = false;
+      }
+    } else if (value === '' || value === false || value === undefined) {
       delete newConfig[configValue];
       // If show_channel_info is turned off, also remove its dependent options
       if (configValue === 'show_channel_info') {
@@ -88,6 +102,13 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
       }
     }
 
+    // Clean up audio player option if not applicable
+    const entries = (stateObj?.attributes.entries as FeedEntry[]) ?? [];
+    const hasAudio = !!(stateObj?.attributes.audio as string | undefined) || entries.some((entry) => !!entry.audio);
+    if (!hasAudio) {
+      delete newConfig.show_audio_player;
+    }
+
     fireEvent(this, 'config-changed', { config: newConfig });
   }
 
@@ -100,6 +121,8 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
     const channel = stateObj?.attributes.channel as Record<string, unknown> | undefined;
     const channelImage = channel?.image as string | undefined;
     const channelPublished = channel?.published as string | undefined;
+    const entries = (stateObj?.attributes.entries as FeedEntry[]) ?? [];
+    const hasAudio = !!(stateObj?.attributes.audio as string | undefined) || entries.some((entry) => !!entry.audio);
 
     return html`
       <ha-card>
@@ -159,56 +182,81 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 @change=${this._valueChanged}
               ></ha-switch>
             </ha-formfield>
+            ${hasAudio
+              ? html`
+                  <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_audio_player')}>
+                    <ha-switch
+                      .checked=${this._config.show_audio_player !== false}
+                      .configValue=${'show_audio_player'}
+                      @change=${this._valueChanged}
+                    ></ha-switch>
+                  </ha-formfield>
+                `
+              : ''}
+            <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_item_image')}>
+              <ha-switch
+                .checked=${this._config.show_item_image !== false}
+                .configValue=${'show_item_image'}
+                @change=${this._valueChanged}
+              ></ha-switch>
+            </ha-formfield>
           </div>
 
-          <div class="group">
-            <div class="group-header">${localize(this.hass, 'component.rss-accordion.editor.groups.item_images')}</div>
-            <div class="row">
-              <ha-textfield
-                .label=${localize(this.hass, 'component.rss-accordion.editor.image_ratio')}
-                .value=${this._config.image_ratio || ''}
-                .configValue=${'image_ratio'}
-                @input=${this._valueChanged}
-                .placeholder=${'auto'}
-                .pattern=${'^auto$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)?\\s*\\/\\s*\\d+(\\.\\d+)?$'}
-                .validationMessage=${localize(
-                  this.hass,
-                  'component.rss-accordion.editor.image_ratio_validation_message',
-                )}
-              ></ha-textfield>
-              ${this._config.image_ratio && this._config.image_ratio !== 'auto'
-                ? html`
-                    <ha-select
-                      .label=${localize(this.hass, 'component.rss-accordion.editor.image_fit_mode')}
-                      .value=${this._config.image_fit_mode || 'cover'}
-                      .configValue=${'image_fit_mode'}
-                      @selected=${this._valueChanged}
-                      @closed=${(ev: Event) => ev.stopPropagation()}
-                      fixedMenuPosition
-                      naturalMenuWidth
-                    >
-                      <mwc-list-item value="cover"
-                        >${localize(
-                          this.hass,
-                          'component.rss-accordion.editor.image_fit_mode_options.cover',
-                        )}</mwc-list-item
-                      >
-                      <mwc-list-item value="contain"
-                        >${localize(
-                          this.hass,
-                          'component.rss-accordion.editor.image_fit_mode_options.contain',
-                        )}</mwc-list-item
-                      >
-                    </ha-select>
-                  `
-                : ''}
-            </div>
-          </div>
-
+          ${this._config.show_item_image !== false
+            ? html`
+                <div class="group">
+                  <div class="group-header">
+                    ${localize(this.hass, 'component.rss-accordion.editor.groups.item_images')}
+                  </div>
+                  <div class="row">
+                    <ha-textfield
+                      .label=${localize(this.hass, 'component.rss-accordion.editor.image_ratio')}
+                      .value=${this._config.image_ratio || ''}
+                      .configValue=${'image_ratio'}
+                      @input=${this._valueChanged}
+                      .placeholder=${'auto'}
+                      .pattern=${'^auto$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)?\\s*\\/\\s*\\d+(\\.\\d+)?$'}
+                      .validationMessage=${localize(
+                        this.hass,
+                        'component.rss-accordion.editor.image_ratio_validation_message',
+                      )}
+                    ></ha-textfield>
+                    ${this._config.image_ratio && this._config.image_ratio !== 'auto'
+                      ? html`
+                          <ha-select
+                            .label=${localize(this.hass, 'component.rss-accordion.editor.image_fit_mode')}
+                            .value=${this._config.image_fit_mode || 'cover'}
+                            .configValue=${'image_fit_mode'}
+                            @selected=${this._valueChanged}
+                            @closed=${(ev: Event) => ev.stopPropagation()}
+                            fixedMenuPosition
+                            naturalMenuWidth
+                          >
+                            <mwc-list-item value="cover"
+                              >${localize(
+                                this.hass,
+                                'component.rss-accordion.editor.image_fit_mode_options.cover',
+                              )}</mwc-list-item
+                            >
+                            <mwc-list-item value="contain"
+                              >${localize(
+                                this.hass,
+                                'component.rss-accordion.editor.image_fit_mode_options.contain',
+                              )}</mwc-list-item
+                            >
+                          </ha-select>
+                        `
+                      : ''}
+                  </div>
+                </div>
+              `
+            : ''}
           ${channel
             ? html`
                 <div class="group">
-                  <div class="group-header">${localize(this.hass, 'component.rss-accordion.editor.groups.channel')}</div>
+                  <div class="group-header">
+                    ${localize(this.hass, 'component.rss-accordion.editor.groups.channel')}
+                  </div>
                   <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_info')}>
                     <ha-switch
                       .checked=${!!this._config.show_channel_info}
@@ -218,7 +266,9 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                   </ha-formfield>
                   ${this._config.show_channel_info && channelImage
                     ? html`
-                        <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.crop_channel_image')}>
+                        <ha-formfield
+                          .label=${localize(this.hass, 'component.rss-accordion.editor.crop_channel_image')}
+                        >
                           <ha-switch
                             .checked=${!!this._config.crop_channel_image}
                             .configValue=${'crop_channel_image'}

@@ -23,7 +23,9 @@
     },
     "show_channel_info": "Kanal-Infos anzeigen (vom 'channel'-Attribut)",
     "show_channel_published_date": "Letzte Aktualisierung des Kanals anzeigen",
-    "crop_channel_image": "Kanalbild als zugeschnittenen Kreis anzeigen"
+    "crop_channel_image": "Kanalbild als zugeschnittenen Kreis anzeigen",
+    "show_audio_player": "Audio-Player anzeigen",
+    "show_item_image": "Bilder der Einträge anzeigen"
   },
   "card": {
     "to_news_article": "Zum Nachrichtenartikel",

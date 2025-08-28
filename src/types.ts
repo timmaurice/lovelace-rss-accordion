@@ -62,6 +62,7 @@ export interface FeedEntry {
   description?: string;
   published: string;
   image?: string;
+  audio?: string;
   [key: string]: unknown;
 }
 
@@ -73,7 +74,9 @@ export interface RssAccordionConfig extends LovelaceCardConfig {
   image_ratio?: string;
   image_fit_mode?: 'cover' | 'contain';
   initial_open?: boolean;
+  show_item_image?: boolean;
   new_pill_duration_hours?: number;
+  show_audio_player?: boolean;
   show_channel_info?: boolean;
   crop_channel_image?: boolean;
   show_published_date?: boolean;

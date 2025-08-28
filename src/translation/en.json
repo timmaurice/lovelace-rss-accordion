@@ -23,7 +23,9 @@
     },
     "show_channel_info": "Show Channel Info (from 'channel' attribute)",
     "show_channel_published_date": "Show channel's last update time",
-    "crop_channel_image": "Display channel image as a cropped circle"
+    "crop_channel_image": "Display channel image as a cropped circle",
+    "show_audio_player": "Show Audio Player",
+    "show_item_image": "Show Item Images"
   },
   "card": {
     "to_news_article": "To the news article",

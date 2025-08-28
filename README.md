@@ -17,6 +17,7 @@ A custom Lovelace card for Home Assistant to display RSS feed items from a senso
 - "NEW" pill for recent articles (published within the last hour by default, and configurable).
 - Visited articles are greyed out to easily distinguish them from unread ones.
 - Displays a hero image if the feed item provides a dedicated `image` URL. When a hero image is shown, any images inside the summary are hidden to prevent duplicates.
+- Built-in audio player for feeds with audio enclosures (e.g., podcasts).
 - Optionally displays channel information (title, description, image) from the feed sensor's attributes.
 - Option to open the first (latest) item on card load.
 - Customizable number of items to display.
@@ -43,20 +44,22 @@ You can now add the card to your dashboard.
 
 ## Configuration
 
-| Name                      | Type    | Default      | Description                                                                                                                                                                                                 |
-| ------------------------- | ------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`                    | string  | **Required** | `custom:rss-accordion`                                                                                                                                                                                      |
-| `entity`                  | string  | **Required** | The entity ID of your feed sensor or event.                                                                                                                                                                 |
-| `title`                   | string  | `''`         | The title of the card.                                                                                                                                                                                      |
-| `max_items`               | number  | All items    | The maximum number of feed items to display.                                                                                                                                                                |
-| `new_pill_duration_hours` | number  | `1`          | The duration in hours for which the "NEW" pill is shown on recent items.                                                                                                                                    |
-| `image_ratio`             | string  | `auto`       | The CSS `aspect-ratio` for item images (e.g., `16/9`, `1.77`). Images are cropped to fit.                                                                                                                   |
-| `image_fit_mode`          | string  | `cover`      | How the image should fit. `cover` (fill & crop) or `contain` (fit inside).                                                                                                                                  |
-| `initial_open`            | boolean | `false`      | If `true`, the first/newest item will be open by default when the card loads.                                                                                                                               |
-| `allow_multiple`          | boolean | `false`      | If `true`, allows multiple accordion items to be open simultaneously.                                                                                                                                       |
+| Name                      | Type    | Default      | Description                                                                                                                                                                                                          |
+| ------------------------- | ------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`                    | string  | **Required** | `custom:rss-accordion`                                                                                                                                                                                               |
+| `entity`                  | string  | **Required** | The entity ID of your feed sensor or event.                                                                                                                                                                          |
+| `title`                   | string  | `''`         | The title of the card.                                                                                                                                                                                               |
+| `max_items`               | number  | All items    | The maximum number of feed items to display.                                                                                                                                                                         |
+| `new_pill_duration_hours` | number  | `1`          | The duration in hours for which the "NEW" pill is shown on recent items.                                                                                                                                             |
+| `show_item_image`         | boolean | `true`       | If `false`, hides the main image for each feed item.                                                                                                                                                                 |
+| `image_ratio`             | string  | `auto`       | The CSS `aspect-ratio` for item images (e.g., `16/9`, `1.77`). Images are cropped to fit.                                                                                                                            |
+| `image_fit_mode`          | string  | `cover`      | How the image should fit. `cover` (fill & crop) or `contain` (fit inside).                                                                                                                                           |
+| `initial_open`            | boolean | `false`      | If `true`, the first/newest item will be open by default when the card loads.                                                                                                                                        |
+| `allow_multiple`          | boolean | `false`      | If `true`, allows multiple accordion items to be open simultaneously.                                                                                                                                                |
+| `show_audio_player`       | boolean | `true`       | If `false`, hides the audio player for feed items that include an audio enclosure (e.g., podcasts).                                                                                                                  |
 | `show_channel_info`       | boolean | `false`      | If `true`, displays the channel's info (title, description, image) above the feed items. This option is only available for entities that have a `channel` attribute (e.g. from the `feedparser` custom integration). |
-| `crop_channel_image`      | boolean | `false`      | If `true`, displays the channel image as a 60x60px cropped circle. By default, the image is shown at 50% width without cropping. Only applicable if `show_channel_info` is true and a channel image exists. |
-| `show_published_date`     | boolean | `false`      | If `true`, displays the channel's last update time. Only applicable if `show_channel_info` is true and the sensor has a `channel.published` attribute.                                                      |
+| `crop_channel_image`      | boolean | `false`      | If `true`, displays the channel image as a 60x60px cropped circle. By default, the image is shown at 50% width without cropping. Only applicable if `show_channel_info` is true and a channel image exists.          |
+| `show_published_date`     | boolean | `false`      | If `true`, displays the channel's last update time. Only applicable if `show_channel_info` is true and the sensor has a `channel.published` attribute.                                                               |
 
 ### Examples
 
