@@ -13,7 +13,6 @@
     "max_items": "Maximum Items",
     "max_items_placeholder": "All items",
     "new_pill_duration_hours": "Duration for 'NEW' pill (hours)",
-    "strip_summary_images": "Remove images from summary (use when you see two images)",
     "image_ratio": "Image aspect ratio (e.g. 16/9 or 1.77)",
     "image_ratio_validation_message": "Invalid format. Use 'auto', '16/9', or '1.77'.",
     "image_fit_mode": "Image Fit Mode",

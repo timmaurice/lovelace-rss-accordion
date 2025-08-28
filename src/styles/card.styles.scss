@@ -121,7 +121,8 @@
       cursor: default;
       pointer-events: none;
       text-decoration: none;
-      white-space: normal; /* Allow titles to wrap */
+      white-space: normal;
+      /* Allow titles to wrap */
 
       &:visited {
         color: var(--secondary-text-color);
@@ -216,5 +217,15 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+.audio-player-container {
+  margin-bottom: 1em;
+
+  audio {
+    border-radius: 50px;
+    height: 40px;
+    width: 100%;
   }
 }

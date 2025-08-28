@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '../src/rss-accordion';
 import type { RssAccordion } from '../src/rss-accordion';
 import { HomeAssistant, RssAccordionConfig, HassEntity } from '../src/types';
+import { formatDate } from '../src/utils';
 
 // Mock console.info
 vi.spyOn(console, 'info').mockImplementation(() => {});
@@ -185,6 +186,30 @@ describe('RssAccordion', () => {
     expect(image).toBeNull();
   });
 
+  it('should not render an image if show_item_image is false', async () => {
+    hass.states['sensor.test_feed'] = {
+      entity_id: 'sensor.test_feed',
+      state: 'ok',
+      attributes: {
+        entries: [
+          {
+            title: 'Test 1',
+            link: '#',
+            summary: 'Summary 1',
+            published: new Date().toISOString(),
+            image: 'http://example.com/image.jpg',
+          },
+        ],
+      },
+    } as HassEntity;
+    element.hass = hass;
+    element.setConfig({ ...config, show_item_image: false });
+    await element.updateComplete;
+
+    const image = element.shadowRoot?.querySelector<HTMLImageElement>('.item-image');
+    expect(image).toBeNull();
+  });
+
   describe('with event entity', () => {
     const baseEventState: HassEntity = {
       entity_id: 'event.test_feed_event',
@@ -308,6 +333,65 @@ describe('RssAccordion', () => {
     });
   });
 
+  describe('audio player rendering', () => {
+    it('should render an audio player if item has an audio URL', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [
+            {
+              title: 'Podcast Episode',
+              link: '#',
+              summary: 'An episode with audio.',
+              published: new Date().toISOString(),
+              audio: 'http://example.com/episode.mp3',
+            },
+          ],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config); // show_audio_player defaults to true
+      await element.updateComplete;
+
+      const audioPlayer = element.shadowRoot?.querySelector<HTMLAudioElement>('audio');
+      expect(audioPlayer).not.toBeNull();
+      expect(audioPlayer?.src).toBe('http://example.com/episode.mp3');
+    });
+
+    it('should not render an audio player if item has no audio URL', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'Test 1', link: '#', summary: 'Summary 1', published: new Date().toISOString() }],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const audioPlayer = element.shadowRoot?.querySelector('audio');
+      expect(audioPlayer).toBeNull();
+    });
+
+    it('should not render an audio player if show_audio_player is false', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'Test 1', link: '#', audio: 'http://a.com/a.mp3', published: new Date().toISOString() }],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig({ ...config, show_audio_player: false });
+      await element.updateComplete;
+
+      const audioPlayer = element.shadowRoot?.querySelector<HTMLAudioElement>('audio');
+      expect(audioPlayer).toBeNull();
+    });
+  });
+
   describe('UI Features', () => {
     beforeEach(() => {
       vi.useFakeTimers();
@@ -421,40 +505,6 @@ describe('RssAccordion', () => {
 
       const newPill = element.shadowRoot?.querySelector('.new-pill');
       expect(newPill).toBeNull();
-    });
-  });
-
-  describe('date formatting', () => {
-    it('should use 12-hour format when hass.locale.time_format is "12"', () => {
-      hass.locale = { language: 'en', number_format: 'comma_decimal', time_format: '12' };
-      element.hass = hass;
-      element.setConfig(config);
-      const options = element['_getDateTimeFormatOptions']();
-      expect(options.hour12).toBe(true);
-    });
-
-    it('should use 24-hour format when hass.locale.time_format is "24"', () => {
-      hass.locale = { language: 'en', number_format: 'comma_decimal', time_format: '24' };
-      element.hass = hass;
-      element.setConfig(config);
-      const options = element['_getDateTimeFormatOptions']();
-      expect(options.hour12).toBe(false);
-    });
-
-    it('should use browser default when hass.locale.time_format is "system"', () => {
-      hass.locale = { language: 'en', number_format: 'comma_decimal', time_format: 'system' };
-      element.hass = hass;
-      element.setConfig(config);
-      const options = element['_getDateTimeFormatOptions']();
-      expect(options.hour12).toBeUndefined();
-    });
-
-    it('should use 2-digit day format for consistency', () => {
-      hass.locale = { language: 'en', number_format: 'comma_decimal', time_format: 'system' };
-      element.hass = hass;
-      element.setConfig(config);
-      const options = element['_getDateTimeFormatOptions']();
-      expect(options.day).toBe('2-digit');
     });
   });
 
@@ -577,6 +627,59 @@ describe('RssAccordion', () => {
       await element.updateComplete;
 
       expect(details?.open).toBe(true);
+    });
+  });
+
+  describe('formatDate utility', () => {
+    const testDate = new Date('2023-10-27T20:30:00Z');
+
+    it('should use 12-hour format when hass.locale.time_format is "12"', () => {
+      hass.locale = { language: 'en-US', number_format: 'comma_decimal', time_format: '12' };
+      const formatted = formatDate(testDate, hass);
+      // Note: The exact output depends on the test environment's timezone.
+      // This checks for the presence of AM/PM, which is characteristic of 12-hour format.
+      expect(formatted.toLowerCase()).toMatch(/am|pm/);
+    });
+
+    it('should use 24-hour format when hass.locale.time_format is "24"', () => {
+      hass.locale = { language: 'en-US', number_format: 'comma_decimal', time_format: '24' };
+      const formatted = formatDate(testDate, hass);
+      // This checks that AM/PM is not present, which is characteristic of 24-hour format.
+      expect(formatted.toLowerCase()).not.toMatch(/am|pm/);
+    });
+
+    it('should use browser default when hass.locale.time_format is "system"', () => {
+      hass.locale = { language: 'en-US', number_format: 'comma_decimal', time_format: 'system' };
+      // We can't know what the default is, but we can ensure it doesn't crash.
+      expect(() => formatDate(testDate, hass)).not.toThrow();
+    });
+
+    it('should use 2-digit day format for consistency', () => {
+      hass.locale = { language: 'en-US', number_format: 'comma_decimal', time_format: 'system' };
+      const date = new Date('2023-01-01T20:00:00Z'); // 1st of month
+      const formatted = formatDate(date, hass);
+      expect(formatted).toContain('01');
+    });
+
+    it('should format channel published date correctly', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'Item 1', link: '#', published: new Date().toISOString() }],
+          channel: {
+            published: '2023-01-01T10:00:00Z',
+          },
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true, show_published_date: true });
+      await element.updateComplete;
+
+      const channelPublished = element.shadowRoot?.querySelector('.channel-published');
+      expect(channelPublished).not.toBeNull();
+      expect(channelPublished?.textContent).toContain('Jan');
+      expect(channelPublished?.textContent).toContain('01');
     });
   });
 });

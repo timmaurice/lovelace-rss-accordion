@@ -9,7 +9,8 @@ import {
   RssAccordionConfig,
   FeedEntry,
 } from './types.js';
-import { localize } from './localize.js';
+import { localize } from './localize';
+import { formatDate } from './utils';
 import styles from './styles/card.styles.scss';
 
 const ELEMENT_NAME = 'rss-accordion';
@@ -238,28 +239,6 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     });
   }
 
-  private _getDateTimeFormatOptions(): Intl.DateTimeFormatOptions {
-    const options: Intl.DateTimeFormatOptions = {
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-      hour: 'numeric',
-      minute: '2-digit',
-    };
-
-    // Respect the user's 12/24 hour format setting from Home Assistant
-    if (this.hass.locale) {
-      // hass.locale.time_format can be '12', '24', or 'system'.
-      // Let's be explicit. 'system' will fallback to browser default which is what we want.
-      if (this.hass.locale.time_format === '12') {
-        options.hour12 = true;
-      } else if (this.hass.locale.time_format === '24') {
-        options.hour12 = false;
-      }
-    }
-    return options;
-  }
-
   private _getFeedItems(): FeedEntry[] {
     const stateObj = this.hass.states[this._config.entity];
     if (!stateObj) {
@@ -359,7 +338,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const processedContent = showImage ? content.replace(/<img[^>]*>/gi, '') : content;
 
     const publishedDate = new Date(item.published);
-    const formattedDate = publishedDate.toLocaleString(this.hass.language, this._getDateTimeFormatOptions());
+    const formattedDate = formatDate(publishedDate, this.hass);
 
     const newPillDurationHours = this._config.new_pill_duration_hours ?? 1;
     const ageInMinutes = (new Date().getTime() - publishedDate.getTime()) / (1000 * 60);
@@ -428,9 +407,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const channelDescription = (channel?.description || channel?.subtitle) as string | undefined;
     const channelImage = channel?.image as string | undefined;
     const channelPublished = channel?.published as string | undefined;
-    const formattedChannelPublished = channelPublished
-      ? new Date(channelPublished).toLocaleString(this.hass.language, this._getDateTimeFormatOptions())
-      : undefined;
+    const formattedChannelPublished = channelPublished ? formatDate(channelPublished, this.hass) : undefined;
 
     const allEntries = this._getFeedItems();
     const maxItems = this._config.max_items ?? allEntries.length;
@@ -463,14 +440,6 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
   static styles = css`
     ${unsafeCSS(styles)}
-    .audio-player-container {
-      margin-bottom: 1em;
-    }
-    .audio-player-container audio {
-      width: 100%;
-      height: 40px;
-      border-radius: 50px;
-    }
   `;
 }
 
