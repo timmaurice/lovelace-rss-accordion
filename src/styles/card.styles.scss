@@ -1,3 +1,5 @@
+$padding: 1em;
+
 .card-content {
   padding: 16px;
 }
@@ -19,12 +21,13 @@
     border-radius: 0;
     height: auto;
     object-fit: contain;
-    width: calc(50% - 8px);
+    width: calc(25% - 8px);
   }
 
   .channel-text {
     display: flex;
     flex-direction: column;
+    flex-grow: 1;
     justify-content: center;
     min-width: 0;
     /* Prevents text from overflowing */
@@ -54,8 +57,18 @@
     }
   }
 
+  .channel-actions {
+    align-items: center;
+    display: flex;
+    container-type: inline-size; /* Establish this as a query container */
+    gap: 8px;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+
   .channel-link {
     color: var(--primary-color);
+    flex-shrink: 0; /* Prevents the link from shrinking and wrapping */
     font-weight: bold;
     text-decoration: none;
 
@@ -104,21 +117,21 @@
 
   .header-main {
     align-items: center;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 1fr auto;
     width: 100%;
 
     .header-badges {
       align-items: center;
       display: flex;
-      flex-shrink: 0;
       gap: 8px;
-      margin-left: 8px;
     }
 
     .title-link {
       color: var(--primary-text-color);
       cursor: default;
+      overflow-wrap: break-word;
       pointer-events: none;
       text-decoration: none;
       white-space: normal;
@@ -137,6 +150,11 @@
       font-weight: bold;
       padding: 2px 8px;
     }
+
+    .bookmark-button {
+      --mdc-icon-button-size: 24px;
+      color: var(--accent-color);
+    }
   }
 }
 
@@ -153,14 +171,14 @@
   .item-published {
     color: var(--secondary-text-color);
     font-size: 1em;
-    margin-bottom: 8px;
+    margin-bottom: $padding;
   }
 
   .item-image {
     border-radius: var(--ha-card-border-radius, 4px);
     display: block;
     height: auto;
-    margin-bottom: 8px;
+    margin-bottom: $padding;
     max-width: 100%;
   }
 
@@ -221,11 +239,58 @@
 }
 
 .audio-player-container {
-  margin-bottom: 1em;
+  line-height: 0;
+  margin-bottom: $padding;
 
   audio {
     border-radius: 50px;
     height: 40px;
     width: 100%;
+  }
+}
+
+.listened-icon {
+  color: var(--primary-color);
+  vertical-align: middle;
+}
+
+.bookmark-filter-button {
+  --mdc-button-outline-color: var(--divider-color);
+  --mdc-theme-primary: var(--primary-text-color);
+  --ha-font-size-m: 12px;
+  --icon-color: var(--primary-text-color);
+  --mdc-typography-button-font-size: 0.8rem;
+
+  ha-icon {
+    --mdc-icon-size: 12px;
+    margin-right: 0.5em;
+    transform: translate(0, -1px);
+  }
+
+  /* Hide the text on the button when the container is narrow */
+  @container (max-width: 245px) {
+    ha-icon {
+      --mdc-icon-size: 14px;
+      margin-right: 0;
+      transform: none;
+    }
+
+    .button-text {
+      display: none;
+    }
+  }
+
+  &.active {
+    --mdc-theme-primary: var(--text-primary-color);
+    --button-color-fill-loud-hover: var(--accent-color);
+    --wa-color-fill-loud: var(--accent-color);
+    --icon-color: var(--text-primary-color);
+    --mdc-button-outline-color: var(--accent-color); // Match outline to background for a solid look
+  }
+
+  &[disabled] {
+    --mdc-button-outline-color: var(--disabled-text-color);
+    color: var(--disabled-text-color);
+    cursor: not-allowed;
   }
 }

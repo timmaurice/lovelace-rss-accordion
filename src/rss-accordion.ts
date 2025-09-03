@@ -11,6 +11,7 @@ import {
 } from './types.js';
 import { localize } from './localize';
 import { formatDate } from './utils';
+import { StorageHelper } from './storage-helper.js';
 import styles from './styles/card.styles.scss';
 
 const ELEMENT_NAME = 'rss-accordion';
@@ -51,13 +52,17 @@ type LovelaceCardConstructor = {
 export class RssAccordion extends LitElement implements LovelaceCard {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private _config!: RssAccordionConfig;
+  @state() private _showOnlyBookmarks = false;
   private _resizeObserver?: ResizeObserver;
+  private _lastAudioSave = new Map<string, number>();
+  private _storageHelper!: StorageHelper;
 
   public setConfig(config: RssAccordionConfig): void {
     if (!config || !config.entity) {
       throw new Error('You need to define an entity');
     }
     this._config = config;
+    this._storageHelper = new StorageHelper(config.entity);
   }
 
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
@@ -90,7 +95,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       return 1;
     }
 
-    const allItems = this._getFeedItems();
+    const allItems = this._getAllDisplayableItems();
     const numItems = allItems.length;
     const maxItems = this._config.max_items ?? numItems;
     const displayItems = Math.min(numItems, maxItems);
@@ -100,17 +105,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const stateObj = this.hass.states[this._config.entity];
     const channel = stateObj?.attributes.channel as Record<string, unknown> | undefined;
 
-    const showChannelBlock =
-      this._config.show_channel_info &&
-      channel &&
-      (channel.title ||
-        channel.description ||
-        channel.subtitle ||
-        channel.image ||
-        channel.link ||
-        (this._config.show_published_date && channel.published));
-
-    if (showChannelBlock) {
+    if (this._shouldRenderChannelInfo(channel)) {
       size += 2; // Add 2 for the channel info block
     }
 
@@ -153,6 +148,27 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         });
       }
     });
+  }
+
+  protected shouldUpdate(changedProperties: Map<string | number | symbol, unknown>): boolean {
+    if (changedProperties.has('_config')) {
+      return true;
+    }
+
+    const oldHass = changedProperties.get('hass') as HomeAssistant | undefined;
+
+    // Check if the entity that this card uses has changed, or if the language has changed.
+    if (oldHass) {
+      if (
+        oldHass.states[this._config.entity] !== this.hass.states[this._config.entity] ||
+        oldHass.language !== this.hass.language
+      ) {
+        return true;
+      }
+      return false; // All other hass changes are ignored
+    }
+
+    return true; // First render
   }
 
   protected firstUpdated(): void {
@@ -239,6 +255,86 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     });
   }
 
+  private _onAudioLoaded(e: Event, audioUrl: string): void {
+    const audioEl = e.target as HTMLAudioElement;
+    const progress = this._storageHelper.getAudioProgress(audioUrl);
+    if (progress && !progress.completed) {
+      audioEl.currentTime = progress.currentTime;
+    }
+  }
+
+  private _onAudioTimeUpdate(e: Event, audioUrl: string): void {
+    const now = Date.now();
+    const lastSave = this._lastAudioSave.get(audioUrl);
+
+    // This is a leading-edge throttle. It fires on the first event, then enforces a cooldown.
+    if (lastSave === undefined || now - lastSave > 5000) {
+      const audioEl = e.target as HTMLAudioElement;
+
+      // On the very first event, the time might be 0. Don't save a 0-progress state.
+      if (lastSave === undefined && audioEl.currentTime === 0) {
+        this._lastAudioSave.set(audioUrl, now); // Just start the timer
+        return;
+      }
+
+      const progress = this._storageHelper.getAudioProgress(audioUrl) || { currentTime: 0, completed: false };
+
+      if (progress.completed) {
+        return;
+      }
+
+      progress.currentTime = audioEl.currentTime;
+      this._storageHelper.setAudioProgress(audioUrl, progress);
+      this._lastAudioSave.set(audioUrl, now);
+    }
+  }
+
+  private _onAudioEnded(e: Event, audioUrl: string): void {
+    const progress = this._storageHelper.getAudioProgress(audioUrl) || { currentTime: 0, completed: false };
+    this._storageHelper.setAudioProgress(audioUrl, {
+      ...progress,
+      currentTime: 0,
+      completed: true,
+      completedAt: new Date().toISOString(),
+    });
+    this.requestUpdate();
+  }
+
+  private _toggleBookmark(e: Event, item: FeedEntry): void {
+    e.stopPropagation();
+    e.preventDefault();
+
+    const isBookmarked = this._storageHelper.isBookmarked(item);
+    this._storageHelper.setBookmark(item, !isBookmarked);
+    this.requestUpdate();
+  }
+
+  private _getAllDisplayableItems(): FeedEntry[] {
+    const itemsMap = new Map<string, FeedEntry>();
+
+    // Add stored bookmarks first
+    if (this._config.show_bookmarks) {
+      const storedBookmarks = this._storageHelper.getBookmarkedItems();
+      for (const item of storedBookmarks) {
+        itemsMap.set(this._storageHelper.getBookmarkKey(item), item);
+      }
+    }
+
+    // Add live feed items, overwriting stored ones if they conflict,
+    // ensuring we have the latest version.
+    const liveFeedItems = this._getFeedItems();
+    for (const item of liveFeedItems) {
+      itemsMap.set(this._storageHelper.getBookmarkKey(item), item);
+    }
+
+    const allItems = Array.from(itemsMap.values());
+
+    // Sort all items by date, newest first
+    allItems.sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
+
+    return allItems;
+  }
+
   private _getFeedItems(): FeedEntry[] {
     const stateObj = this.hass.states[this._config.entity];
     if (!stateObj) {
@@ -281,48 +377,70 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return item.image;
   }
 
-  private _renderChannelInfo(
-    channelTitle: string | undefined,
-    channelDescription: string | undefined,
-    channelImage: string | undefined,
-    channelLink: string | undefined,
-    channelPublished: string | undefined,
-    formattedChannelPublished: string | undefined,
-  ): TemplateResult {
-    if (
-      !this._config.show_channel_info ||
-      !(
-        channelTitle ||
-        channelDescription ||
-        channelImage ||
-        channelLink ||
-        (this._config.show_published_date && channelPublished)
-      )
-    ) {
+  private _shouldRenderChannelInfo(channel: Record<string, unknown> | undefined): boolean {
+    if (!this._config.show_channel_info || !channel) {
+      return false;
+    }
+
+    return !!(
+      channel.title ||
+      channel.description ||
+      channel.subtitle ||
+      channel.image ||
+      channel.link ||
+      (this._config.show_published_date && channel.published)
+    );
+  }
+
+  private _renderChannelActions(channelLink: string | undefined): TemplateResult {
+    const allEntries = this._getAllDisplayableItems();
+    const hasAnyBookmarks = !!(
+      this._config.show_bookmarks && allEntries.some((item) => this._storageHelper.isBookmarked(item))
+    );
+
+    return html`
+      <div class="channel-actions">
+        ${channelLink
+          ? html`<a class="channel-link" href="${channelLink}" target="_blank" rel="noopener noreferrer"
+              >${localize(this.hass, 'component.rss-accordion.card.visit_channel')}</a
+            >`
+          : ''}
+        ${this._renderBookmarkFilter(hasAnyBookmarks)}
+      </div>
+    `;
+  }
+
+  private _renderChannelInfo(channel: Record<string, unknown> | undefined): TemplateResult {
+    if (!channel) {
       return html``;
     }
 
+    const channelTitle = channel.title as string | undefined;
+    const channelLink = channel.link as string | undefined;
+    const channelDescription = (channel.description || channel.subtitle) as string | undefined;
+    const channelImage = channel.image as string | undefined;
+    const channelPublished = channel.published as string | undefined;
+    const formattedChannelPublished = channelPublished ? formatDate(channelPublished, this.hass) : undefined;
+
     return html`
       <div class="channel-info ${this._config.crop_channel_image ? 'cropped-image' : ''}">
-        ${this._config.show_channel_info && channelImage
-          ? html`<img class="channel-image" src="${channelImage}" alt="${channelTitle || 'Channel Image'}" />`
+        ${channelImage
+          ? html`<img
+              class="channel-image"
+              src="${channelImage}"
+              alt="${channelTitle || localize(this.hass, 'component.rss-accordion.card.channel_image_alt')}"
+            />`
           : ''}
         <div class="channel-text">
-          ${this._config.show_channel_info && channelTitle ? html`<h2 class="channel-title">${channelTitle}</h2>` : ''}
+          ${channelTitle ? html`<h2 class="channel-title">${channelTitle}</h2>` : ''}
           ${this._config.show_published_date && formattedChannelPublished
             ? html`<p class="channel-published">
                 <span class="label">${localize(this.hass, 'component.rss-accordion.card.last_updated')}:</span>
                 ${formattedChannelPublished}
               </p>`
             : ''}
-          ${this._config.show_channel_info && channelDescription
-            ? html`<p class="channel-description">${channelDescription}</p>`
-            : ''}
-          ${this._config.show_channel_info && channelLink
-            ? html`<a class="channel-link" href="${channelLink}" target="_blank" rel="noopener noreferrer"
-                >${localize(this.hass, 'component.rss-accordion.card.visit_channel')}</a
-              >`
-            : ''}
+          ${channelDescription ? html`<p class="channel-description">${channelDescription}</p>` : ''}
+          ${this._renderChannelActions(channelLink)}
         </div>
       </div>
     `;
@@ -343,6 +461,17 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const newPillDurationHours = this._config.new_pill_duration_hours ?? 1;
     const ageInMinutes = (new Date().getTime() - publishedDate.getTime()) / (1000 * 60);
     const isNew = ageInMinutes >= 0 && ageInMinutes < newPillDurationHours * 60;
+    const isBookmarked = this._storageHelper.isBookmarked(item);
+
+    const audioUrlString = item.audio as string | undefined;
+    const audioProgress = audioUrlString ? this._storageHelper.getAudioProgress(audioUrlString) : null;
+    const isCompleted = audioProgress?.completed ?? false;
+
+    let listenedTooltip = localize(this.hass, 'component.rss-accordion.card.listened');
+    if (isCompleted && audioProgress?.completedAt) {
+      const completedDate = formatDate(audioProgress.completedAt, this.hass);
+      listenedTooltip = localize(this.hass, 'component.rss-accordion.card.listened_on', { date: completedDate });
+    }
 
     const imageStyles = {
       aspectRatio: this._config.image_ratio,
@@ -355,8 +484,30 @@ export class RssAccordion extends LitElement implements LovelaceCard {
           <div class="header-main">
             <a class="title-link" href="${item.link}" target="_blank" rel="noopener noreferrer"> ${item.title} </a>
             <div class="header-badges">
+              ${this._config.show_bookmarks
+                ? html`<span
+                    class="bookmark-button"
+                    role="button"
+                    tabindex="0"
+                    title="${localize(
+                      this.hass,
+                      isBookmarked
+                        ? 'component.rss-accordion.card.remove_bookmark'
+                        : 'component.rss-accordion.card.add_bookmark',
+                    )}"
+                    @click=${(e: Event) => this._toggleBookmark(e, item)}
+                    ><ha-icon icon=${isBookmarked ? 'mdi:star' : 'mdi:star-outline'}></ha-icon
+                  ></span>`
+                : ''}
               ${isNew
                 ? html`<span class="new-pill">${localize(this.hass, 'component.rss-accordion.card.new_pill')}</span>`
+                : ''}
+              ${audioUrlString && isCompleted
+                ? html`<ha-icon
+                    class="listened-icon"
+                    icon="mdi:check-circle-outline"
+                    title="${listenedTooltip}"
+                  ></ha-icon>`
                 : ''}
             </div>
           </div>
@@ -374,7 +525,13 @@ export class RssAccordion extends LitElement implements LovelaceCard {
           ${this._config.show_audio_player !== false && item.audio
             ? html`
                 <div class="audio-player-container">
-                  <audio controls .src=${item.audio as string}></audio>
+                  <audio
+                    controls
+                    .src=${audioUrlString}
+                    @loadedmetadata=${(e: Event) => this._onAudioLoaded(e, audioUrlString as string)}
+                    @timeupdate=${(e: Event) => this._onAudioTimeUpdate(e, audioUrlString as string)}
+                    @ended=${(e: Event) => this._onAudioEnded(e, audioUrlString as string)}
+                  ></audio>
                 </div>
               `
             : ''}
@@ -396,27 +553,42 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     if (!stateObj) {
       return html`
         <ha-card .header=${this._config.title}>
-          <div class="card-content warning">Entity not found: ${this._config.entity}</div>
+          <div class="card-content warning">
+            ${localize(this.hass, 'component.rss-accordion.card.entity_not_found', { entity: this._config.entity })}
+          </div>
         </ha-card>
       `;
     }
 
     const channel = stateObj.attributes.channel as Record<string, unknown> | undefined;
-    const channelTitle = channel?.title as string | undefined;
-    const channelLink = channel?.link as string | undefined;
-    const channelDescription = (channel?.description || channel?.subtitle) as string | undefined;
-    const channelImage = channel?.image as string | undefined;
-    const channelPublished = channel?.published as string | undefined;
-    const formattedChannelPublished = channelPublished ? formatDate(channelPublished, this.hass) : undefined;
 
-    const allEntries = this._getFeedItems();
+    let allEntries = this._getAllDisplayableItems();
+    const hasAnyBookmarks = !!(
+      this._config.show_bookmarks && allEntries.some((item) => this._storageHelper.isBookmarked(item))
+    );
+
+    if (this._config.show_bookmarks && this._showOnlyBookmarks) {
+      allEntries = allEntries.filter((item) => this._storageHelper.isBookmarked(item));
+    }
+
     const maxItems = this._config.max_items ?? allEntries.length;
     const itemsToDisplay = allEntries.slice(0, maxItems);
 
     if (itemsToDisplay.length === 0) {
+      if (this._showOnlyBookmarks) {
+        return html`
+          <ha-card .header=${this._config.title}>
+            <div class="card-content">
+              ${this._shouldRenderChannelInfo(channel) ? this._renderChannelInfo(channel) : ''}
+              ${this._renderBookmarkFilter(hasAnyBookmarks)}
+              <i>${localize(this.hass, 'component.rss-accordion.card.no_bookmarked_entries')}</i>
+            </div>
+          </ha-card>
+        `;
+      }
       return html`
         <ha-card .header=${this._config.title}>
-          <div class="card-content"><i>No entries available.</i></div>
+          <div class="card-content"><i>${localize(this.hass, 'component.rss-accordion.card.no_entries')}</i></div>
         </ha-card>
       `;
     }
@@ -424,23 +596,51 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return html`
       <ha-card .header=${this._config.title}>
         <div class="card-content">
-          ${this._renderChannelInfo(
-            channelTitle,
-            channelDescription,
-            channelImage,
-            channelLink,
-            channelPublished,
-            formattedChannelPublished,
-          )}
+          ${this._shouldRenderChannelInfo(channel)
+            ? this._renderChannelInfo(channel)
+            : this._renderBookmarkFilter(hasAnyBookmarks)}
           ${itemsToDisplay.map((item) => this._renderItem(item))}
         </div>
       </ha-card>
     `;
   }
 
-  static styles = css`
-    ${unsafeCSS(styles)}
-  `;
+  private _renderBookmarkFilter(hasAnyBookmarks: boolean): TemplateResult {
+    if (!this._config.show_bookmarks) {
+      return html``;
+    }
+
+    return html`
+      <ha-button
+        outlined
+        class="bookmark-filter-button ${this._showOnlyBookmarks ? 'active' : ''}"
+        ?disabled=${!hasAnyBookmarks}
+        size="small"
+        title="${!hasAnyBookmarks
+          ? localize(this.hass, 'component.rss-accordion.card.no_bookmarks_yet_tooltip')
+          : localize(this.hass, 'component.rss-accordion.card.show_bookmarked')}"
+        @click=${() => {
+          if (hasAnyBookmarks) {
+            this._showOnlyBookmarks = !this._showOnlyBookmarks;
+          }
+        }}
+      >
+        <ha-icon icon="mdi:star"></ha-icon>
+        <span class="button-text">${localize(this.hass, 'component.rss-accordion.card.show_bookmarked')}</span>
+      </ha-button>
+    `;
+  }
+
+  static styles = [
+    css`
+      ${unsafeCSS(styles)}
+    `,
+    css`
+      .bookmark-button {
+        cursor: pointer;
+      }
+    `,
+  ];
 }
 
 if (typeof window !== 'undefined') {

@@ -80,4 +80,11 @@ export interface RssAccordionConfig extends LovelaceCardConfig {
   show_channel_info?: boolean;
   crop_channel_image?: boolean;
   show_published_date?: boolean;
+  show_bookmarks?: boolean;
+}
+
+export interface AudioProgress {
+  currentTime: number;
+  completed: boolean;
+  completedAt?: string;
 }

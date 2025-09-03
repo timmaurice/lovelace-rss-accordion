@@ -11,18 +11,28 @@ A custom Lovelace card for Home Assistant to display RSS feed items from a senso
 
 ## Features
 
-- Display items from a `sensor` entity _(like one from the Feed Parser integration)_ or an `event` entity _(like one from the core `feedreader` integration)_.
-- Each item is displayed in a collapsible accordion.
-- Option to only allow one item to be open at a time.
-- "NEW" pill for recent articles (published within the last hour by default, and configurable).
-- Visited articles are greyed out to easily distinguish them from unread ones.
-- Displays a hero image if the feed item provides a dedicated `image` URL. When a hero image is shown, any images inside the summary are hidden to prevent duplicates.
-- Built-in audio player for feeds with audio enclosures (e.g., podcasts).
-- Optionally displays channel information (title, description, image) from the feed sensor's attributes.
-- Option to open the first (latest) item on card load.
-- Customizable number of items to display.
+### Core Functionality & Layout
 
-![RSS Accordion Card Screenshot](https://raw.githubusercontent.com/timmaurice/lovelace-rss-accordion/main/screenshot.png)
+- **Flexible Data Source**: Displays items from a `sensor` entity (e.g., Feed Parser) or an `event` entity (e.g., core `feedreader`).
+- **Accordion Layout**: Each feed item is presented in a clean, collapsible accordion view, with an option to allow single or multiple items to be open at once.
+- **Customizable Display**: Control the maximum number of items shown and optionally open the latest item automatically on card load.
+- **Channel Information**: Optionally display the feed's channel details, such as title, description, and image.
+
+### Visuals & User Experience
+
+- **Recent Item Indicator**: A "NEW" pill highlights recent articles, with a configurable duration.
+- **Read/Unread Tracking**: Visited article links are greyed out, making it easy to see what you've already read.
+- **Hero Images**: Automatically displays a hero image if provided in the feed, and hides duplicate images from the summary to keep the layout clean.
+- **Persistent Bookmarking**: Star your favorite items to save them permanently in your browser. Bookmarked items will remain visible even after they disappear from the live RSS feed.
+
+### Podcast & Audio Features
+
+- **Built-in Audio Player**: Includes an integrated player for feeds with audio enclosures, perfect for podcasts.
+- **Playback Persistence**: Remembers your listening progress. Audio resumes where you left off after a refresh, and a "Listened" icon with a completion timestamp appears for finished tracks.
+
+| The New York Times RSS                                                                                                                         | The Daily Audio Podcast RSS                                                                                                                               |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![RSS Accordion Card - The New York Times Screenshot](https://raw.githubusercontent.com/timmaurice/lovelace-rss-accordion/main/screenshot.png) | ![RSS Accordion Card - The Daily Audio Podcast Screenshot](https://raw.githubusercontent.com/timmaurice/lovelace-rss-accordion/main/screenshot-audio.png) |
 
 ## Installation
 
@@ -57,6 +67,7 @@ You can now add the card to your dashboard.
 | `initial_open`            | boolean | `false`      | If `true`, the first/newest item will be open by default when the card loads.                                                                                                                                        |
 | `allow_multiple`          | boolean | `false`      | If `true`, allows multiple accordion items to be open simultaneously.                                                                                                                                                |
 | `show_audio_player`       | boolean | `true`       | If `false`, hides the audio player for feed items that include an audio enclosure (e.g., podcasts).                                                                                                                  |
+| `show_bookmarks`          | boolean | `false`      | If `true`, enables a bookmarking feature, allowing you to star items and filter for them.                                                                                                                            |
 | `show_channel_info`       | boolean | `false`      | If `true`, displays the channel's info (title, description, image) above the feed items. This option is only available for entities that have a `channel` attribute (e.g. from the `feedparser` custom integration). |
 | `crop_channel_image`      | boolean | `false`      | If `true`, displays the channel image as a 60x60px cropped circle. By default, the image is shown at 50% width without cropping. Only applicable if `show_channel_info` is true and a channel image exists.          |
 | `show_published_date`     | boolean | `false`      | If `true`, displays the channel's last update time. Only applicable if `show_channel_info` is true and the sensor has a `channel.published` attribute.                                                               |
@@ -91,10 +102,10 @@ To contribute to the development, you'll need to set up a build environment.
     ```
 
 3.  **Start the development server:**
-    This command will watch for changes in the `src` directory and automatically rebuild the card.
+    This command will build for changes in the `src` directory and rebuild the card.
 
     ```bash
-    npm run watch
+    npm run build
     ```
 
 4.  In your Home Assistant instance, you will need to configure Lovelace to use the local development version of the card from `dist/rss-accordion.js`.
@@ -104,3 +115,7 @@ To contribute to the development, you'll need to set up a build environment.
 For further assistance or to [report issues](https://github.com/timmaurice/lovelace-rss-accordion/issues), please visit the [GitHub repository](https://github.com/timmaurice/lovelace-rss-accordion).
 
 ![Star History Chart](https://api.star-history.com/svg?repos=timmaurice/lovelace-rss-accordion&type=Date)
+
+## ☕ Support My Work
+
+[<img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="30" />](https://www.buymeacoffee.com/timmaurice)

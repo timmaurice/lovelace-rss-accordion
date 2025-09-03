@@ -24,12 +24,23 @@
     "show_channel_published_date": "Show channel's last update time",
     "crop_channel_image": "Display channel image as a cropped circle",
     "show_audio_player": "Show Audio Player",
-    "show_item_image": "Show Item Images"
+    "show_item_image": "Show Item Images",
+    "show_bookmarks": "Enable bookmarking for items"
   },
   "card": {
     "to_news_article": "To the news article",
     "new_pill": "NEW",
     "visit_channel": "Visit channel",
-    "last_updated": "Last updated"
+    "last_updated": "Last updated",
+    "listened": "Listened",
+    "listened_on": "Listened on: {date}",
+    "entity_not_found": "Entity not found: {entity}",
+    "no_entries": "No entries available in feed.",
+    "no_bookmarked_entries": "You have no bookmarked items.",
+    "channel_image_alt": "Channel Image",
+    "add_bookmark": "Bookmark item",
+    "remove_bookmark": "Remove bookmark",
+    "show_bookmarked": "Show Bookmarked",
+    "no_bookmarks_yet_tooltip": "Bookmark an item to enable this filter"
   }
 }

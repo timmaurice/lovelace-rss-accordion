@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '../src/rss-accordion';
 import type { RssAccordion } from '../src/rss-accordion';
-import { HomeAssistant, RssAccordionConfig, HassEntity } from '../src/types';
+import { HomeAssistant, RssAccordionConfig, HassEntity, AudioProgress } from '../src/types';
+import { StorageHelper } from '../src/storage-helper';
 import { formatDate } from '../src/utils';
 
 // Mock console.info
@@ -68,8 +69,18 @@ describe('RssAccordion', () => {
       state: 'ok',
       attributes: {
         entries: [
-          { title: 'Test 1', link: '#', summary: 'Summary 1', published: new Date().toISOString() },
-          { title: 'Test 2', link: '#', summary: 'Summary 2', published: new Date().toISOString() },
+          {
+            title: 'Test 1',
+            link: '#1',
+            summary: 'Summary 1',
+            published: new Date('2023-01-01T12:00:00Z').toISOString(),
+          },
+          {
+            title: 'Test 2',
+            link: '#2',
+            summary: 'Summary 2',
+            published: new Date('2023-01-02T12:00:00Z').toISOString(),
+          },
         ],
       },
     } as HassEntity;
@@ -79,10 +90,10 @@ describe('RssAccordion', () => {
 
     const items = element.shadowRoot?.querySelectorAll('.accordion-item');
     expect(items?.length).toBe(2);
-    const firstTitle = items?.[0].querySelector('.header-main > a.title-link');
-    expect(firstTitle?.textContent?.trim()).toBe('Test 1');
+    const firstTitle = items?.[0].querySelector('.header-main > a.title-link'); // Newest item (Test 2) should be first
+    expect(firstTitle?.textContent?.trim()).toBe('Test 2');
     const firstContent = items?.[0].querySelector('.accordion-content > .item-summary');
-    expect(firstContent?.innerHTML).toBe('Summary 1');
+    expect(firstContent?.innerHTML).toBe('Summary 2');
   });
 
   it('should respect max_items config', async () => {
@@ -91,8 +102,18 @@ describe('RssAccordion', () => {
       state: 'ok',
       attributes: {
         entries: [
-          { title: 'Test 1', link: '#', summary: 'Summary 1', published: new Date().toISOString() },
-          { title: 'Test 2', link: '#', summary: 'Summary 2', published: new Date().toISOString() },
+          {
+            title: 'Test 1',
+            link: '#1',
+            summary: 'Summary 1',
+            published: new Date('2023-01-01T12:00:00Z').toISOString(),
+          },
+          {
+            title: 'Test 2',
+            link: '#2',
+            summary: 'Summary 2',
+            published: new Date('2023-01-02T12:00:00Z').toISOString(),
+          },
         ],
       },
     } as HassEntity;
@@ -267,8 +288,17 @@ describe('RssAccordion', () => {
     });
 
     it('should not render if title or link is missing', async () => {
-      delete hass.states['event.test_feed_event'].attributes.link;
-      element.hass = { ...hass };
+      // Simulate a state update from Home Assistant.
+      // For the component's `shouldUpdate` to trigger, the `hass.states[entity]`
+      // object reference must change. We achieve this by creating a new `hass` object
+      // with a new `states` object that contains the modified entity state.
+      const newEntityState = JSON.parse(JSON.stringify(hass.states['event.test_feed_event']));
+      delete newEntityState.attributes.link;
+
+      element.hass = {
+        ...hass,
+        states: { ...hass.states, 'event.test_feed_event': newEntityState },
+      };
       await element.updateComplete;
 
       const items = element.shadowRoot?.querySelectorAll('.accordion-item');
@@ -389,6 +419,286 @@ describe('RssAccordion', () => {
 
       const audioPlayer = element.shadowRoot?.querySelector<HTMLAudioElement>('audio');
       expect(audioPlayer).toBeNull();
+    });
+  });
+
+  describe('audio persistence', () => {
+    const audioUrl = 'http://example.com/episode.mp3';
+    let audioProgressMock: AudioProgress | null = null;
+
+    beforeEach(() => {
+      // Mock StorageHelper for audio
+      audioProgressMock = null;
+      vi.spyOn(StorageHelper.prototype, 'getAudioProgress').mockImplementation(() => audioProgressMock);
+      vi.spyOn(StorageHelper.prototype, 'setAudioProgress').mockImplementation((_url, progress) => {
+        audioProgressMock = progress;
+      });
+
+      // Set up a feed item with audio
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [
+            {
+              title: 'Podcast Episode',
+              link: '#',
+              summary: 'An episode with audio.',
+              published: new Date().toISOString(),
+              audio: audioUrl,
+            },
+          ],
+        },
+      } as HassEntity;
+
+      element.hass = hass;
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should save audio progress on timeupdate after interval', async () => {
+      const setAudioProgressSpy = vi.spyOn(StorageHelper.prototype, 'setAudioProgress').mockImplementation(() => {});
+      vi.useFakeTimers();
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const audioEl = element.shadowRoot?.querySelector('audio');
+      expect(audioEl).not.toBeNull();
+
+      // This first timeupdate will not save because the faked time is less than the interval
+      audioEl!.dispatchEvent(new Event('timeupdate'));
+      expect(setAudioProgressSpy).not.toHaveBeenCalled();
+
+      // Advance time past the save interval (5000ms)
+      vi.advanceTimersByTime(5001);
+
+      // This timeupdate should trigger a save
+      audioEl!.currentTime = 30;
+      audioEl!.dispatchEvent(new Event('timeupdate'));
+
+      expect(setAudioProgressSpy).toHaveBeenCalledWith(audioUrl, {
+        currentTime: 30,
+        completed: false,
+      });
+
+      vi.useRealTimers();
+    });
+
+    it('should load audio progress on loadedmetadata', async () => {
+      audioProgressMock = { currentTime: 60, completed: false };
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const audioEl = element.shadowRoot?.querySelector('audio');
+      audioEl!.dispatchEvent(new Event('loadedmetadata'));
+      await element.updateComplete;
+
+      expect(audioEl!.currentTime).toBe(60);
+    });
+
+    it('should mark audio as completed and show icon on "ended" event', async () => {
+      element.setConfig(config);
+      await element.updateComplete;
+
+      let listenedIcon = element.shadowRoot?.querySelector('.listened-icon');
+      expect(listenedIcon).toBeNull();
+
+      const audioEl = element.shadowRoot?.querySelector('audio');
+      audioEl!.dispatchEvent(new Event('ended'));
+      await element.updateComplete;
+
+      // Check that setAudioProgress was called with completed status
+      expect(audioProgressMock?.completed).toBe(true);
+      expect(audioProgressMock?.completedAt).toBeDefined();
+      expect(typeof audioProgressMock?.completedAt).toBe('string');
+
+      listenedIcon = element.shadowRoot?.querySelector('.listened-icon');
+      expect(listenedIcon).not.toBeNull();
+      expect(listenedIcon?.getAttribute('icon')).toBe('mdi:check-circle-outline');
+      expect(listenedIcon?.getAttribute('title')).toContain('Listened on:');
+    });
+
+    it('should display listened icon on initial render if audio is completed', async () => {
+      audioProgressMock = { currentTime: 0, completed: true, completedAt: new Date().toISOString() };
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const listenedIcon = element.shadowRoot?.querySelector('.listened-icon');
+      expect(listenedIcon).not.toBeNull();
+      expect(listenedIcon?.getAttribute('title')).toContain('Listened on:');
+    });
+
+    it('should not load progress for a completed audio', async () => {
+      audioProgressMock = { currentTime: 120, completed: true };
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const audioEl = element.shadowRoot?.querySelector('audio');
+      expect(audioEl).not.toBeNull();
+
+      audioEl!.currentTime = 10; // Set a non-zero time to see if it gets overwritten
+      audioEl!.dispatchEvent(new Event('loadedmetadata'));
+      await element.updateComplete;
+
+      // currentTime should not be changed because the track is marked as completed
+      expect(audioEl!.currentTime).toBe(10);
+    });
+  });
+
+  describe('bookmarking', () => {
+    let bookmarksMock: Record<string, string>;
+    let storageHelper: StorageHelper;
+    const feedItem1 = {
+      title: 'Bookmark Item 1',
+      link: 'http://example.com/item1',
+      summary: 'Summary 1',
+      published: new Date('2023-01-01T10:00:00Z').toISOString(),
+    };
+    const feedItem2 = {
+      title: 'Bookmark Item 2',
+      link: 'http://example.com/item2',
+      summary: 'Summary 2',
+      published: new Date('2023-01-02T10:00:00Z').toISOString(),
+    };
+
+    beforeEach(() => {
+      // Create an instance for test-side logic
+      storageHelper = new StorageHelper(config.entity);
+
+      // Mock StorageHelper for bookmarks
+      bookmarksMock = {};
+      vi.spyOn(StorageHelper.prototype, 'isBookmarked').mockImplementation((item) => {
+        const key = storageHelper.getBookmarkKey(item);
+        return !!bookmarksMock[key];
+      });
+      vi.spyOn(StorageHelper.prototype, 'setBookmark').mockImplementation((item, bookmarked) => {
+        const key = storageHelper.getBookmarkKey(item);
+        if (bookmarked) {
+          bookmarksMock[key] = JSON.stringify(item);
+        } else {
+          delete bookmarksMock[key];
+        }
+      });
+      vi.spyOn(StorageHelper.prototype, 'getBookmarkedItems').mockImplementation(() => {
+        return Object.values(bookmarksMock).map((itemStr) => JSON.parse(itemStr));
+      });
+
+      // Set up a feed with multiple items
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [feedItem1, feedItem2],
+        },
+      } as HassEntity;
+
+      element.hass = hass;
+      // Enable bookmarking for these tests
+      element.setConfig({ ...config, show_bookmarks: true });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should not render bookmarking UI if show_bookmarks is false', async () => {
+      element.setConfig({ ...config, show_bookmarks: false });
+      await element.updateComplete;
+
+      const bookmarkButton = element.shadowRoot?.querySelector('.bookmark-button');
+      expect(bookmarkButton).toBeNull();
+    });
+
+    it('should toggle bookmark on and save to localStorage', async () => {
+      await element.updateComplete;
+
+      const bookmarkButton = element.shadowRoot?.querySelector<HTMLElement>('.bookmark-button');
+      let bookmarkIcon = bookmarkButton?.querySelector('ha-icon');
+      expect(bookmarkButton).not.toBeNull();
+      expect(bookmarkIcon?.getAttribute('icon')).toBe('mdi:star-outline');
+      // The first item in the DOM is feedItem2 because it's newer
+      const bookmarkKey = storageHelper.getBookmarkKey(feedItem2);
+      expect(bookmarksMock[bookmarkKey]).toBeUndefined();
+
+      // Click to bookmark
+      bookmarkButton?.click();
+      await element.updateComplete;
+
+      // Check localStorage and UI
+      const storedItem = bookmarksMock[bookmarkKey];
+      expect(storedItem).not.toBeNull();
+      expect(JSON.parse(storedItem!)).toEqual(feedItem2);
+      bookmarkIcon = element.shadowRoot?.querySelector<HTMLElement>('.bookmark-button')?.querySelector('ha-icon');
+      expect(bookmarkIcon?.getAttribute('icon')).toBe('mdi:star');
+    });
+
+    it('should show a disabled filter button when there are no bookmarks, and enable it after bookmarking', async () => {
+      await element.updateComplete;
+      const filterButton = element.shadowRoot?.querySelector<HTMLButtonElement>('.bookmark-filter-button');
+      expect(filterButton, 'Filter button should exist').not.toBeNull();
+      // In JSDOM, the `disabled` property might not be immediately reflected. Checking the attribute is more reliable.
+      expect(filterButton?.hasAttribute('disabled'), 'Filter button should be disabled initially').toBe(true);
+
+      // Bookmark an item (feedItem2, the newest, is the first in the list)
+      const bookmarkButton = element.shadowRoot?.querySelector<HTMLElement>('.bookmark-button');
+      bookmarkButton?.click();
+      await element.updateComplete;
+
+      // The same button should now be enabled.
+      expect(filterButton?.hasAttribute('disabled'), 'Filter button should be enabled after bookmarking').toBe(false);
+    });
+
+    it('should filter to show only bookmarked items when filter is clicked', async () => {
+      await element.updateComplete;
+
+      // Bookmark the first item (feedItem2, the newest)
+      const bookmarkButton1 = element.shadowRoot?.querySelector<HTMLElement>('.bookmark-button');
+      bookmarkButton1?.click();
+      await element.updateComplete;
+
+      let items = element.shadowRoot?.querySelectorAll('.accordion-item');
+      expect(items?.length).toBe(2);
+
+      // Click the filter button
+      const filterButton = element.shadowRoot?.querySelector<HTMLElement>('.bookmark-filter-button');
+      filterButton?.click();
+      await element.updateComplete;
+
+      items = element.shadowRoot?.querySelectorAll('.accordion-item');
+      expect(items?.length).toBe(1);
+      // The bookmarked item was feedItem2, so it should be the only one visible
+      expect(items?.[0].querySelector('.title-link')?.textContent?.trim()).toBe(feedItem2.title);
+    });
+
+    it('should show bookmarked item even if it disappears from feed', async () => {
+      await element.updateComplete;
+
+      // Bookmark the first item (feedItem2, the newest)
+      const bookmarkButton1 = element.shadowRoot?.querySelector<HTMLElement>('.bookmark-button');
+      bookmarkButton1?.click();
+      await element.updateComplete;
+
+      // Check that feedItem2 is bookmarked
+      expect(bookmarksMock[storageHelper.getBookmarkKey(feedItem2)]).not.toBeUndefined();
+
+      // Now, update the feed so the bookmarked item (feedItem2) is gone
+      hass.states['sensor.test_feed'] = {
+        ...(hass.states['sensor.test_feed'] as HassEntity),
+        attributes: {
+          entries: [feedItem1], // Only feedItem1 remains in the live feed
+        },
+      };
+      element.hass = { ...hass }; // Trigger update
+      await element.updateComplete;
+
+      // The bookmarked item (feedItem2) should still be visible, along with the other item from the live feed (feedItem1)
+      const items = element.shadowRoot?.querySelectorAll('.accordion-item');
+      expect(items?.length).toBe(2);
+      const titles = Array.from(items || []).map((item) => item.querySelector('.title-link')?.textContent?.trim());
+      expect(titles).toContain(feedItem1.title);
+      expect(titles).toContain(feedItem2.title);
     });
   });
 

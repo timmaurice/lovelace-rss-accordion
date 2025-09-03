@@ -1,0 +1,46 @@
+{
+  "editor": {
+    "groups": {
+      "core": "Configuration de base",
+      "feed": "Éléments du flux et comportement",
+      "item_images": "Images des éléments",
+      "channel": "Informations sur le canal"
+    },
+    "title": "Titre (Optionnel)",
+    "entity": "Entité du flux",
+    "allow_multiple": "Autoriser l'ouverture de plusieurs éléments",
+    "initial_open": "Ouvrir le dernier élément au chargement",
+    "max_items": "Nombre maximum d'éléments",
+    "max_items_placeholder": "Tous les éléments",
+    "new_pill_duration_hours": "Durée d'affichage de la pastille 'NOUVEAU' (heures)",
+    "image_ratio": "Ratio d'aspect de l'image (ex: 16/9 ou 1.77)",
+    "image_ratio_validation_message": "Format invalide. Utilisez 'auto', '16/9', ou '1.77'.",
+    "image_fit_mode": "Mode d'ajustement de l'image",
+    "image_fit_mode_options": {
+      "cover": "Couvrir (remplir et rogner)",
+      "contain": "Contenir (ajuster à l'intérieur)"
+    },
+    "show_channel_info": "Afficher les informations du canal (de l'attribut 'channel')",
+    "show_channel_published_date": "Afficher la dernière heure de mise à jour du canal",
+    "crop_channel_image": "Afficher l'image du canal sous forme de cercle rogné",
+    "show_audio_player": "Afficher le lecteur audio",
+    "show_item_image": "Afficher les images des éléments",
+    "show_bookmarks": "Activer les favoris pour les éléments"
+  },
+  "card": {
+    "to_news_article": "Vers l'article",
+    "new_pill": "NOUVEAU",
+    "visit_channel": "Visiter le canal",
+    "last_updated": "Dernière mise à jour",
+    "listened": "Écouté",
+    "listened_on": "Écouté le : {date}",
+    "entity_not_found": "Entité non trouvée : {entity}",
+    "no_entries": "Aucun élément disponible dans le flux.",
+    "no_bookmarked_entries": "Vous n'avez aucun favori.",
+    "channel_image_alt": "Image du canal",
+    "add_bookmark": "Ajouter aux favoris",
+    "remove_bookmark": "Retirer des favoris",
+    "show_bookmarked": "Afficher les favoris",
+    "no_bookmarks_yet_tooltip": "Ajoutez un élément aux favoris pour activer ce filtre"
+  }
+}

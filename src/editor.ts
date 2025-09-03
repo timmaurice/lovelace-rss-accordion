@@ -193,6 +193,13 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                   </ha-formfield>
                 `
               : ''}
+            <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_bookmarks')}>
+              <ha-switch
+                .checked=${!!this._config.show_bookmarks}
+                .configValue=${'show_bookmarks'}
+                @change=${this._valueChanged}
+              ></ha-switch>
+            </ha-formfield>
             <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_item_image')}>
               <ha-switch
                 .checked=${this._config.show_item_image !== false}
