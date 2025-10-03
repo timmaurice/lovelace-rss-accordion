@@ -17,12 +17,6 @@ import styles from './styles/card.styles.scss';
 const ELEMENT_NAME = 'rss-accordion';
 const EDITOR_ELEMENT_NAME = `${ELEMENT_NAME}-editor`;
 
-console.info(
-  `%c RSS-ACCORDION %c v__CARD_VERSION__ `,
-  'color: orange; font-weight: bold; background: black',
-  'color: white; font-weight: bold; background: dimgray',
-);
-
 declare global {
   interface Window {
     customCards?: {

@@ -34,6 +34,26 @@ A custom Lovelace card for Home Assistant to display RSS feed items from a senso
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![RSS Accordion Card - The New York Times Screenshot](https://raw.githubusercontent.com/timmaurice/lovelace-rss-accordion/main/screenshot.png) | ![RSS Accordion Card - The Daily Audio Podcast Screenshot](https://raw.githubusercontent.com/timmaurice/lovelace-rss-accordion/main/screenshot-audio.png) |
 
+## Localization
+
+The editor is available in the following languages:
+
+- English
+- German
+- French
+
+<details>
+<summary>Contributing Translations</summary>
+
+If you would like to contribute a new translation:
+
+1.  Fork the repository on GitHub.
+2.  Copy the `src/translation/en.json` file and rename it to your language code (e.g., `es.json` for Spanish).
+3.  Translate all the values in the new file.
+4.  Submit a pull request with your changes.
+
+</details>
+
 ## Installation
 
 ### HACS (Recommended)
@@ -42,7 +62,8 @@ This card is available in the [Home Assistant Community Store (HACS)](https://ha
 
 <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=timmaurice&repository=lovelace-rss-accordion&category=plugin" target="_blank" rel="noreferrer noopener"><img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open your Home Assistant instance and open a repository inside the Home Assistant Community Store." /></a>
 
-### Manual Installation
+<details>
+<summary>Manual Installation</summary>
 
 1.  Download the `rss-accordion.js` file from the latest release.
 2.  Place it in your `config/www` directory.
@@ -51,6 +72,8 @@ This card is available in the [Home Assistant Community Store (HACS)](https://ha
     - Resource Type: `JavaScript Module`
 
 You can now add the card to your dashboard.
+
+</details>
 
 ## Configuration
 
@@ -86,7 +109,8 @@ image_fit_mode: cover
 
 ## Development
 
-To contribute to the development, you'll need to set up a build environment.
+<details>
+<summary>To contribute to the development, you'll need to set up a build environment.</summary>
 
 1.  **Clone the repository:**
 
@@ -109,6 +133,7 @@ To contribute to the development, you'll need to set up a build environment.
     ```
 
 4.  In your Home Assistant instance, you will need to configure Lovelace to use the local development version of the card from `dist/rss-accordion.js`.
+</details>
 
 ---
 
