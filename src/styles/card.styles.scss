@@ -59,8 +59,9 @@ $padding: 1em;
 
   .channel-actions {
     align-items: center;
+    container-type: inline-size;
+    /* Establish this as a query container */
     display: flex;
-    container-type: inline-size; /* Establish this as a query container */
     gap: 8px;
     justify-content: space-between;
     margin-top: 8px;
@@ -68,7 +69,8 @@ $padding: 1em;
 
   .channel-link {
     color: var(--primary-color);
-    flex-shrink: 0; /* Prevents the link from shrinking and wrapping */
+    flex-shrink: 0;
+    /* Prevents the link from shrinking and wrapping */
     font-weight: bold;
     text-decoration: none;
 
@@ -154,6 +156,7 @@ $padding: 1em;
     .bookmark-button {
       --mdc-icon-button-size: 24px;
       color: var(--accent-color);
+      cursor: pointer;
     }
   }
 }
@@ -267,19 +270,6 @@ $padding: 1em;
     transform: translate(0, -1px);
   }
 
-  /* Hide the text on the button when the container is narrow */
-  @container (max-width: 245px) {
-    ha-icon {
-      --mdc-icon-size: 14px;
-      margin-right: 0;
-      transform: none;
-    }
-
-    .button-text {
-      display: none;
-    }
-  }
-
   &.active {
     --mdc-theme-primary: var(--text-primary-color);
     --button-color-fill-loud-hover: var(--accent-color);
@@ -292,5 +282,18 @@ $padding: 1em;
     --mdc-button-outline-color: var(--disabled-text-color);
     color: var(--disabled-text-color);
     cursor: not-allowed;
+  }
+
+  /* Hide the text on the button when the container is narrow */
+  @container (max-width: 245px) {
+    ha-icon {
+      --mdc-icon-size: 14px;
+      margin-right: 0;
+      transform: none;
+    }
+
+    .button-text {
+      display: none;
+    }
   }
 }

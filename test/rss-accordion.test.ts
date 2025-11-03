@@ -8,6 +8,15 @@ import { formatDate } from '../src/utils';
 // Mock console.info
 vi.spyOn(console, 'info').mockImplementation(() => {});
 
+// Mock ResizeObserver, which is not available in JSDOM
+class ResizeObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+
 // Define a minimal interface for the ha-card element to satisfy TypeScript
 interface HaCard extends HTMLElement {
   header?: string;

@@ -386,12 +386,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     );
   }
 
-  private _renderChannelActions(channelLink: string | undefined): TemplateResult {
-    const allEntries = this._getAllDisplayableItems();
-    const hasAnyBookmarks = !!(
-      this._config.show_bookmarks && allEntries.some((item) => this._storageHelper.isBookmarked(item))
-    );
-
+  private _renderChannelActions(channelLink: string | undefined, hasAnyBookmarks: boolean): TemplateResult {
     return html`
       <div class="channel-actions">
         ${channelLink
@@ -404,7 +399,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     `;
   }
 
-  private _renderChannelInfo(channel: Record<string, unknown> | undefined): TemplateResult {
+  private _renderChannelInfo(channel: Record<string, unknown> | undefined, hasAnyBookmarks: boolean): TemplateResult {
     if (!channel) {
       return html``;
     }
@@ -434,7 +429,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
               </p>`
             : ''}
           ${channelDescription ? html`<p class="channel-description">${channelDescription}</p>` : ''}
-          ${this._renderChannelActions(channelLink)}
+          ${this._renderChannelActions(channelLink, hasAnyBookmarks)}
         </div>
       </div>
     `;
@@ -555,11 +550,12 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     }
 
     const channel = stateObj.attributes.channel as Record<string, unknown> | undefined;
-
     let allEntries = this._getAllDisplayableItems();
     const hasAnyBookmarks = !!(
       this._config.show_bookmarks && allEntries.some((item) => this._storageHelper.isBookmarked(item))
     );
+
+    const shouldRenderChannel = this._shouldRenderChannelInfo(channel);
 
     if (this._config.show_bookmarks && this._showOnlyBookmarks) {
       allEntries = allEntries.filter((item) => this._storageHelper.isBookmarked(item));
@@ -573,8 +569,11 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         return html`
           <ha-card .header=${this._config.title}>
             <div class="card-content">
-              ${this._shouldRenderChannelInfo(channel) ? this._renderChannelInfo(channel) : ''}
-              ${this._renderBookmarkFilter(hasAnyBookmarks)}
+              ${
+                shouldRenderChannel
+                  ? this._renderChannelInfo(channel, hasAnyBookmarks)
+                  : this._renderChannelActions(undefined, hasAnyBookmarks) /* Render filter button */
+              }
               <i>${localize(this.hass, 'component.rss-accordion.card.no_bookmarked_entries')}</i>
             </div>
           </ha-card>
@@ -590,9 +589,11 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return html`
       <ha-card .header=${this._config.title}>
         <div class="card-content">
-          ${this._shouldRenderChannelInfo(channel)
-            ? this._renderChannelInfo(channel)
-            : this._renderBookmarkFilter(hasAnyBookmarks)}
+          ${
+            shouldRenderChannel
+              ? this._renderChannelInfo(channel, hasAnyBookmarks)
+              : this._renderChannelActions(undefined, hasAnyBookmarks) /* Render filter button */
+          }
           ${itemsToDisplay.map((item) => this._renderItem(item))}
         </div>
       </ha-card>
@@ -628,11 +629,6 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   static styles = [
     css`
       ${unsafeCSS(styles)}
-    `,
-    css`
-      .bookmark-button {
-        cursor: pointer;
-      }
     `,
   ];
 }
