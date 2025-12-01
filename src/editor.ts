@@ -75,7 +75,48 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
     fireEvent(this, 'config-changed', { config: newConfig });
   }
 
-  private _entityChanged(ev: CustomEvent): void {
+  private _getEntities(): string[] {
+    if (this._config.entities && this._config.entities.length > 0) {
+      return this._config.entities;
+    }
+    if (this._config.entity) {
+      return [this._config.entity];
+    }
+    return [];
+  }
+
+  private _isMultiEntityMode(): boolean {
+    return !!(this._config.entities && this._config.entities.length > 0);
+  }
+
+  private _toggleMultiEntityMode(ev: Event): void {
+    if (!this._config || !this.hass) {
+      return;
+    }
+    const target = ev.target as HTMLInputElement;
+    const enableMulti = target.checked;
+
+    const currentEntities = this._getEntities();
+    const newConfig: RssAccordionConfig = { ...this._config };
+
+    if (enableMulti) {
+      // Switch to multi-entity mode
+      newConfig.entities = currentEntities.length > 0 ? currentEntities : [''];
+      delete newConfig.entity;
+      // Remove channel-specific options
+      delete newConfig.show_channel_info;
+      delete newConfig.crop_channel_image;
+      delete newConfig.show_published_date;
+    } else {
+      // Switch to single entity mode
+      newConfig.entity = currentEntities[0] || '';
+      delete newConfig.entities;
+    }
+
+    fireEvent(this, 'config-changed', { config: newConfig });
+  }
+
+  private _singleEntityChanged(ev: CustomEvent): void {
     if (!this._config || !this.hass) {
       return;
     }
@@ -112,17 +153,95 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
     fireEvent(this, 'config-changed', { config: newConfig });
   }
 
+  private _entityChanged(index: number, ev: CustomEvent): void {
+    if (!this._config || !this.hass) {
+      return;
+    }
+    const newEntityId = ev.detail.value;
+    const currentEntities = this._getEntities();
+    const newEntities = [...currentEntities];
+    newEntities[index] = newEntityId;
+
+    const newConfig: RssAccordionConfig = {
+      ...this._config,
+      entities: newEntities,
+    };
+
+    // Remove legacy single entity field to avoid confusion
+    delete newConfig.entity;
+
+    // Always remove channel options in multi-entity mode
+    delete newConfig.show_channel_info;
+    delete newConfig.crop_channel_image;
+    delete newConfig.show_published_date;
+
+    // Clean up audio player option if not applicable
+    // Check if ANY entity has audio
+    let hasAudio = false;
+    for (const entityId of newEntities) {
+      const entityState = this.hass.states[entityId];
+      const entries = (entityState?.attributes.entries as FeedEntry[]) ?? [];
+      if (!!(entityState?.attributes.audio as string | undefined) || entries.some((entry) => !!entry.audio)) {
+        hasAudio = true;
+        break;
+      }
+    }
+
+    if (!hasAudio) {
+      delete newConfig.show_audio_player;
+    }
+
+    fireEvent(this, 'config-changed', { config: newConfig });
+  }
+
+  private _addEntity(): void {
+    const currentEntities = this._getEntities();
+    const newEntities = [...currentEntities, ''];
+
+    const newConfig: RssAccordionConfig = {
+      ...this._config,
+      entities: newEntities,
+    };
+    delete newConfig.entity;
+
+    fireEvent(this, 'config-changed', { config: newConfig });
+  }
+
+  private _removeEntity(index: number): void {
+    const currentEntities = this._getEntities();
+    const newEntities = [...currentEntities];
+    newEntities.splice(index, 1);
+
+    const newConfig: RssAccordionConfig = {
+      ...this._config,
+      entities: newEntities,
+    };
+    delete newConfig.entity;
+
+    fireEvent(this, 'config-changed', { config: newConfig });
+  }
+
   protected render(): TemplateResult {
     if (!this.hass || !this._config) {
       return html``;
     }
 
-    const stateObj = this._config.entity ? this.hass.states[this._config.entity] : undefined;
+    const entities = this._getEntities();
+    const firstEntityId = entities[0];
+    const stateObj = firstEntityId ? this.hass.states[firstEntityId] : undefined;
     const channel = stateObj?.attributes.channel as Record<string, unknown> | undefined;
     const channelImage = channel?.image as string | undefined;
     const channelPublished = channel?.published as string | undefined;
-    const entries = (stateObj?.attributes.entries as FeedEntry[]) ?? [];
-    const hasAudio = !!(stateObj?.attributes.audio as string | undefined) || entries.some((entry) => !!entry.audio);
+
+    let hasAudio = false;
+    for (const entityId of entities) {
+      const entityState = this.hass.states[entityId];
+      const entries = (entityState?.attributes.entries as FeedEntry[]) ?? [];
+      if (!!(entityState?.attributes.audio as string | undefined) || entries.some((entry) => !!entry.audio)) {
+        hasAudio = true;
+        break;
+      }
+    }
 
     return html`
       <ha-card>
@@ -135,15 +254,48 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
               .configValue=${'title'}
               @input=${this._valueChanged}
             ></ha-textfield>
-            <ha-entity-picker
-              .hass=${this.hass}
-              .label=${localize(this.hass, 'component.rss-accordion.editor.entity')}
-              .value=${this._config.entity || ''}
-              .includeDomains=${['sensor', 'event']}
-              @value-changed=${this._entityChanged}
-              allow-custom-entity
-              required
-            ></ha-entity-picker>
+            <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.use_multiple_entities')}>
+              <ha-switch .checked=${this._isMultiEntityMode()} @change=${this._toggleMultiEntityMode}></ha-switch>
+            </ha-formfield>
+            ${this._isMultiEntityMode()
+              ? html`
+                  <div class="entities-list">
+                    ${this._getEntities().map(
+                      (entityId, index) => html`
+                        <div class="entity-row">
+                          <ha-entity-picker
+                            .hass=${this.hass}
+                            .label=${localize(this.hass, 'component.rss-accordion.editor.entity')}
+                            .value=${entityId}
+                            .includeDomains=${['sensor', 'event']}
+                            @value-changed=${(ev: CustomEvent) => this._entityChanged(index, ev)}
+                            allow-custom-entity
+                            required
+                          ></ha-entity-picker>
+                          <ha-icon-button
+                            .label=${localize(this.hass, 'component.rss-accordion.editor.remove_entity')}
+                            .path=${'M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z'}
+                            @click=${() => this._removeEntity(index)}
+                          ></ha-icon-button>
+                        </div>
+                      `,
+                    )}
+                    <ha-button @click=${this._addEntity}>
+                      ${localize(this.hass, 'component.rss-accordion.editor.add_entity')}
+                    </ha-button>
+                  </div>
+                `
+              : html`
+                  <ha-entity-picker
+                    .hass=${this.hass}
+                    .label=${localize(this.hass, 'component.rss-accordion.editor.entity')}
+                    .value=${this._config.entity || ''}
+                    .includeDomains=${['sensor', 'event']}
+                    @value-changed=${this._singleEntityChanged}
+                    allow-custom-entity
+                    required
+                  ></ha-entity-picker>
+                `}
           </div>
 
           <div class="group">
@@ -258,7 +410,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 </div>
               `
             : ''}
-          ${channel
+          ${channel && !this._isMultiEntityMode()
             ? html`
                 <div class="group">
                   <div class="group-header">

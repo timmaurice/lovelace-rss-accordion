@@ -25,7 +25,10 @@
     "crop_channel_image": "Kanalbild als zugeschnittenen Kreis anzeigen",
     "show_audio_player": "Audio-Player anzeigen",
     "show_item_image": "Bilder der Einträge anzeigen",
-    "show_bookmarks": "Lesezeichen für Einträge aktivieren"
+    "show_bookmarks": "Lesezeichen für Einträge aktivieren",
+    "use_multiple_entities": "Mehrere Entitäten verwenden",
+    "add_entity": "Entität hinzufügen",
+    "remove_entity": "Entität entfernen"
   },
   "card": {
     "to_news_article": "Zum Nachrichtenartikel",
@@ -41,6 +44,7 @@
     "add_bookmark": "Lesezeichen hinzufügen",
     "remove_bookmark": "Lesezeichen entfernen",
     "show_bookmarked": "Lesezeichen anzeigen",
-    "no_bookmarks_yet_tooltip": "Markieren Sie einen Eintrag als Lesezeichen, um diesen Filter zu aktivieren"
+    "no_bookmarks_yet_tooltip": "Markieren Sie einen Eintrag als Lesezeichen, um diesen Filter zu aktivieren",
+    "source": "Quelle"
   }
 }

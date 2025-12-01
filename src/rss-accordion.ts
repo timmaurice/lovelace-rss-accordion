@@ -47,16 +47,27 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private _config!: RssAccordionConfig;
   @state() private _showOnlyBookmarks = false;
+  @state() private _entities: string[] = [];
   private _resizeObserver?: ResizeObserver;
   private _lastAudioSave = new Map<string, number>();
   private _storageHelper!: StorageHelper;
 
   public setConfig(config: RssAccordionConfig): void {
-    if (!config || !config.entity) {
-      throw new Error('You need to define an entity');
+    if (!config || (!config.entity && (!config.entities || config.entities.length === 0))) {
+      throw new Error('You need to define an entity or a list of entities');
     }
     this._config = config;
-    this._storageHelper = new StorageHelper(config.entity);
+
+    if (config.entities && config.entities.length > 0) {
+      this._entities = [...config.entities];
+    } else if (config.entity) {
+      this._entities = [config.entity];
+    } else {
+      this._entities = [];
+    }
+
+    const uniqueId = this._entities.slice().sort().join(',');
+    this._storageHelper = new StorageHelper(uniqueId);
   }
 
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
@@ -96,7 +107,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     let size = (this._config.title ? 1 : 0) + (displayItems || 1);
 
-    const stateObj = this.hass.states[this._config.entity];
+    const stateObj = this._entities.length > 0 ? this.hass.states[this._entities[0]] : undefined;
     const channel = stateObj?.attributes.channel as Record<string, unknown> | undefined;
 
     if (this._shouldRenderChannelInfo(channel)) {
@@ -151,12 +162,17 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     const oldHass = changedProperties.get('hass') as HomeAssistant | undefined;
 
-    // Check if the entity that this card uses has changed, or if the language has changed.
+    // Check if any of the entities that this card uses has changed, or if the language has changed.
     if (oldHass) {
-      if (
-        oldHass.states[this._config.entity] !== this.hass.states[this._config.entity] ||
-        oldHass.language !== this.hass.language
-      ) {
+      let entitiesChanged = false;
+      for (const entityId of this._entities) {
+        if (oldHass.states[entityId] !== this.hass.states[entityId]) {
+          entitiesChanged = true;
+          break;
+        }
+      }
+
+      if (entitiesChanged || oldHass.language !== this.hass.language) {
         return true;
       }
       return false; // All other hass changes are ignored
@@ -330,34 +346,44 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   }
 
   private _getFeedItems(): FeedEntry[] {
-    const stateObj = this.hass.states[this._config.entity];
-    if (!stateObj) {
-      return [];
-    }
+    const allItems: FeedEntry[] = [];
 
-    // Handle sensor entities with an 'entries' attribute
-    if (stateObj.attributes.entries && Array.isArray(stateObj.attributes.entries)) {
-      return (stateObj.attributes.entries as FeedEntry[]) || [];
-    }
+    for (const entityId of this._entities) {
+      const stateObj = this.hass.states[entityId];
+      if (!stateObj) {
+        continue;
+      }
 
-    // Handle event entities which represent a single item
-    if (this._config.entity.startsWith('event.')) {
-      const { title, link, summary, description, image } = stateObj.attributes;
-      if (typeof title === 'string' && typeof link === 'string') {
-        return [
-          {
+      // Handle sensor entities with an 'entries' attribute
+      if (stateObj.attributes.entries && Array.isArray(stateObj.attributes.entries)) {
+        const entries = (stateObj.attributes.entries as FeedEntry[]) || [];
+        // Tag each entry with its source entity
+        const taggedEntries = entries.map((entry) => ({ ...entry, source_entity_id: entityId }));
+        allItems.push(...taggedEntries);
+      }
+      // Handle event entities which represent a single item
+      else if (entityId.startsWith('event.')) {
+        const { title, link, summary, description, image } = stateObj.attributes;
+        if (typeof title === 'string' && typeof link === 'string') {
+          allItems.push({
             title,
             link,
             summary: (summary as string) ?? undefined,
             description: (description as string) ?? undefined,
             image: (image as string) ?? undefined,
             published: stateObj.state,
-          },
-        ];
+            source_entity_id: entityId,
+          });
+        }
       }
     }
 
-    return [];
+    return allItems;
+  }
+
+  private _getEntityName(entityId: string): string {
+    const stateObj = this.hass.states[entityId];
+    return stateObj?.attributes.friendly_name || entityId;
   }
 
   /**
@@ -502,6 +528,12 @@ export class RssAccordion extends LitElement implements LovelaceCard {
           </div>
         </summary>
         <div class="accordion-content">
+          ${this._entities.length > 1 && item.source_entity_id
+            ? html`<div class="item-source">
+                ${localize(this.hass, 'component.rss-accordion.card.source')}:
+                ${this._getEntityName(item.source_entity_id)}
+              </div>`
+            : ''}
           <div class="item-published">${formattedDate}</div>
           ${showImage
             ? html`<img
@@ -538,18 +570,34 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       return html``;
     }
 
-    const stateObj = this.hass.states[this._config.entity];
-    if (!stateObj) {
+    // If no entities are configured or found
+    if (this._entities.length === 0) {
       return html`
         <ha-card .header=${this._config.title}>
           <div class="card-content warning">
-            ${localize(this.hass, 'component.rss-accordion.card.entity_not_found', { entity: this._config.entity })}
+            ${localize(this.hass, 'component.rss-accordion.card.entity_not_found', { entity: 'No entity configured' })}
           </div>
         </ha-card>
       `;
     }
 
-    const channel = stateObj.attributes.channel as Record<string, unknown> | undefined;
+    // Check if at least one entity exists
+    const someEntityExists = this._entities.some((id) => this.hass.states[id]);
+    if (!someEntityExists) {
+      return html`
+        <ha-card .header=${this._config.title}>
+          <div class="card-content warning">
+            ${localize(this.hass, 'component.rss-accordion.card.entity_not_found', {
+              entity: this._entities.join(', '),
+            })}
+          </div>
+        </ha-card>
+      `;
+    }
+
+    // Use the first entity for channel info, if available
+    const firstStateObj = this.hass.states[this._entities[0]];
+    const channel = firstStateObj?.attributes.channel as Record<string, unknown> | undefined;
     let allEntries = this._getAllDisplayableItems();
     const hasAnyBookmarks = !!(
       this._config.show_bookmarks && allEntries.some((item) => this._storageHelper.isBookmarked(item))

@@ -25,7 +25,10 @@
     "crop_channel_image": "Display channel image as a cropped circle",
     "show_audio_player": "Show Audio Player",
     "show_item_image": "Show Item Images",
-    "show_bookmarks": "Enable bookmarking for items"
+    "show_bookmarks": "Enable bookmarking for items",
+    "use_multiple_entities": "Use multiple entities",
+    "add_entity": "Add Entity",
+    "remove_entity": "Remove Entity"
   },
   "card": {
     "to_news_article": "To the news article",
@@ -41,6 +44,7 @@
     "add_bookmark": "Bookmark item",
     "remove_bookmark": "Remove bookmark",
     "show_bookmarked": "Show Bookmarked",
-    "no_bookmarks_yet_tooltip": "Bookmark an item to enable this filter"
+    "no_bookmarks_yet_tooltip": "Bookmark an item to enable this filter",
+    "source": "Source"
   }
 }

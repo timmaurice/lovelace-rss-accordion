@@ -63,12 +63,14 @@ export interface FeedEntry {
   published: string;
   image?: string;
   audio?: string;
+  source_entity_id?: string; // Track which entity this item came from
   [key: string]: unknown;
 }
 
 export interface RssAccordionConfig extends LovelaceCardConfig {
   title?: string;
-  entity: string;
+  entity?: string;
+  entities?: string[];
   max_items?: number;
   allow_multiple?: boolean;
   image_ratio?: string;

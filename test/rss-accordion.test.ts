@@ -574,7 +574,7 @@ describe('RssAccordion', () => {
 
     beforeEach(() => {
       // Create an instance for test-side logic
-      storageHelper = new StorageHelper(config.entity);
+      storageHelper = new StorageHelper(config.entity || 'sensor.test_feed');
 
       // Mock StorageHelper for bookmarks
       bookmarksMock = {};
@@ -638,7 +638,11 @@ describe('RssAccordion', () => {
       // Check localStorage and UI
       const storedItem = bookmarksMock[bookmarkKey];
       expect(storedItem).not.toBeNull();
-      expect(JSON.parse(storedItem!)).toEqual(feedItem2);
+      const parsedItem = JSON.parse(storedItem!);
+      expect(parsedItem.title).toBe(feedItem2.title);
+      expect(parsedItem.link).toBe(feedItem2.link);
+      expect(parsedItem.summary).toBe(feedItem2.summary);
+      expect(parsedItem.published).toBe(feedItem2.published);
       bookmarkIcon = element.shadowRoot?.querySelector<HTMLElement>('.bookmark-button')?.querySelector('ha-icon');
       expect(bookmarkIcon?.getAttribute('icon')).toBe('mdi:star');
     });
@@ -999,6 +1003,55 @@ describe('RssAccordion', () => {
       expect(channelPublished).not.toBeNull();
       expect(channelPublished?.textContent).toContain('Jan');
       expect(channelPublished?.textContent).toContain('01');
+    });
+  });
+
+  describe('multiple entities support', () => {
+    it('should render items from multiple entities sorted by date', async () => {
+      hass.states['sensor.feed1'] = {
+        entity_id: 'sensor.feed1',
+        state: 'ok',
+        attributes: {
+          entries: [
+            {
+              title: 'Feed 1 Item 1',
+              link: '#1',
+              published: new Date('2023-01-01T10:00:00Z').toISOString(),
+            },
+          ],
+        },
+      } as HassEntity;
+
+      hass.states['sensor.feed2'] = {
+        entity_id: 'sensor.feed2',
+        state: 'ok',
+        attributes: {
+          entries: [
+            {
+              title: 'Feed 2 Item 1',
+              link: '#2',
+              published: new Date('2023-01-01T11:00:00Z').toISOString(),
+            },
+          ],
+        },
+      } as HassEntity;
+
+      element.hass = hass;
+      element.setConfig({
+        type: 'custom:rss-accordion',
+        entities: ['sensor.feed1', 'sensor.feed2'],
+      });
+      await element.updateComplete;
+
+      const items = element.shadowRoot?.querySelectorAll('.accordion-item');
+      expect(items?.length).toBe(2);
+
+      // Feed 2 Item 1 is newer (11:00) than Feed 1 Item 1 (10:00), so it should be first
+      const firstTitle = items?.[0].querySelector('.header-main > a.title-link');
+      expect(firstTitle?.textContent?.trim()).toBe('Feed 2 Item 1');
+
+      const secondTitle = items?.[1].querySelector('.header-main > a.title-link');
+      expect(secondTitle?.textContent?.trim()).toBe('Feed 1 Item 1');
     });
   });
 });

@@ -177,6 +177,13 @@ $padding: 1em;
     margin-bottom: $padding;
   }
 
+  .item-source {
+    color: var(--secondary-text-color);
+    font-size: 0.9em;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+
   .item-image {
     border-radius: var(--ha-card-border-radius, 4px);
     display: block;

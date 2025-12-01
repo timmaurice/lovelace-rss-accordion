@@ -35,3 +35,25 @@
 ha-formfield {
   padding-bottom: 8px;
 }
+
+.entities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.entity-row {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+
+  ha-entity-picker {
+    flex: 1;
+  }
+
+  ha-icon-button {
+    flex-shrink: 0;
+    margin-bottom: 4px;
+  }
+}
