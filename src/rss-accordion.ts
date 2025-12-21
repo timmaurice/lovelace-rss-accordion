@@ -117,6 +117,20 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return size;
   }
 
+  public static getLayoutOptions(): {
+    grid_rows: number;
+    grid_columns: number;
+    grid_min_rows: number;
+    grid_min_columns: number;
+  } {
+    return {
+      grid_rows: 3,
+      grid_columns: 12,
+      grid_min_rows: 1,
+      grid_min_columns: 6,
+    };
+  }
+
   public connectedCallback(): void {
     super.connectedCallback();
     // Using ResizeObserver is more performant than a window resize event listener
