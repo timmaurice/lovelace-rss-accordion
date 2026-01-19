@@ -10,7 +10,7 @@ import {
   FeedEntry,
 } from './types.js';
 import { localize } from './localize';
-import { formatDate } from './utils';
+import { formatDate, truncate } from './utils';
 import { StorageHelper } from './storage-helper.js';
 import styles from './styles/card.styles.scss';
 
@@ -418,8 +418,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     return !!(
       channel.title ||
-      channel.description ||
-      channel.subtitle ||
+      (this._config.show_channel_description !== false && (channel.description || channel.subtitle)) ||
       channel.image ||
       channel.link ||
       (this._config.show_published_date && channel.published)
@@ -468,7 +467,11 @@ export class RssAccordion extends LitElement implements LovelaceCard {
                 ${formattedChannelPublished}
               </p>`
             : ''}
-          ${channelDescription ? html`<p class="channel-description">${channelDescription}</p>` : ''}
+          ${this._config.show_channel_description !== false && channelDescription
+            ? html`<p class="channel-description">
+                ${truncate(channelDescription, this._config.max_channel_description_length ?? 280)}
+              </p>`
+            : ''}
           ${this._renderChannelActions(channelLink, hasAnyBookmarks)}
         </div>
       </div>

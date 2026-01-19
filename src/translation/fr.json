@@ -23,6 +23,8 @@
     "show_channel_info": "Afficher les informations du canal (de l'attribut 'channel')",
     "show_channel_published_date": "Afficher la dernière heure de mise à jour du canal",
     "crop_channel_image": "Afficher l'image du canal sous forme de cercle rogné",
+    "show_channel_description": "Afficher la description du canal",
+    "max_channel_description_length": "Longueur maximale de la description du canal",
     "show_audio_player": "Afficher le lecteur audio",
     "show_item_image": "Afficher les images des éléments",
     "show_bookmarks": "Activer les favoris pour les éléments"

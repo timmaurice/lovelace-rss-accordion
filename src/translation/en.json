@@ -23,6 +23,8 @@
     "show_channel_info": "Show Channel Info (from 'channel' attribute)",
     "show_channel_published_date": "Show channel's last update time",
     "crop_channel_image": "Display channel image as a cropped circle",
+    "show_channel_description": "Show channel description",
+    "max_channel_description_length": "Maximum channel description length",
     "show_audio_player": "Show Audio Player",
     "show_item_image": "Show Item Images",
     "show_bookmarks": "Enable bookmarking for items",

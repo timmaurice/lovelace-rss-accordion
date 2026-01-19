@@ -23,6 +23,8 @@
     "show_channel_info": "Kanal-Infos anzeigen (vom 'channel'-Attribut)",
     "show_channel_published_date": "Letzte Aktualisierung des Kanals anzeigen",
     "crop_channel_image": "Kanalbild als zugeschnittenen Kreis anzeigen",
+    "show_channel_description": "Kanalbeschreibung anzeigen",
+    "max_channel_description_length": "Maximale Länge der Kanalbeschreibung",
     "show_audio_player": "Audio-Player anzeigen",
     "show_item_image": "Bilder der Einträge anzeigen",
     "show_bookmarks": "Lesezeichen für Einträge aktivieren",

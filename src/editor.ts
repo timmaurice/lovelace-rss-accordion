@@ -61,6 +61,11 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
       if (configValue === 'show_channel_info') {
         delete newConfig.show_published_date;
         delete newConfig.crop_channel_image;
+        delete newConfig.show_channel_description;
+        delete newConfig.max_channel_description_length;
+      }
+      if (configValue === 'show_channel_description') {
+        delete newConfig.max_channel_description_length;
       }
     } else {
       newConfig[configValue] = target.type === 'number' ? Number(value) : value;
@@ -107,6 +112,8 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
       delete newConfig.show_channel_info;
       delete newConfig.crop_channel_image;
       delete newConfig.show_published_date;
+      delete newConfig.show_channel_description;
+      delete newConfig.max_channel_description_length;
     } else {
       // Switch to single entity mode
       newConfig.entity = currentEntities[0] || '';
@@ -134,12 +141,18 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
       delete newConfig.show_channel_info;
       delete newConfig.crop_channel_image;
       delete newConfig.show_published_date;
+      delete newConfig.show_channel_description;
+      delete newConfig.max_channel_description_length;
     } else {
       if (!channel.published) {
         delete newConfig.show_published_date;
       }
       if (!channel.image) {
         delete newConfig.crop_channel_image;
+      }
+      if (!(channel.description || channel.subtitle)) {
+        delete newConfig.show_channel_description;
+        delete newConfig.max_channel_description_length;
       }
     }
 
@@ -174,6 +187,8 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
     delete newConfig.show_channel_info;
     delete newConfig.crop_channel_image;
     delete newConfig.show_published_date;
+    delete newConfig.show_channel_description;
+    delete newConfig.max_channel_description_length;
 
     // Clean up audio player option if not applicable
     // Check if ANY entity has audio
@@ -447,6 +462,35 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                             @change=${this._valueChanged}
                           ></ha-switch>
                         </ha-formfield>
+                      `
+                    : ''}
+                  ${this._config.show_channel_info && (channel.description || channel.subtitle)
+                    ? html`
+                        <ha-formfield
+                          .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_description')}
+                        >
+                          <ha-switch
+                            .checked=${this._config.show_channel_description !== false}
+                            .configValue=${'show_channel_description'}
+                            @change=${this._valueChanged}
+                          ></ha-switch>
+                        </ha-formfield>
+                        ${this._config.show_channel_description !== false
+                          ? html`
+                              <ha-textfield
+                                .label=${localize(
+                                  this.hass,
+                                  'component.rss-accordion.editor.max_channel_description_length',
+                                )}
+                                type="number"
+                                min="1"
+                                .value=${this._config.max_channel_description_length || ''}
+                                .configValue=${'max_channel_description_length'}
+                                @input=${this._valueChanged}
+                                .placeholder="280"
+                              ></ha-textfield>
+                            `
+                          : ''}
                       `
                     : ''}
                 </div>
