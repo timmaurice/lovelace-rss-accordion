@@ -865,12 +865,58 @@ describe('RssAccordion', () => {
 
       const channelInfo = element.shadowRoot?.querySelector('.channel-info');
       expect(channelInfo).not.toBeNull();
-      expect(channelInfo?.querySelector('.channel-title')?.textContent).toBe('My Channel');
-      expect(channelInfo?.querySelector('.channel-description')?.textContent).toBe('My Channel Description');
+      expect(channelInfo?.querySelector('.channel-title')?.textContent?.trim()).toBe('My Channel');
+      expect(channelInfo?.querySelector('.channel-description')?.textContent?.trim()).toBe('My Channel Description');
       expect(channelInfo?.querySelector<HTMLImageElement>('.channel-image')?.src).toBe(
         'http://example.com/channel.png',
       );
       expect(channelInfo?.querySelector<HTMLAnchorElement>('.channel-link')?.href).toBe('http://example.com/channel');
+    });
+
+    it('should not render channel description when show_channel_description is false', async () => {
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true, show_channel_description: false });
+      await element.updateComplete;
+
+      const description = element.shadowRoot?.querySelector('.channel-description');
+      expect(description).toBeNull();
+    });
+
+    it('should show "show more" button and truncate text when channel description is long', async () => {
+      element.hass = hass;
+      element.setConfig({
+        ...config,
+        show_channel_info: true,
+        max_channel_description_length: 10,
+      });
+      await element.updateComplete;
+
+      const description = element.shadowRoot?.querySelector('.channel-description');
+      const toggleBtn = element.shadowRoot?.querySelector('.toggle-description');
+      expect(description?.textContent?.trim()).toBe('My Channel...');
+      expect(toggleBtn).not.toBeNull();
+      expect(toggleBtn?.textContent?.trim()).toBe('Show more');
+    });
+
+    it('should expand channel description when toggle button is clicked', async () => {
+      element.hass = hass;
+      element.setConfig({
+        ...config,
+        show_channel_info: true,
+        max_channel_description_length: 10,
+      });
+      await element.updateComplete;
+
+      const container = element.shadowRoot?.querySelector('.channel-description-container');
+      const toggleBtn = element.shadowRoot?.querySelector<HTMLElement>('.toggle-description');
+
+      expect(container?.classList.contains('expanded')).toBe(false);
+
+      toggleBtn?.click();
+      await element.updateComplete;
+
+      expect(container?.classList.contains('expanded')).toBe(true);
+      expect(toggleBtn?.textContent?.trim()).toBe('Show less');
     });
 
     it('should not render channel published date by default', async () => {

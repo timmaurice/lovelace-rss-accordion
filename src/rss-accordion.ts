@@ -47,6 +47,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private _config!: RssAccordionConfig;
   @state() private _showOnlyBookmarks = false;
+  @state() private _isDescriptionExpanded = false;
   @state() private _entities: string[] = [];
   private _resizeObserver?: ResizeObserver;
   private _lastAudioSave = new Map<string, number>();
@@ -468,14 +469,35 @@ export class RssAccordion extends LitElement implements LovelaceCard {
               </p>`
             : ''}
           ${this._config.show_channel_description !== false && channelDescription
-            ? html`<p class="channel-description">
-                ${truncate(channelDescription, this._config.max_channel_description_length ?? 280)}
-              </p>`
+            ? html`<div
+                class="channel-description-container ${this._isDescriptionExpanded ? 'expanded' : ''}"
+                style="${this._isDescriptionExpanded ? `max-height: 1000px` : ''}"
+              >
+                <p class="channel-description">
+                  ${this._isDescriptionExpanded
+                    ? channelDescription
+                    : truncate(channelDescription, this._config.max_channel_description_length ?? 180)}
+                </p>
+                ${channelDescription.length > (this._config.max_channel_description_length ?? 180)
+                  ? html`<button class="toggle-description" @click=${this._toggleDescription}>
+                      ${localize(
+                        this.hass,
+                        this._isDescriptionExpanded
+                          ? 'component.rss-accordion.card.show_less'
+                          : 'component.rss-accordion.card.show_more',
+                      )}
+                    </button>`
+                  : ''}
+              </div>`
             : ''}
           ${this._renderChannelActions(channelLink, hasAnyBookmarks)}
         </div>
       </div>
     `;
+  }
+
+  private _toggleDescription(): void {
+    this._isDescriptionExpanded = !this._isDescriptionExpanded;
   }
 
   private _renderItem(item: FeedEntry): TemplateResult {

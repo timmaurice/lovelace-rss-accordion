@@ -55,6 +55,13 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
       } else {
         newConfig.show_audio_player = false;
       }
+    } else if (configValue === 'show_channel_description') {
+      if (value) {
+        delete newConfig.show_channel_description;
+      } else {
+        newConfig.show_channel_description = false;
+        delete newConfig.max_channel_description_length;
+      }
     } else if (value === '' || value === false || value === undefined) {
       delete newConfig[configValue];
       // If show_channel_info is turned off, also remove its dependent options
@@ -62,9 +69,6 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
         delete newConfig.show_published_date;
         delete newConfig.crop_channel_image;
         delete newConfig.show_channel_description;
-        delete newConfig.max_channel_description_length;
-      }
-      if (configValue === 'show_channel_description') {
         delete newConfig.max_channel_description_length;
       }
     } else {
@@ -475,7 +479,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                             @change=${this._valueChanged}
                           ></ha-switch>
                         </ha-formfield>
-                        ${this._config.show_channel_description !== false
+                        ${(this._config.show_channel_description ?? true)
                           ? html`
                               <ha-textfield
                                 .label=${localize(
@@ -487,7 +491,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                                 .value=${this._config.max_channel_description_length || ''}
                                 .configValue=${'max_channel_description_length'}
                                 @input=${this._valueChanged}
-                                .placeholder="280"
+                                .placeholder="180"
                               ></ha-textfield>
                             `
                           : ''}

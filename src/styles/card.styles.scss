@@ -56,10 +56,68 @@ ha-card {
     margin: 0 0 4px 0;
   }
 
-  .channel-description {
-    color: var(--secondary-text-color);
-    font-size: 0.9em;
+  .channel-description-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     margin: 0 0 8px 0;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    .channel-description {
+      color: var(--secondary-text-color);
+      font-size: 0.9em;
+      line-height: 1.5;
+      margin: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toggle-description {
+      align-items: center;
+      align-self: flex-start;
+      background: none;
+      border: none;
+      color: var(--primary-color);
+      cursor: pointer;
+      display: flex;
+      font-size: 0.85em;
+      font-weight: bold;
+      gap: 4px;
+      padding: 4px 0;
+      transition: all 0.2s ease;
+
+      &::after {
+        content: '▸';
+        display: inline-block;
+        font-size: 0.8em;
+        transform: rotate(90deg);
+        transition: transform 0.3s ease;
+      }
+
+      &:hover {
+        opacity: 0.8;
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
+    }
+
+    &:not(.expanded) {
+      .channel-description {
+        overflow: hidden;
+      }
+    }
+
+    &.expanded {
+      .channel-description {
+        color: var(--primary-text-color);
+      }
+
+      .toggle-description::after {
+        transform: rotate(-90deg);
+      }
+    }
   }
 
   .channel-published {

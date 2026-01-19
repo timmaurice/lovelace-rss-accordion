@@ -47,6 +47,8 @@
     "remove_bookmark": "Remove bookmark",
     "show_bookmarked": "Show Bookmarked",
     "no_bookmarks_yet_tooltip": "Bookmark an item to enable this filter",
-    "source": "Source"
+    "source": "Source",
+    "show_more": "Show more",
+    "show_less": "Show less"
   }
 }

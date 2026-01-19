@@ -47,6 +47,8 @@
     "remove_bookmark": "Lesezeichen entfernen",
     "show_bookmarked": "Lesezeichen anzeigen",
     "no_bookmarks_yet_tooltip": "Markieren Sie einen Eintrag als Lesezeichen, um diesen Filter zu aktivieren",
-    "source": "Quelle"
+    "source": "Quelle",
+    "show_more": "Mehr anzeigen",
+    "show_less": "Weniger anzeigen"
   }
 }

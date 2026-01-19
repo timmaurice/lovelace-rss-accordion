@@ -43,6 +43,8 @@
     "add_bookmark": "Ajouter aux favoris",
     "remove_bookmark": "Retirer des favoris",
     "show_bookmarked": "Afficher les favoris",
-    "no_bookmarks_yet_tooltip": "Ajoutez un élément aux favoris pour activer ce filtre"
+    "no_bookmarks_yet_tooltip": "Ajoutez un élément aux favoris pour activer ce filtre",
+    "show_more": "Voir plus",
+    "show_less": "Voir moins"
   }
 }
