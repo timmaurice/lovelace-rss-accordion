@@ -338,6 +338,15 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 @input=${this._valueChanged}
                 .placeholder="1"
               ></ha-textfield>
+              <ha-textfield
+                .label=${localize(this.hass, 'component.rss-accordion.editor.refresh_interval')}
+                type="number"
+                min="0"
+                .value=${this._config.refresh_interval || ''}
+                .configValue=${'refresh_interval'}
+                @input=${this._valueChanged}
+                .placeholder=${localize(this.hass, 'component.rss-accordion.editor.refresh_interval_placeholder')}
+              ></ha-textfield>
             </div>
             <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.initial_open')}>
               <ha-switch

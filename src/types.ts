@@ -13,6 +13,7 @@ export interface HomeAssistant {
   language: string;
   locale: FrontendLocaleData;
   callWS: <T>(message: { type: string; [key: string]: unknown }) => Promise<T>;
+  callService: (domain: string, service: string, serviceData?: Record<string, unknown>) => Promise<void>;
   themes?: {
     darkMode?: boolean;
     [key: string]: unknown;
@@ -85,6 +86,7 @@ export interface RssAccordionConfig extends LovelaceCardConfig {
   show_bookmarks?: boolean;
   show_channel_description?: boolean;
   max_channel_description_length?: number;
+  refresh_interval?: number;
 }
 
 export interface AudioProgress {

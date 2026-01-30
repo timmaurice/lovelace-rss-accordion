@@ -13,6 +13,8 @@
     "max_items": "Nombre maximum d'éléments",
     "max_items_placeholder": "Tous les éléments",
     "new_pill_duration_hours": "Durée d'affichage de la pastille 'NOUVEAU' (heures)",
+    "refresh_interval": "Intervalle d'actualisation (minutes)",
+    "refresh_interval_placeholder": "30",
     "image_ratio": "Ratio d'aspect de l'image (ex: 16/9 ou 1.77)",
     "image_ratio_validation_message": "Format invalide. Utilisez 'auto', '16/9', ou '1.77'.",
     "image_fit_mode": "Mode d'ajustement de l'image",

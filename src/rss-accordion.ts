@@ -52,6 +52,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   private _resizeObserver?: ResizeObserver;
   private _lastAudioSave = new Map<string, number>();
   private _storageHelper!: StorageHelper;
+  private _refreshTimer?: number;
 
   public setConfig(config: RssAccordionConfig): void {
     if (!config || (!config.entity && (!config.entities || config.entities.length === 0))) {
@@ -69,6 +70,8 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     const uniqueId = this._entities.slice().sort().join(',');
     this._storageHelper = new StorageHelper(uniqueId);
+
+    this._startRefreshTimer();
   }
 
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
@@ -140,12 +143,53 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       this._resizeObserver = new ResizeObserver(() => this._handleResize());
     }
     this._resizeObserver.observe(this);
+    this._startRefreshTimer();
   }
 
   public disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this._resizeObserver) {
       this._resizeObserver.disconnect();
+    }
+    this._stopRefreshTimer();
+  }
+
+  private _startRefreshTimer(): void {
+    this._stopRefreshTimer();
+
+    if (this._config && this._config.refresh_interval && this._config.refresh_interval > 0) {
+      this._refreshTimer = window.setInterval(
+        () => {
+          this._refreshEntities();
+        },
+        this._config.refresh_interval * 60 * 1000,
+      ); // Convert minutes to milliseconds
+    }
+  }
+
+  private _stopRefreshTimer(): void {
+    if (this._refreshTimer) {
+      clearInterval(this._refreshTimer);
+      this._refreshTimer = undefined;
+    }
+  }
+
+  private async _refreshEntities(): Promise<void> {
+    if (!this.hass || !this._entities || this._entities.length === 0) {
+      return;
+    }
+
+    // Call homeassistant.update_entity service for all configured entities
+    try {
+      await Promise.all(
+        this._entities.map((entityId) =>
+          this.hass.callService('homeassistant', 'update_entity', {
+            entity_id: entityId,
+          }),
+        ),
+      );
+    } catch (err) {
+      console.error('Failed to refresh RSS feed entities:', err);
     }
   }
 

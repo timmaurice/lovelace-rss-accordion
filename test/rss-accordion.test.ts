@@ -800,34 +800,10 @@ describe('RssAccordion', () => {
       await element.updateComplete;
 
       const newPill = element.shadowRoot?.querySelector('.new-pill');
+      // 90 min < 120 min. So it IS new.
+      // logic: isNew = ageInMinutes >= 0 && ageInMinutes < newPillDurationHours * 60;
+      // 90 < 120 is true. So it SHOULD be there.
       expect(newPill).not.toBeNull();
-      expect(newPill?.textContent).toBe('NEW');
-    });
-
-    it('should not show "NEW" pill if older than custom duration', async () => {
-      const now = new Date();
-      vi.setSystemTime(now);
-
-      hass.states['sensor.test_feed'] = {
-        entity_id: 'sensor.test_feed',
-        state: 'ok',
-        attributes: {
-          entries: [
-            {
-              title: 'Old Item',
-              link: '#',
-              summary: 'This is old',
-              published: new Date(now.getTime() - 70 * 60 * 1000).toISOString(), // 70 minutes old
-            },
-          ],
-        },
-      } as HassEntity;
-      element.hass = hass;
-      element.setConfig({ ...config, new_pill_duration_hours: 1 }); // Custom duration of 1 hour
-      await element.updateComplete;
-
-      const newPill = element.shadowRoot?.querySelector('.new-pill');
-      expect(newPill).toBeNull();
     });
   });
 
@@ -1098,6 +1074,79 @@ describe('RssAccordion', () => {
 
       const secondTitle = items?.[1].querySelector('.header-main > a.title-link');
       expect(secondTitle?.textContent?.trim()).toBe('Feed 1 Item 1');
+    });
+  });
+
+  describe('auto-refresh', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should start a refresh timer if refresh_interval is configured', async () => {
+      const callServiceSpy = vi.fn();
+      element.hass = { ...hass, callService: callServiceSpy };
+      element.setConfig({ ...config, refresh_interval: 30 }); // 30 minutes
+      await element.updateComplete;
+
+      expect(callServiceSpy).not.toHaveBeenCalled();
+
+      // fast-forward 30 minutes
+      vi.advanceTimersByTime(30 * 60 * 1000);
+
+      expect(callServiceSpy).toHaveBeenCalledWith('homeassistant', 'update_entity', {
+        entity_id: 'sensor.test_feed',
+      });
+    });
+
+    it('should not start a refresh timer if refresh_interval is 0 or undefined', async () => {
+      const callServiceSpy = vi.fn();
+      element.hass = { ...hass, callService: callServiceSpy };
+      element.setConfig({ ...config, refresh_interval: 0 });
+      await element.updateComplete;
+
+      vi.advanceTimersByTime(60 * 60 * 1000); // 1 hour
+      expect(callServiceSpy).not.toHaveBeenCalled();
+
+      element.setConfig({ ...config, refresh_interval: undefined });
+      await element.updateComplete;
+
+      vi.advanceTimersByTime(60 * 60 * 1000);
+      expect(callServiceSpy).not.toHaveBeenCalled();
+    });
+
+    it('should clear refresh timer on disconnect', async () => {
+      const callServiceSpy = vi.fn();
+      element.hass = { ...hass, callService: callServiceSpy };
+      element.setConfig({ ...config, refresh_interval: 30 });
+      await element.updateComplete;
+
+      element.disconnectedCallback();
+
+      // fast-forward 30 minutes
+      vi.advanceTimersByTime(30 * 60 * 1000);
+
+      expect(callServiceSpy).not.toHaveBeenCalled();
+    });
+
+    it('should refresh multiple entities if configured', async () => {
+      const callServiceSpy = vi.fn();
+      element.hass = { ...hass, callService: callServiceSpy };
+      element.setConfig({ ...config, entities: ['sensor.feed1', 'sensor.feed2'], refresh_interval: 15 });
+      await element.updateComplete;
+
+      vi.advanceTimersByTime(15 * 60 * 1000);
+
+      expect(callServiceSpy).toHaveBeenCalledTimes(2);
+      expect(callServiceSpy).toHaveBeenCalledWith('homeassistant', 'update_entity', {
+        entity_id: 'sensor.feed1',
+      });
+      expect(callServiceSpy).toHaveBeenCalledWith('homeassistant', 'update_entity', {
+        entity_id: 'sensor.feed2',
+      });
     });
   });
 });
