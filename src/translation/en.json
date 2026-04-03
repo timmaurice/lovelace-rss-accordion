@@ -36,6 +36,7 @@
     "show_item_image": "Show Item Images",
     "show_bookmarks": "Enable bookmarking for items",
     "use_multiple_entities": "Use multiple entities",
+    "show_source": "Show item source",
     "add_entity": "Add Entity",
     "remove_entity": "Remove Entity"
   },

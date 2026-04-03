@@ -1077,6 +1077,88 @@ describe('RssAccordion', () => {
     });
   });
 
+  describe('show_source option', () => {
+    beforeEach(() => {
+      hass.states['sensor.feed1'] = {
+        entity_id: 'sensor.feed1',
+        state: 'ok',
+        attributes: {
+          friendly_name: 'Feed 1',
+          entries: [{ title: 'Item 1', link: '#1', published: new Date().toISOString() }],
+        },
+      } as HassEntity;
+
+      hass.states['sensor.feed2'] = {
+        entity_id: 'sensor.feed2',
+        state: 'ok',
+        attributes: {
+          friendly_name: 'Feed 2',
+          entries: [{ title: 'Item 2', link: '#2', published: new Date().toISOString() }],
+        },
+      } as HassEntity;
+    });
+
+    it('should show source for multiple entities by default', async () => {
+      element.hass = hass;
+      element.setConfig({
+        type: 'custom:rss-accordion',
+        entities: ['sensor.feed1', 'sensor.feed2'],
+      });
+      await element.updateComplete;
+
+      const items = element.shadowRoot?.querySelectorAll('.accordion-item');
+      expect(items?.length).toBe(2);
+      const source = items?.[0].querySelector('.item-source');
+      expect(source).not.toBeNull();
+      expect(source?.textContent).toContain('Feed');
+    });
+
+    it('should hide source for multiple entities if explicitly disabled', async () => {
+      element.hass = hass;
+      element.setConfig({
+        type: 'custom:rss-accordion',
+        entities: ['sensor.feed1', 'sensor.feed2'],
+        show_source: false,
+      });
+      await element.updateComplete;
+
+      const items = element.shadowRoot?.querySelectorAll('.accordion-item');
+      expect(items?.length).toBe(2);
+      const source = items?.[0].querySelector('.item-source');
+      expect(source).toBeNull();
+    });
+
+    it('should hide source for single entity by default', async () => {
+      element.hass = hass;
+      element.setConfig({
+        type: 'custom:rss-accordion',
+        entity: 'sensor.feed1',
+      });
+      await element.updateComplete;
+
+      const items = element.shadowRoot?.querySelectorAll('.accordion-item');
+      expect(items?.length).toBe(1);
+      const source = items?.[0].querySelector('.item-source');
+      expect(source).toBeNull();
+    });
+
+    it('should show source for single entity if explicitly enabled', async () => {
+      element.hass = hass;
+      element.setConfig({
+        type: 'custom:rss-accordion',
+        entity: 'sensor.feed1',
+        show_source: true,
+      });
+      await element.updateComplete;
+
+      const items = element.shadowRoot?.querySelectorAll('.accordion-item');
+      expect(items?.length).toBe(1);
+      const source = items?.[0].querySelector('.item-source');
+      expect(source).not.toBeNull();
+      expect(source?.textContent).toContain('Feed 1');
+    });
+  });
+
   describe('auto-refresh', () => {
     beforeEach(() => {
       vi.useFakeTimers();

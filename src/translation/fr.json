@@ -34,7 +34,11 @@
     "max_channel_description_length": "Longueur maximale de la description du canal",
     "show_audio_player": "Afficher le lecteur audio",
     "show_item_image": "Afficher les images des éléments",
-    "show_bookmarks": "Activer les favoris pour les éléments"
+    "show_bookmarks": "Activer les favoris pour les éléments",
+    "use_multiple_entities": "Utiliser plusieurs entités",
+    "show_source": "Afficher la source",
+    "add_entity": "Ajouter une entité",
+    "remove_entity": "Supprimer l'entité"
   },
   "card": {
     "to_news_article": "Vers l'article",
@@ -51,6 +55,7 @@
     "remove_bookmark": "Retirer des favoris",
     "show_bookmarked": "Afficher les favoris",
     "no_bookmarks_yet_tooltip": "Ajoutez un élément aux favoris pour activer ce filtre",
+    "source": "Source",
     "show_more": "Voir plus",
     "show_less": "Voir moins"
   }

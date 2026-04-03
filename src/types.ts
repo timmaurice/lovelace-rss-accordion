@@ -88,6 +88,7 @@ export interface RssAccordionConfig extends LovelaceCardConfig {
   show_channel_description?: boolean;
   max_channel_description_length?: number;
   refresh_interval?: number;
+  show_source?: boolean;
 }
 
 export interface AudioProgress {

@@ -623,7 +623,8 @@ export class RssAccordion extends LitElement implements LovelaceCard {
           </div>
         </summary>
         <div class="accordion-content">
-          ${this._entities.length > 1 && item.source_entity_id
+          ${(this._config.show_source !== undefined ? this._config.show_source : this._entities.length > 1) &&
+          item.source_entity_id
             ? html`<div class="item-source">
                 ${localize(this.hass, 'component.rss-accordion.card.source')}:
                 ${this._getEntityName(item.source_entity_id)}

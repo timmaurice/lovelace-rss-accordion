@@ -69,6 +69,13 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
         newConfig.open_behavior = value as 'none' | 'latest' | 'all';
       }
       delete newConfig.initial_open; // Clean up legacy property
+    } else if (configValue === 'show_source') {
+      const isMulti = this._getEntities().length > 1;
+      if (value === isMulti) {
+        delete newConfig.show_source;
+      } else {
+        newConfig.show_source = value as boolean;
+      }
     } else if (value === '' || value === false || value === undefined) {
       delete newConfig[configValue];
       // If show_channel_info is turned off, also remove its dependent options
@@ -427,6 +434,15 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
               <ha-switch
                 .checked=${!!this._config.show_bookmarks}
                 .configValue=${'show_bookmarks'}
+                @change=${this._valueChanged}
+              ></ha-switch>
+            </ha-formfield>
+            <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_source')}>
+              <ha-switch
+                .checked=${this._config.show_source !== undefined
+                  ? this._config.show_source
+                  : this._getEntities().length > 1}
+                .configValue=${'show_source'}
                 @change=${this._valueChanged}
               ></ha-switch>
             </ha-formfield>
