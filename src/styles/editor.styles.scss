@@ -57,3 +57,19 @@ ha-formfield {
     margin-bottom: 4px;
   }
 }
+
+.dropdown-wrapper {
+  width: 100%;
+
+  ha-dropdown {
+    width: 100%;
+  }
+}
+
+.dropdown-trigger {
+  width: 100%;
+}
+
+.dropdown-textfield {
+  width: 100%;
+}

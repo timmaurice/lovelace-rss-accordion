@@ -22,7 +22,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
     this._config = config;
   }
 
-  private _valueChanged(ev: Event): void {
+  private _valueChanged(ev: Event | CustomEvent): void {
     if (!this._config || !this.hass) {
       return;
     }
@@ -268,7 +268,19 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
         break;
       }
     }
+    const openBehavior = this._config.open_behavior || (this._config.initial_open ? 'latest' : 'none');
+    const openBehaviorLabel =
+      openBehavior === 'all'
+        ? localize(this.hass, 'component.rss-accordion.editor.open_behavior_options.all')
+        : openBehavior === 'latest'
+          ? localize(this.hass, 'component.rss-accordion.editor.open_behavior_options.latest')
+          : localize(this.hass, 'component.rss-accordion.editor.open_behavior_options.none');
 
+    const imageFitMode = this._config.image_fit_mode || 'cover';
+    const imageFitModeLabel =
+      imageFitMode === 'contain'
+        ? localize(this.hass, 'component.rss-accordion.editor.image_fit_mode_options.contain')
+        : localize(this.hass, 'component.rss-accordion.editor.image_fit_mode_options.cover');
     return html`
       <ha-card>
         <div class="card-content card-config">
@@ -355,25 +367,44 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 .placeholder=${localize(this.hass, 'component.rss-accordion.editor.refresh_interval_placeholder')}
               ></ha-textfield>
             </div>
-            <ha-select
-              .label=${localize(this.hass, 'component.rss-accordion.editor.open_behavior')}
-              .value=${this._config.open_behavior || (this._config.initial_open ? 'latest' : 'none')}
-              .configValue=${'open_behavior'}
-              @selected=${this._valueChanged}
-              @closed=${(ev: Event) => ev.stopPropagation()}
-              fixedMenuPosition
-              naturalMenuWidth
-            >
-              <mwc-list-item value="none"
-                >${localize(this.hass, 'component.rss-accordion.editor.open_behavior_options.none')}</mwc-list-item
+            <div class="dropdown-wrapper">
+              <ha-dropdown
+                @wa-select=${(ev: CustomEvent) => {
+                  const target = {
+                    configValue: 'open_behavior',
+                    value: ev.detail.item.value,
+                  } as unknown as EventTarget;
+                  this._valueChanged({ target } as unknown as Event);
+                }}
+                @closed=${(ev: Event) => ev.stopPropagation()}
+                fixedMenuPosition
+                naturalMenuWidth
               >
-              <mwc-list-item value="latest"
-                >${localize(this.hass, 'component.rss-accordion.editor.open_behavior_options.latest')}</mwc-list-item
-              >
-              <mwc-list-item value="all"
-                >${localize(this.hass, 'component.rss-accordion.editor.open_behavior_options.all')}</mwc-list-item
-              >
-            </ha-select>
+                <div slot="trigger" class="dropdown-trigger">
+                  <ha-textfield
+                    readonly
+                    .label=${localize(this.hass, 'component.rss-accordion.editor.open_behavior')}
+                    .value=${openBehaviorLabel}
+                    iconTrailing
+                    class="dropdown-textfield"
+                  >
+                    <ha-icon slot="trailingIcon" icon="mdi:menu-down"></ha-icon>
+                  </ha-textfield>
+                </div>
+                <ha-dropdown-item value="none"
+                  >${localize(this.hass, 'component.rss-accordion.editor.open_behavior_options.none')}</ha-dropdown-item
+                >
+                <ha-dropdown-item value="latest"
+                  >${localize(
+                    this.hass,
+                    'component.rss-accordion.editor.open_behavior_options.latest',
+                  )}</ha-dropdown-item
+                >
+                <ha-dropdown-item value="all"
+                  >${localize(this.hass, 'component.rss-accordion.editor.open_behavior_options.all')}</ha-dropdown-item
+                >
+              </ha-dropdown>
+            </div>
             <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.allow_multiple')}>
               <ha-switch
                 .checked=${!!this._config.allow_multiple}
@@ -429,28 +460,44 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                     ></ha-textfield>
                     ${this._config.image_ratio && this._config.image_ratio !== 'auto'
                       ? html`
-                          <ha-select
-                            .label=${localize(this.hass, 'component.rss-accordion.editor.image_fit_mode')}
-                            .value=${this._config.image_fit_mode || 'cover'}
-                            .configValue=${'image_fit_mode'}
-                            @selected=${this._valueChanged}
-                            @closed=${(ev: Event) => ev.stopPropagation()}
-                            fixedMenuPosition
-                            naturalMenuWidth
-                          >
-                            <mwc-list-item value="cover"
-                              >${localize(
-                                this.hass,
-                                'component.rss-accordion.editor.image_fit_mode_options.cover',
-                              )}</mwc-list-item
+                          <div class="dropdown-wrapper">
+                            <ha-dropdown
+                              @wa-select=${(ev: CustomEvent) => {
+                                const target = {
+                                  configValue: 'image_fit_mode',
+                                  value: ev.detail.item.value,
+                                } as unknown as EventTarget;
+                                this._valueChanged({ target } as unknown as Event);
+                              }}
+                              @closed=${(ev: Event) => ev.stopPropagation()}
+                              fixedMenuPosition
+                              naturalMenuWidth
                             >
-                            <mwc-list-item value="contain"
-                              >${localize(
-                                this.hass,
-                                'component.rss-accordion.editor.image_fit_mode_options.contain',
-                              )}</mwc-list-item
-                            >
-                          </ha-select>
+                              <div slot="trigger" class="dropdown-trigger">
+                                <ha-textfield
+                                  readonly
+                                  .label=${localize(this.hass, 'component.rss-accordion.editor.image_fit_mode')}
+                                  .value=${imageFitModeLabel}
+                                  iconTrailing
+                                  class="dropdown-textfield"
+                                >
+                                  <ha-icon slot="trailingIcon" icon="mdi:menu-down"></ha-icon>
+                                </ha-textfield>
+                              </div>
+                              <ha-dropdown-item value="cover"
+                                >${localize(
+                                  this.hass,
+                                  'component.rss-accordion.editor.image_fit_mode_options.cover',
+                                )}</ha-dropdown-item
+                              >
+                              <ha-dropdown-item value="contain"
+                                >${localize(
+                                  this.hass,
+                                  'component.rss-accordion.editor.image_fit_mode_options.contain',
+                                )}</ha-dropdown-item
+                              >
+                            </ha-dropdown>
+                          </div>
                         `
                       : ''}
                   </div>
