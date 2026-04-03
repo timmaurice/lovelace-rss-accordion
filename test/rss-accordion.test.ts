@@ -1149,4 +1149,112 @@ describe('RssAccordion', () => {
       });
     });
   });
+
+  describe('open_behavior', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+
+      // Remove the automatically created element so we can create it with the correct initial config
+      if (element.parentElement) {
+        document.body.removeChild(element);
+      }
+
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [
+            {
+              title: 'Item 1',
+              link: '#1',
+              summary: 'Summary 1',
+              published: new Date('2023-01-02T10:00:00Z').toISOString(),
+            },
+            {
+              title: 'Item 2',
+              link: '#2',
+              summary: 'Summary 2',
+              published: new Date('2023-01-01T10:00:00Z').toISOString(),
+            },
+          ],
+        },
+      } as HassEntity;
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      // Only remove if it was attached. The outer afterEach will also attempt removal on whatever `element` is pointing to.
+      if (element && element.parentElement) {
+        document.body.removeChild(element);
+      }
+      // Provide a dummy element to prevent outer afterEach from throwing if we did something weird
+      element = document.createElement('rss-accordion') as RssAccordion;
+      document.body.appendChild(element);
+    });
+
+    it('should open the latest item if open_behavior is "latest"', async () => {
+      element = document.createElement('rss-accordion') as RssAccordion;
+      element.hass = hass;
+      element.setConfig({ ...config, open_behavior: 'latest' });
+      document.body.appendChild(element);
+      await element.updateComplete;
+
+      // Fast-forward setTimeout in firstUpdated
+      vi.runAllTimers();
+      await element.updateComplete;
+
+      const items = element.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item');
+      expect(items?.length).toBe(2);
+      expect(items?.[0].open).toBe(true); // Item 1 (newest)
+      expect(items?.[1].open).toBe(false); // Item 2
+    });
+
+    it('should fall back to latest if initial_open is true and open_behavior is unset', async () => {
+      element = document.createElement('rss-accordion') as RssAccordion;
+      element.hass = hass;
+      element.setConfig({ ...config, initial_open: true });
+      document.body.appendChild(element);
+      await element.updateComplete;
+
+      vi.runAllTimers();
+      await element.updateComplete;
+
+      const items = element.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item');
+      expect(items?.length).toBe(2);
+      expect(items?.[0].open).toBe(true);
+      expect(items?.[1].open).toBe(false);
+    });
+
+    it('should open all items if open_behavior is "all"', async () => {
+      element = document.createElement('rss-accordion') as RssAccordion;
+      element.hass = hass;
+      element.setConfig({ ...config, open_behavior: 'all' });
+      document.body.appendChild(element);
+      await element.updateComplete;
+
+      vi.runAllTimers();
+      await element.updateComplete;
+
+      const items = element.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item');
+      expect(items?.length).toBe(2);
+      expect(items?.[0].open).toBe(true);
+      expect(items?.[1].open).toBe(true);
+    });
+
+    it('should keep all items closed if open_behavior is "none"', async () => {
+      element = document.createElement('rss-accordion') as RssAccordion;
+      element.hass = hass;
+      element.setConfig({ ...config, open_behavior: 'none' });
+      document.body.appendChild(element);
+      await element.updateComplete;
+
+      vi.runAllTimers();
+      await element.updateComplete;
+
+      const items = element.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item');
+      expect(items?.length).toBe(2);
+      expect(items?.[0].open).toBe(false);
+      expect(items?.[1].open).toBe(false);
+    });
+  });
 });

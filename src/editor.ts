@@ -62,6 +62,13 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
         newConfig.show_channel_description = false;
         delete newConfig.max_channel_description_length;
       }
+    } else if (configValue === 'open_behavior') {
+      if (value === 'none') {
+        delete newConfig.open_behavior;
+      } else {
+        newConfig.open_behavior = value as 'none' | 'latest' | 'all';
+      }
+      delete newConfig.initial_open; // Clean up legacy property
     } else if (value === '' || value === false || value === undefined) {
       delete newConfig[configValue];
       // If show_channel_info is turned off, also remove its dependent options
@@ -348,13 +355,25 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 .placeholder=${localize(this.hass, 'component.rss-accordion.editor.refresh_interval_placeholder')}
               ></ha-textfield>
             </div>
-            <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.initial_open')}>
-              <ha-switch
-                .checked=${!!this._config.initial_open}
-                .configValue=${'initial_open'}
-                @change=${this._valueChanged}
-              ></ha-switch>
-            </ha-formfield>
+            <ha-select
+              .label=${localize(this.hass, 'component.rss-accordion.editor.open_behavior')}
+              .value=${this._config.open_behavior || (this._config.initial_open ? 'latest' : 'none')}
+              .configValue=${'open_behavior'}
+              @selected=${this._valueChanged}
+              @closed=${(ev: Event) => ev.stopPropagation()}
+              fixedMenuPosition
+              naturalMenuWidth
+            >
+              <mwc-list-item value="none"
+                >${localize(this.hass, 'component.rss-accordion.editor.open_behavior_options.none')}</mwc-list-item
+              >
+              <mwc-list-item value="latest"
+                >${localize(this.hass, 'component.rss-accordion.editor.open_behavior_options.latest')}</mwc-list-item
+              >
+              <mwc-list-item value="all"
+                >${localize(this.hass, 'component.rss-accordion.editor.open_behavior_options.all')}</mwc-list-item
+              >
+            </ha-select>
             <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.allow_multiple')}>
               <ha-switch
                 .checked=${!!this._config.allow_multiple}

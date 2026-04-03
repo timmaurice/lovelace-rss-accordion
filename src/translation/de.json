@@ -9,7 +9,12 @@
     "title": "Titel (Optional)",
     "entity": "Feed-Entität",
     "allow_multiple": "Erlaube das Öffnen mehrerer Einträge",
-    "initial_open": "Neuesten Eintrag bei Laden öffnen",
+    "open_behavior": "Standard-Öffnungsverhalten",
+    "open_behavior_options": {
+      "none": "Alle geschlossen",
+      "latest": "Neuesten Eintrag öffnen",
+      "all": "Alle Einträge öffnen"
+    },
     "max_items": "Maximale Einträge",
     "max_items_placeholder": "Alle Einträge",
     "new_pill_duration_hours": "Dauer für 'NEU'-Anzeige (Stunden)",

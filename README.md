@@ -16,7 +16,7 @@ A custom Lovelace card for Home Assistant to display RSS feed items from a senso
 - **Flexible Data Source**: Displays items from a `sensor` entity (e.g., Feed Parser) or an `event` entity (e.g., core `feedreader`).
 - **Multiple Feed Aggregation**: Combine items from multiple RSS entities into a single card, automatically sorted by publication date.
 - **Accordion Layout**: Each feed item is presented in a clean, collapsible accordion view, with an option to allow single or multiple items to be open at once.
-- **Customizable Display**: Control the maximum number of items shown and optionally open the latest item automatically on card load.
+- **Customizable Display**: Control the maximum number of items shown and optionally open the latest item or all items automatically on card load.
 - **Channel Information**: Optionally display the feed's channel details, such as title, description, and image.
 
 ### Visuals & User Experience
@@ -90,7 +90,7 @@ You can now add the card to your dashboard.
 | `show_item_image`                | boolean | `true`         | If `false`, hides the main image for each feed item.                                                                                                                                                                      |
 | `image_ratio`                    | string  | `auto`         | The CSS `aspect-ratio` for item images (e.g., `16/9`, `1.77`). Images are cropped to fit.                                                                                                                                 |
 | `image_fit_mode`                 | string  | `cover`        | How the image should fit. `cover` (fill & crop) or `contain` (fit inside).                                                                                                                                                |
-| `initial_open`                   | boolean | `false`        | If `true`, the first/newest item will be open by default when the card loads.                                                                                                                                             |
+| `open_behavior`                  | string  | `none`         | Determines which items are open by default when the card loads. Options: `none` (keep all closed), `latest` (open the newest item), or `all` (open all items).                                                            |
 | `allow_multiple`                 | boolean | `false`        | If `true`, allows multiple accordion items to be open simultaneously.                                                                                                                                                     |
 | `show_audio_player`              | boolean | `true`         | If `false`, hides the audio player for feed items that include an audio enclosure (e.g., podcasts).                                                                                                                       |
 | `show_bookmarks`                 | boolean | `false`        | If `true`, enables a bookmarking feature, allowing you to star items and filter for them.                                                                                                                                 |

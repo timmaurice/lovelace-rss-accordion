@@ -76,7 +76,8 @@ export interface RssAccordionConfig extends LovelaceCardConfig {
   allow_multiple?: boolean;
   image_ratio?: string;
   image_fit_mode?: 'cover' | 'contain';
-  initial_open?: boolean;
+  initial_open?: boolean; // legacy, migrated to open_behavior
+  open_behavior?: 'none' | 'latest' | 'all';
   show_item_image?: boolean;
   new_pill_duration_hours?: number;
   show_audio_player?: boolean;

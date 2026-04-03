@@ -241,7 +241,18 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   }
 
   protected firstUpdated(): void {
-    if (this._config?.initial_open) {
+    const openBehavior = this._config?.open_behavior || (this._config?.initial_open ? 'latest' : 'none');
+
+    if (openBehavior === 'all') {
+      setTimeout(() => {
+        const allItems = this.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item');
+        allItems?.forEach((item) => {
+          if (!item.open) {
+            this._openAccordion(item);
+          }
+        });
+      }, 0);
+    } else if (openBehavior === 'latest') {
       // We need to wait for the DOM to be fully settled before we can measure scrollHeight for the animation.
       // A timeout of 0 pushes this to the end of the event queue, after the current render cycle.
       setTimeout(() => {
@@ -290,7 +301,8 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const content = details.querySelector<HTMLElement>('.accordion-content');
     if (!content) return;
 
-    if (!this._config.allow_multiple) {
+    const openBehavior = this._config.open_behavior || (this._config.initial_open ? 'latest' : 'none');
+    if (!this._config.allow_multiple && openBehavior !== 'all') {
       this.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item[open]').forEach((openDetails) => {
         if (openDetails !== details) {
           this._closeAccordion(openDetails);

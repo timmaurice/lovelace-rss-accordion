@@ -9,7 +9,12 @@
     "title": "Titre (Optionnel)",
     "entity": "Entité du flux",
     "allow_multiple": "Autoriser l'ouverture de plusieurs éléments",
-    "initial_open": "Ouvrir le dernier élément au chargement",
+    "open_behavior": "Comportement d'ouverture par défaut",
+    "open_behavior_options": {
+      "none": "Tous fermés",
+      "latest": "Ouvrir le dernier élément",
+      "all": "Tout ouvrir"
+    },
     "max_items": "Nombre maximum d'éléments",
     "max_items_placeholder": "Tous les éléments",
     "new_pill_duration_hours": "Durée d'affichage de la pastille 'NOUVEAU' (heures)",
