@@ -1157,6 +1157,25 @@ describe('RssAccordion', () => {
       expect(source).not.toBeNull();
       expect(source?.textContent).toContain('Feed 1');
     });
+
+    it('should prioritize item category over entity name if available', async () => {
+      ((hass.states['sensor.feed1'].attributes.entries as unknown[])[0] as Record<string, unknown>).category =
+        'Custom Category';
+      element.hass = { ...hass };
+      element.setConfig({
+        type: 'custom:rss-accordion',
+        entity: 'sensor.feed1',
+        show_source: true,
+      });
+      await element.updateComplete;
+
+      const items = element.shadowRoot?.querySelectorAll('.accordion-item');
+      expect(items?.length).toBe(1);
+      const source = items?.[0].querySelector('.item-source');
+      expect(source).not.toBeNull();
+      expect(source?.textContent).toContain('Custom Category');
+      expect(source?.textContent).not.toContain('Feed 1');
+    });
   });
 
   describe('auto-refresh', () => {

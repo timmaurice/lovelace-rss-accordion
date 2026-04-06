@@ -457,6 +457,24 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return stateObj?.attributes.friendly_name || entityId;
   }
 
+  private _getItemSourceName(item: FeedEntry): string {
+    const entityName = item.source_entity_id ? this._getEntityName(item.source_entity_id) : '';
+    let itemSource = '';
+
+    if (item.source && typeof item.source === 'string') {
+      itemSource = item.source;
+    } else if (item.category) {
+      if (typeof item.category === 'string') itemSource = item.category;
+      if (Array.isArray(item.category)) itemSource = item.category.join(', ');
+    }
+
+    if (this._entities.length > 1) {
+      return itemSource ? `${entityName} (${itemSource})` : entityName;
+    } else {
+      return itemSource ? itemSource : entityName;
+    }
+  }
+
   /**
    * Extracts an image URL from a feed item, prioritizing dedicated fields
    * over parsing HTML content.
@@ -624,10 +642,9 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         </summary>
         <div class="accordion-content">
           ${(this._config.show_source !== undefined ? this._config.show_source : this._entities.length > 1) &&
-          item.source_entity_id
+          (item.source_entity_id || item.category || item.source)
             ? html`<div class="item-source">
-                ${localize(this.hass, 'component.rss-accordion.card.source')}:
-                ${this._getEntityName(item.source_entity_id)}
+                ${localize(this.hass, 'component.rss-accordion.card.source')}: ${this._getItemSourceName(item)}
               </div>`
             : ''}
           <div class="item-published">${formattedDate}</div>
