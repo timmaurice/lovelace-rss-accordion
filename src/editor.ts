@@ -356,6 +356,17 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 .placeholder=${localize(this.hass, 'component.rss-accordion.editor.max_items_placeholder')}
               ></ha-textfield>
               <ha-textfield
+                .label=${localize(this.hass, 'component.rss-accordion.editor.max_items_per_entity')}
+                type="number"
+                min="1"
+                .value=${this._config.max_items_per_entity || ''}
+                .configValue=${'max_items_per_entity'}
+                @input=${this._valueChanged}
+                .placeholder=${localize(this.hass, 'component.rss-accordion.editor.max_items_per_entity_placeholder')}
+              ></ha-textfield>
+            </div>
+            <div class="row">
+              <ha-textfield
                 .label=${localize(this.hass, 'component.rss-accordion.editor.new_pill_duration_hours')}
                 type="number"
                 min="1"

@@ -85,6 +85,7 @@ You can now add the card to your dashboard.
 | `entities`                       | list    | _optional_     | A list of entity IDs to aggregate items from multiple feeds. Items are sorted by publication date. \*Either `entity` or `entities` is required.                                                                                                                                                        |
 | `title`                          | string  | `''`           | The title of the card.                                                                                                                                                                                                                                                                                 |
 | `max_items`                      | number  | All items      | The maximum number of feed items to display.                                                                                                                                                                                                                                                           |
+| `max_items_per_entity`           | number  | All items      | The maximum number of feed items to extract from each configured entity. Useful for ensuring slower feeds are not entirely overwhelmed by high-volume feeds before the global `max_items` limit.                                                                                                       |
 | `new_pill_duration_hours`        | number  | `1`            | The duration in hours for which the "NEW" pill is shown on recent items.                                                                                                                                                                                                                               |
 | `refresh_interval`               | number  | _optional_     | The interval in minutes at which the card will automatically refresh the RSS feed entities. When set, the card will call the `homeassistant.update_entity` service for all configured entities at the specified interval.                                                                              |
 | `show_item_image`                | boolean | `true`         | If `false`, hides the main image for each feed item.                                                                                                                                                                                                                                                   |
@@ -126,6 +127,7 @@ entities:
   - sensor.local_news
   - sensor.weather_alerts
 max_items: 15
+max_items_per_entity: 5
 show_bookmarks: true
 ```
 

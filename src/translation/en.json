@@ -15,8 +15,10 @@
       "latest": "Open latest item",
       "all": "Open all items"
     },
-    "max_items": "Maximum Items",
+    "max_items": "Maximum Items (Overall)",
     "max_items_placeholder": "All items",
+    "max_items_per_entity": "Maximum Items (Per Feed)",
+    "max_items_per_entity_placeholder": "All items",
     "new_pill_duration_hours": "Duration for 'NEW' pill (hours)",
     "refresh_interval": "Refresh Interval (minutes)",
     "refresh_interval_placeholder": "30",

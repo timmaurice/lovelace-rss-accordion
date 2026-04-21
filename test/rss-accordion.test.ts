@@ -134,6 +134,47 @@ describe('RssAccordion', () => {
     expect(items?.length).toBe(1);
   });
 
+  it('should respect max_items_per_entity config and fetch the newest items', async () => {
+    hass.states['sensor.test_feed'] = {
+      entity_id: 'sensor.test_feed',
+      state: 'ok',
+      attributes: {
+        entries: [
+          {
+            title: 'Test 1 (Oldest)',
+            link: '#1',
+            summary: 'Summary 1',
+            published: new Date('2023-01-01T12:00:00Z').toISOString(),
+          },
+          {
+            title: 'Test 2 (Middle)',
+            link: '#2',
+            summary: 'Summary 2',
+            published: new Date('2023-01-02T12:00:00Z').toISOString(),
+          },
+          {
+            title: 'Test 3 (Newest)',
+            link: '#3',
+            summary: 'Summary 3',
+            published: new Date('2023-01-03T12:00:00Z').toISOString(),
+          },
+        ],
+      },
+    } as HassEntity;
+    element.hass = hass;
+    // Limit to 2 items per entity
+    element.setConfig({ ...config, max_items_per_entity: 2 });
+    await element.updateComplete;
+
+    const items = element.shadowRoot?.querySelectorAll('.accordion-item');
+    expect(items?.length).toBe(2);
+    // The items shown should be the NEWEST two items, even though the raw array has the oldest first.
+    const titles = Array.from(items || []).map((item) => item.querySelector('.title-link')?.textContent?.trim());
+    expect(titles).toContain('Test 3 (Newest)');
+    expect(titles).toContain('Test 2 (Middle)');
+    expect(titles).not.toContain('Test 1 (Oldest)');
+  });
+
   it('should use description if summary is not available', async () => {
     hass.states['sensor.test_feed'] = {
       entity_id: 'sensor.test_feed',

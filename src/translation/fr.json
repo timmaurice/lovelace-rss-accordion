@@ -15,8 +15,10 @@
       "latest": "Ouvrir le dernier élément",
       "all": "Tout ouvrir"
     },
-    "max_items": "Nombre maximum d'éléments",
+    "max_items": "Nombre maximum d'éléments (Global)",
     "max_items_placeholder": "Tous les éléments",
+    "max_items_per_entity": "Nombre maximum d'éléments (Par flux)",
+    "max_items_per_entity_placeholder": "Tous les éléments",
     "new_pill_duration_hours": "Durée d'affichage de la pastille 'NOUVEAU' (heures)",
     "refresh_interval": "Intervalle d'actualisation (minutes)",
     "refresh_interval_placeholder": "30",

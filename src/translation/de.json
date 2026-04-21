@@ -15,8 +15,10 @@
       "latest": "Neuesten Eintrag öffnen",
       "all": "Alle Einträge öffnen"
     },
-    "max_items": "Maximale Einträge",
+    "max_items": "Maximale Einträge (Gesamt)",
     "max_items_placeholder": "Alle Einträge",
+    "max_items_per_entity": "Maximale Einträge (Pro Feed)",
+    "max_items_per_entity_placeholder": "Alle Einträge",
     "new_pill_duration_hours": "Dauer für 'NEU'-Anzeige (Stunden)",
     "refresh_interval": "Aktualisierungsintervall (Minuten)",
     "refresh_interval_placeholder": "30",

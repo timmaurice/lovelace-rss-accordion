@@ -425,9 +425,18 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         continue;
       }
 
-      // Handle sensor entities with an 'entries' attribute
-      if (stateObj.attributes.entries && Array.isArray(stateObj.attributes.entries)) {
-        const entries = (stateObj.attributes.entries as FeedEntry[]) || [];
+      // Arrays of entries might be in `entries`, `events`, or `items` depending on the integration
+      const entryArray = stateObj.attributes.entries || stateObj.attributes.events || stateObj.attributes.items;
+
+      if (entryArray && Array.isArray(entryArray)) {
+        let entries = [...((entryArray as FeedEntry[]) || [])];
+
+        // Ensure entries are sorted newest first BEFORE slicing!
+        entries.sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
+
+        if (this._config.max_items_per_entity) {
+          entries = entries.slice(0, this._config.max_items_per_entity);
+        }
         // Tag each entry with its source entity
         const taggedEntries = entries.map((entry) => ({ ...entry, source_entity_id: entityId }));
         allItems.push(...taggedEntries);
