@@ -61,7 +61,8 @@ export interface FeedEntry {
   link: string;
   summary?: string;
   description?: string;
-  published: string;
+  published?: string;
+  updated?: string;
   image?: string;
   audio?: string;
   source_entity_id?: string; // Track which entity this item came from

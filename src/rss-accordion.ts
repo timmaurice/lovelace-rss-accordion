@@ -411,7 +411,11 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const allItems = Array.from(itemsMap.values());
 
     // Sort all items by date, newest first
-    allItems.sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
+    allItems.sort((a, b) => {
+      const dateA = a.published || a.updated || '';
+      const dateB = b.published || b.updated || '';
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
 
     return allItems;
   }
@@ -432,7 +436,11 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         let entries = [...((entryArray as FeedEntry[]) || [])];
 
         // Ensure entries are sorted newest first BEFORE slicing!
-        entries.sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
+        entries.sort((a, b) => {
+          const dateA = a.published || a.updated || '';
+          const dateB = b.published || b.updated || '';
+          return new Date(dateB).getTime() - new Date(dateA).getTime();
+        });
 
         if (this._config.max_items_per_entity) {
           entries = entries.slice(0, this._config.max_items_per_entity);
@@ -505,7 +513,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       (this._config.show_channel_description !== false && (channel.description || channel.subtitle)) ||
       channel.image ||
       channel.link ||
-      (this._config.show_published_date && channel.published)
+      (this._config.show_published_date && (channel.published || channel.updated))
     );
   }
 
@@ -531,7 +539,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const channelLink = channel.link as string | undefined;
     const channelDescription = (channel.description || channel.subtitle) as string | undefined;
     const channelImage = channel.image as string | undefined;
-    const channelPublished = channel.published as string | undefined;
+    const channelPublished = (channel.published || channel.updated) as string | undefined;
     const formattedChannelPublished = channelPublished ? formatDate(channelPublished, this.hass) : undefined;
 
     return html`
@@ -592,7 +600,8 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     // strip all images from the summary to prevent duplicates.
     const processedContent = showImage ? content.replace(/<img[^>]*>/gi, '') : content;
 
-    const publishedDate = new Date(item.published);
+    const dateString = item.published || item.updated || '';
+    const publishedDate = new Date(dateString);
     const formattedDate = formatDate(publishedDate, this.hass);
 
     const newPillDurationHours = this._config.new_pill_duration_hours ?? 1;

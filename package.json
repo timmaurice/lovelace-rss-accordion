@@ -1,6 +1,6 @@
 {
   "name": "rss-accordion",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "A custom Lovelace card for Home Assistant to display RSS feed items in an accordion style.",
   "homepage": "https://github.com/timmaurice/lovelace-rss-accordion#readme",
   "bugs": {
@@ -41,7 +41,7 @@
     "sass": "^1.99.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.0",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.5"
   },
   "dependencies": {
     "tslib": "^2.8.1"

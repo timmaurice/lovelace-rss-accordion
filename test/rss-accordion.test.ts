@@ -191,6 +191,23 @@ describe('RssAccordion', () => {
     expect(content?.innerHTML).toBe('Description 1');
   });
 
+  it('should fallback to updated if published is not available', async () => {
+    hass.states['sensor.test_feed'] = {
+      entity_id: 'sensor.test_feed',
+      state: 'ok',
+      attributes: {
+        entries: [{ title: 'Test 1', link: '#', description: 'Description 1', updated: new Date().toISOString() }],
+      },
+    } as HassEntity;
+    element.hass = hass;
+    element.setConfig(config);
+    await element.updateComplete;
+
+    const publishedEl = element.shadowRoot?.querySelector('.item-published');
+    expect(publishedEl?.textContent).not.toBe('Invalid Date');
+    expect(publishedEl?.textContent?.length).toBeGreaterThan(0);
+  });
+
   it('should prefer summary over description if both are available', async () => {
     hass.states['sensor.test_feed'] = {
       entity_id: 'sensor.test_feed',
