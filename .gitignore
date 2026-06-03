@@ -9,3 +9,6 @@ yarn.lock
 
 GEMINI.md
 start-test-env.sh
+
+# Home Assistant local test configuration
+/test/ha-config

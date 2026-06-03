@@ -1,0 +1,14 @@
+services:
+  homeassistant:
+    container_name: ha-rss-accordion-test
+    image: homeassistant/home-assistant:stable
+    volumes:
+      - ./test/ha-config:/config
+      - ./dist:/config/www:ro
+      - ../feedparser/custom_components:/config/custom_components:ro
+      - /etc/ssl/certs:/etc/ssl/certs:ro
+    environment:
+      - TZ=Europe/Berlin
+    restart: unless-stopped
+    ports:
+      - '8136:8123'

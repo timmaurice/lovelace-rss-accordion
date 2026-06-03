@@ -293,12 +293,12 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
         <div class="card-content card-config">
           <div class="group">
             <div class="group-header">${localize(this.hass, 'component.rss-accordion.editor.groups.core')}</div>
-            <ha-textfield
+            <ha-input
               .label=${localize(this.hass, 'component.rss-accordion.editor.title')}
               .value=${this._config.title || ''}
               .configValue=${'title'}
               @input=${this._valueChanged}
-            ></ha-textfield>
+            ></ha-input>
             <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.use_multiple_entities')}>
               <ha-switch .checked=${this._isMultiEntityMode()} @change=${this._toggleMultiEntityMode}></ha-switch>
             </ha-formfield>
@@ -346,7 +346,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
           <div class="group">
             <div class="group-header">${localize(this.hass, 'component.rss-accordion.editor.groups.feed')}</div>
             <div class="row">
-              <ha-textfield
+              <ha-input
                 .label=${localize(this.hass, 'component.rss-accordion.editor.max_items')}
                 type="number"
                 min="1"
@@ -354,8 +354,8 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 .configValue=${'max_items'}
                 @input=${this._valueChanged}
                 .placeholder=${localize(this.hass, 'component.rss-accordion.editor.max_items_placeholder')}
-              ></ha-textfield>
-              <ha-textfield
+              ></ha-input>
+              <ha-input
                 .label=${localize(this.hass, 'component.rss-accordion.editor.max_items_per_entity')}
                 type="number"
                 min="1"
@@ -363,10 +363,10 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 .configValue=${'max_items_per_entity'}
                 @input=${this._valueChanged}
                 .placeholder=${localize(this.hass, 'component.rss-accordion.editor.max_items_per_entity_placeholder')}
-              ></ha-textfield>
+              ></ha-input>
             </div>
             <div class="row">
-              <ha-textfield
+              <ha-input
                 .label=${localize(this.hass, 'component.rss-accordion.editor.new_pill_duration_hours')}
                 type="number"
                 min="1"
@@ -374,8 +374,8 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 .configValue=${'new_pill_duration_hours'}
                 @input=${this._valueChanged}
                 .placeholder="1"
-              ></ha-textfield>
-              <ha-textfield
+              ></ha-input>
+              <ha-input
                 .label=${localize(this.hass, 'component.rss-accordion.editor.refresh_interval')}
                 type="number"
                 min="0"
@@ -383,7 +383,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 .configValue=${'refresh_interval'}
                 @input=${this._valueChanged}
                 .placeholder=${localize(this.hass, 'component.rss-accordion.editor.refresh_interval_placeholder')}
-              ></ha-textfield>
+              ></ha-input>
             </div>
             <div class="dropdown-wrapper">
               <ha-dropdown
@@ -399,15 +399,14 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 naturalMenuWidth
               >
                 <div slot="trigger" class="dropdown-trigger">
-                  <ha-textfield
+                  <ha-input
                     readonly
                     .label=${localize(this.hass, 'component.rss-accordion.editor.open_behavior')}
                     .value=${openBehaviorLabel}
-                    iconTrailing
                     class="dropdown-textfield"
                   >
-                    <ha-icon slot="trailingIcon" icon="mdi:menu-down"></ha-icon>
-                  </ha-textfield>
+                    <ha-icon slot="end" icon="mdi:menu-down"></ha-icon>
+                  </ha-input>
                 </div>
                 <ha-dropdown-item value="none"
                   >${localize(this.hass, 'component.rss-accordion.editor.open_behavior_options.none')}</ha-dropdown-item
@@ -473,7 +472,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                     ${localize(this.hass, 'component.rss-accordion.editor.groups.item_images')}
                   </div>
                   <div class="row">
-                    <ha-textfield
+                    <ha-input
                       .label=${localize(this.hass, 'component.rss-accordion.editor.image_ratio')}
                       .value=${this._config.image_ratio || ''}
                       .configValue=${'image_ratio'}
@@ -484,7 +483,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                         this.hass,
                         'component.rss-accordion.editor.image_ratio_validation_message',
                       )}
-                    ></ha-textfield>
+                    ></ha-input>
                     ${this._config.image_ratio && this._config.image_ratio !== 'auto'
                       ? html`
                           <div class="dropdown-wrapper">
@@ -501,15 +500,14 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                               naturalMenuWidth
                             >
                               <div slot="trigger" class="dropdown-trigger">
-                                <ha-textfield
+                                <ha-input
                                   readonly
                                   .label=${localize(this.hass, 'component.rss-accordion.editor.image_fit_mode')}
                                   .value=${imageFitModeLabel}
-                                  iconTrailing
                                   class="dropdown-textfield"
                                 >
-                                  <ha-icon slot="trailingIcon" icon="mdi:menu-down"></ha-icon>
-                                </ha-textfield>
+                                  <ha-icon slot="end" icon="mdi:menu-down"></ha-icon>
+                                </ha-input>
                               </div>
                               <ha-dropdown-item value="cover"
                                 >${localize(
@@ -583,7 +581,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                         </ha-formfield>
                         ${(this._config.show_channel_description ?? true)
                           ? html`
-                              <ha-textfield
+                              <ha-input
                                 .label=${localize(
                                   this.hass,
                                   'component.rss-accordion.editor.max_channel_description_length',
@@ -594,7 +592,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                                 .configValue=${'max_channel_description_length'}
                                 @input=${this._valueChanged}
                                 .placeholder="180"
-                              ></ha-textfield>
+                              ></ha-input>
                             `
                           : ''}
                       `
