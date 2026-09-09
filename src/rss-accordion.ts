@@ -10,6 +10,7 @@ import {
   FeedEntry,
 } from './types.js';
 import { localize } from './localize';
+import { isSafeUrl, sanitizeHtml } from './sanitize';
 import { formatDate, truncate } from './utils';
 import { StorageHelper } from './storage-helper.js';
 import styles from './styles/card.styles.scss';
@@ -520,7 +521,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   private _renderChannelActions(channelLink: string | undefined, hasAnyBookmarks: boolean): TemplateResult {
     return html`
       <div class="channel-actions">
-        ${channelLink
+        ${channelLink && isSafeUrl(channelLink)
           ? html`<a class="channel-link" href="${channelLink}" target="_blank" rel="noopener noreferrer"
               >${localize(this.hass, 'component.rss-accordion.card.visit_channel')}</a
             >`
@@ -538,7 +539,8 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const channelTitle = channel.title as string | undefined;
     const channelLink = channel.link as string | undefined;
     const channelDescription = (channel.description || channel.subtitle) as string | undefined;
-    const channelImage = channel.image as string | undefined;
+    const rawChannelImage = channel.image as string | undefined;
+    const channelImage = isSafeUrl(rawChannelImage, true) ? rawChannelImage : undefined;
     const channelPublished = (channel.published || channel.updated) as string | undefined;
     const formattedChannelPublished = channelPublished ? formatDate(channelPublished, this.hass) : undefined;
 
@@ -594,7 +596,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   private _renderItem(item: FeedEntry): TemplateResult {
     const imageUrl = this._getItemImage(item);
     const content = item.summary || item.description || '';
-    const showImage = this._config.show_item_image !== false && !!imageUrl;
+    const showImage = this._config.show_item_image !== false && isSafeUrl(imageUrl as string | undefined, true);
 
     // If a hero image is being displayed from the `item.image` field,
     // strip all images from the summary to prevent duplicates.
@@ -628,7 +630,11 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       <details class="accordion-item">
         <summary class="accordion-header" @click=${this._onSummaryClick}>
           <div class="header-main">
-            <a class="title-link" href="${item.link}" target="_blank" rel="noopener noreferrer"> ${item.title} </a>
+            ${isSafeUrl(item.link)
+              ? html`<a class="title-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
+                  ${item.title}
+                </a>`
+              : html`<span class="title-link">${item.title}</span>`}
             <div class="header-badges">
               ${this._config.show_bookmarks
                 ? html`<span
@@ -687,10 +693,12 @@ export class RssAccordion extends LitElement implements LovelaceCard {
                 </div>
               `
             : ''}
-          <div class="item-summary" .innerHTML=${processedContent}></div>
-          <a class="item-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
-            ${localize(this.hass, 'component.rss-accordion.card.to_news_article')}
-          </a>
+          <div class="item-summary" .innerHTML=${sanitizeHtml(processedContent)}></div>
+          ${isSafeUrl(item.link)
+            ? html`<a class="item-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
+                ${localize(this.hass, 'component.rss-accordion.card.to_news_article')}
+              </a>`
+            : ''}
         </div>
       </details>
     `;
