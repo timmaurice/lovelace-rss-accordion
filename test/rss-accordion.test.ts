@@ -2061,9 +2061,50 @@ describe('RssAccordion', () => {
       expect(element.shadowRoot?.querySelector('.channel-info.cropped-image')).not.toBeNull();
 
       image?.dispatchEvent(new Event('error'));
+      await element.updateComplete;
 
       expect(image?.classList.contains('image-failed')).toBe(true);
       expect(element.shadowRoot?.querySelector('.channel-info.cropped-image')).toBeNull();
+
+      // The crop used to be removed by reaching into the class attribute lit
+      // owns. That held only while lit had no reason to rewrite it: toggling
+      // the crop off and on gives the binding a new value, and the crop came
+      // back around a picture that was still hidden.
+      element.setConfig({ ...config, show_channel_info: true, crop_channel_image: false });
+      await element.updateComplete;
+      element.setConfig({ ...config, show_channel_info: true, crop_channel_image: true });
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelector<HTMLImageElement>('.channel-image')).toBe(image);
+      expect(image?.classList.contains('image-failed')).toBe(true);
+      expect(element.shadowRoot?.querySelector('.channel-info.cropped-image')).toBeNull();
+    });
+
+    it('should show a channel image again once it loads', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'Item', link: 'https://example.com/item', published: '2023-01-01T12:00:00Z' }],
+          channel: { title: 'Channel', image: 'https://example.com/broken.png' },
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true, crop_channel_image: true });
+      await element.updateComplete;
+
+      const image = element.shadowRoot?.querySelector<HTMLImageElement>('.channel-image');
+      image?.dispatchEvent(new Event('error'));
+      await element.updateComplete;
+      expect(element.shadowRoot?.querySelector('.channel-info.cropped-image')).toBeNull();
+
+      // Nodes outlive their contents, so a src that rebinds to something that
+      // works has to be able to undo this.
+      image?.dispatchEvent(new Event('load'));
+      await element.updateComplete;
+
+      expect(image?.classList.contains('image-failed')).toBe(false);
+      expect(element.shadowRoot?.querySelector('.channel-info.cropped-image')).not.toBeNull();
     });
 
     it('should hide an item image that fails to load', async () => {
@@ -2089,6 +2130,14 @@ describe('RssAccordion', () => {
       image?.dispatchEvent(new Event('error'));
 
       expect(image?.classList.contains('image-failed')).toBe(true);
+
+      // Items are keyed, so this node outlives the entry's contents. A feed
+      // that rewrites the entry around a picture that works has to be able to
+      // bring it back - without a load handler the <img> stayed hidden for the
+      // life of the card.
+      image?.dispatchEvent(new Event('load'));
+
+      expect(image?.classList.contains('image-failed')).toBe(false);
     });
   });
 

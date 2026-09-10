@@ -49,6 +49,14 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   @state() private _config!: RssAccordionConfig;
   @state() private _showOnlyBookmarks = false;
   @state() private _isDescriptionExpanded = false;
+  /**
+   * The channel image URL that failed to load, if one has.
+   *
+   * Held as the URL rather than as a flag so that a channel which later offers
+   * a different picture starts out trusted again, and held in state rather than
+   * written onto the DOM because the class it suppresses is one lit owns.
+   */
+  @state() private _failedChannelImage?: string;
   @state() private _entities: string[] = [];
   private _resizeObserver?: ResizeObserver;
   private _lastAudioSave = new Map<string, number>();
@@ -759,18 +767,22 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const channelDescription = (channel.description || channel.subtitle) as string | undefined;
     const rawChannelImage = channel.image as string | undefined;
     const channelImage = isSafeUrl(rawChannelImage, true) ? rawChannelImage : undefined;
+    // Cropping a picture that is not being shown reserves a hole where it would
+    // have been, so the crop comes off with the picture.
+    const channelImageFailed = channelImage !== undefined && this._failedChannelImage === channelImage;
     const channelPublished = (channel.published || channel.updated) as string | undefined;
     const formattedChannelPublished = channelPublished ? formatDate(channelPublished, this.hass) : undefined;
 
     return html`
-      <div class="channel-info ${this._config.crop_channel_image ? 'cropped-image' : ''}">
+      <div class="channel-info ${this._config.crop_channel_image && !channelImageFailed ? 'cropped-image' : ''}">
         ${
           channelImage
             ? html`<img
                 class="channel-image"
                 src="${channelImage}"
                 alt="${channelTitle || localize(this.hass, 'component.rss-accordion.card.channel_image_alt')}"
-                @error=${this._onImageError}
+                @error=${this._onChannelImageError}
+                @load=${this._onChannelImageLoad}
               />`
             : ''
         }
@@ -819,16 +831,46 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   }
 
   /**
-   * Removes an image that failed to load.
+   * Hides an image that failed to load.
    *
    * A broken `<img>` paints its alt text - wrapped over several lines next to
-   * the title, or as a broken-file icon - which is worse than no image. The
-   * layout that reserves space for it goes with it.
+   * the title - or a broken-file icon, which is worse than no image at all.
+   *
+   * The class is only ever a reaction to what this element did, and the
+   * `class` attribute it goes on is a static part of the template that lit
+   * writes once and never revisits, so mutating it here is safe. It has to come
+   * off again, though: nodes are keyed and outlive their contents, so an `<img>`
+   * whose `src` later rebinds to a working URL would otherwise stay hidden for
+   * the life of the card.
    */
   private _onImageError(e: Event): void {
+    (e.target as HTMLImageElement).classList.add('image-failed');
+  }
+
+  private _onImageLoad(e: Event): void {
+    (e.target as HTMLImageElement).classList.remove('image-failed');
+  }
+
+  /**
+   * The same for the channel image, which additionally drives the crop.
+   *
+   * The crop lives on `.channel-info`, whose `class` attribute lit owns through
+   * a binding. Reaching in and removing `cropped-image` by hand only appeared
+   * to work: lit skips writing an attribute whose value has not changed, so the
+   * removal survived until the binding produced a different string - toggling
+   * the crop off and on in the editor put the crop back while the picture
+   * stayed hidden. It is derived from state and rendered now, so lit remains
+   * the only writer.
+   */
+  private _onChannelImageError(e: Event): void {
     const img = e.target as HTMLImageElement;
     img.classList.add('image-failed');
-    img.closest('.channel-info')?.classList.remove('cropped-image');
+    this._failedChannelImage = img.getAttribute('src') ?? undefined;
+  }
+
+  private _onChannelImageLoad(e: Event): void {
+    (e.target as HTMLImageElement).classList.remove('image-failed');
+    this._failedChannelImage = undefined;
   }
 
   private _toggleDescription(): void {
@@ -938,6 +980,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
                   alt="${title}"
                   style=${styleMap(imageStyles)}
                   @error=${this._onImageError}
+                  @load=${this._onImageLoad}
                 />`
               : ''
           }
