@@ -373,6 +373,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     super.updated(changedProperties);
 
     const openAll = this._openBehavior() === 'all';
+    this._pruneKeys();
     this._enforceSingleOpen();
 
     this.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item').forEach((details) => {
@@ -402,6 +403,33 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         content.style.maxHeight = '0px';
       }
     });
+  }
+
+  /**
+   * Forgets the keys of entries the feed no longer offers.
+   *
+   * Both sets only ever grew. On a card left on a dashboard for weeks that is a
+   * slow leak, and it is wrong as well as untidy: an entry that scrolled out of
+   * the feed while it was open came back open when the feed offered it again,
+   * even under `open_behavior: 'none'`, because its key was still in
+   * `_openKeys` and `updated()` re-applies whatever it finds there.
+   *
+   * Measured against everything the card could display rather than against what
+   * it currently shows, so that hiding entries behind the bookmark filter or
+   * past `max_items` does not count as leaving. An empty feed prunes nothing:
+   * an entity that is briefly unavailable is not the feed dropping every entry
+   * it ever had.
+   */
+  private _pruneKeys(): void {
+    const displayable = this._getAllDisplayableItems();
+    if (displayable.length === 0) return;
+
+    const live = new Set(displayable.map((item) => this._storageHelper.getBookmarkKey(item)));
+    for (const keys of [this._openKeys, this._seenKeys]) {
+      for (const key of keys) {
+        if (!live.has(key)) keys.delete(key);
+      }
+    }
   }
 
   /**

@@ -1810,6 +1810,83 @@ describe('RssAccordion', () => {
     });
   });
 
+  describe('keys of entries that left the feed', () => {
+    const older = {
+      title: 'Older',
+      link: 'https://example.com/older',
+      published: '2023-01-01T10:00:00Z',
+      summary: '<p>Older.</p>',
+    };
+    const newer = {
+      title: 'Newer',
+      link: 'https://example.com/newer',
+      published: '2023-01-02T10:00:00Z',
+      summary: '<p>Newer.</p>',
+    };
+
+    const feed = (entries: Record<string, unknown>[]): HassEntity =>
+      ({ entity_id: 'sensor.test_feed', state: 'ok', attributes: { entries } }) as HassEntity;
+
+    const publish = async (entries: Record<string, unknown>[]): Promise<void> => {
+      element.hass = { ...hass, states: { 'sensor.test_feed': feed(entries) } };
+      await element.updateComplete;
+    };
+
+    /** The two sets are private, and their size is the whole point of this. */
+    const keySets = (): { open: Set<string>; seen: Set<string> } => {
+      const internals = element as unknown as { _openKeys: Set<string>; _seenKeys: Set<string> };
+      return { open: internals._openKeys, seen: internals._seenKeys };
+    };
+
+    const items = (): HTMLDetailsElement[] => [
+      ...element.shadowRoot!.querySelectorAll<HTMLDetailsElement>('.accordion-item'),
+    ];
+
+    it('forgets them, instead of re-opening them when they come back', async () => {
+      element.setConfig({ ...config, open_behavior: 'none' });
+      await publish([newer, older]);
+
+      // The user opens the newer entry, which renders first.
+      items()[0].querySelector<HTMLElement>('.accordion-header')!.click();
+      await element.updateComplete;
+      expect(items()[0].hasAttribute('open')).toBe(true);
+      expect(keySets().open.size).toBe(1);
+
+      // It scrolls out of the feed while it is still open.
+      await publish([older]);
+      expect(items()).toHaveLength(1);
+      expect(keySets().open.size).toBe(0);
+      expect(keySets().seen.size).toBe(1);
+
+      // The feed offers it again. Nothing asked for it to be open.
+      await publish([newer, older]);
+      expect(items()).toHaveLength(2);
+      expect(items().some((details) => details.hasAttribute('open'))).toBe(false);
+      expect(keySets().seen.size).toBe(2);
+    });
+
+    it('keeps them while the entity is briefly unavailable', async () => {
+      element.setConfig({ ...config, open_behavior: 'none' });
+      await publish([newer, older]);
+
+      items()[0].querySelector<HTMLElement>('.accordion-header')!.click();
+      await element.updateComplete;
+      expect(keySets().open.size).toBe(1);
+
+      element.hass = {
+        ...hass,
+        states: { 'sensor.test_feed': { entity_id: 'sensor.test_feed', state: 'unavailable', attributes: {} } },
+      } as HomeAssistant;
+      await element.updateComplete;
+
+      // An entity that is down is not the feed dropping everything it had.
+      expect(keySets().open.size).toBe(1);
+
+      await publish([newer, older]);
+      expect(items()[0].hasAttribute('open')).toBe(true);
+    });
+  });
+
   describe('entries with missing fields', () => {
     it('should render no date row for an entry without a date', async () => {
       hass.states['sensor.test_feed'] = {
