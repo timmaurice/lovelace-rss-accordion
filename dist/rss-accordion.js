@@ -421,7 +421,7 @@ const he={attribute:!0,type:String,converter:$,reflect:!1,hasChanged:y},de=(e=he
                             @change=${this._valueChanged}
                           ></ha-switch>
                         </ha-formfield>
-                        ${this._config.show_channel_description??1?q`
+                        ${this._config.show_channel_description??!0?q`
                               <ha-input
                                 .label=${ye(this.hass,"component.rss-accordion.editor.max_channel_description_length")}
                                 type="number"
