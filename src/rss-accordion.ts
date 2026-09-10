@@ -373,6 +373,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     super.updated(changedProperties);
 
     const openAll = this._openBehavior() === 'all';
+    this._enforceSingleOpen();
 
     this.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item').forEach((details) => {
       const key = details.dataset.key;
@@ -401,6 +402,28 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         content.style.maxHeight = '0px';
       }
     });
+  }
+
+  /**
+   * Drops every open key but the newest when the config allows one panel.
+   *
+   * `_openAccordion` collapses the panels it can see, which is not all of them:
+   * an item the bookmark filter hides is not in the DOM, so its key stays
+   * behind and re-opens it when the filter comes off - two panels open where
+   * the config says one. A config edit from `allow_multiple: true` leaves the
+   * same surplus behind.
+   *
+   * The survivor is the most recently opened, which is why `_openAccordion`
+   * re-inserts rather than adds: the user's last choice is the one they can
+   * still see, and taking it away instead would be the visible surprise.
+   */
+  private _enforceSingleOpen(): void {
+    if (this._config.allow_multiple || this._openBehavior() === 'all' || this._openKeys.size <= 1) {
+      return;
+    }
+
+    const keys = [...this._openKeys];
+    this._openKeys = new Set([keys[keys.length - 1]]);
   }
 
   protected firstUpdated(): void {
@@ -493,6 +516,9 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     details.setAttribute('open', '');
     const key = details.dataset.key;
     if (key) {
+      // Re-inserted rather than added, so the set stays ordered oldest first -
+      // which is what single-open enforcement reads to find the newest.
+      this._openKeys.delete(key);
       this._openKeys.add(key);
     }
 

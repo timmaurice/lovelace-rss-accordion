@@ -743,6 +743,50 @@ describe('RssAccordion', () => {
       expect(items?.[0].querySelector('.title-link')?.textContent?.trim()).toBe(feedItem2.title);
     });
 
+    it('re-opens only one panel when a filtered-out entry returns', async () => {
+      // A panel the bookmark filter hides is not in the DOM, so opening another
+      // one cannot collapse it - only its key can be dropped, and nothing was
+      // dropping it. Turning the filter off brought it back open beside the one
+      // the user had actually left open.
+      element.setConfig({ ...config, show_bookmarks: true, allow_multiple: false, open_behavior: 'none' });
+      await element.updateComplete;
+
+      const items = (): HTMLDetailsElement[] => [
+        ...element.shadowRoot!.querySelectorAll<HTMLDetailsElement>('.accordion-item'),
+      ];
+      const filterButton = (): HTMLElement =>
+        element.shadowRoot!.querySelector<HTMLElement>('.bookmark-filter-button')!;
+      const openHeader = (details: HTMLDetailsElement): void =>
+        details.querySelector<HTMLElement>('.accordion-header')!.click();
+
+      // feedItem2 is the newer one and renders first; bookmark the other.
+      element.shadowRoot!.querySelectorAll<HTMLElement>('.bookmark-button')[1].click();
+      await element.updateComplete;
+
+      // The user opens the entry that is not bookmarked.
+      openHeader(items()[0]);
+      await element.updateComplete;
+      expect(items()[0].hasAttribute('open')).toBe(true);
+
+      // Filter on: that entry leaves the DOM while its key stays behind.
+      filterButton().click();
+      await element.updateComplete;
+      expect(items()).toHaveLength(1);
+
+      // The user opens the bookmarked entry instead.
+      openHeader(items()[0]);
+      await element.updateComplete;
+
+      // Filter off: the first entry comes back.
+      filterButton().click();
+      await element.updateComplete;
+      expect(items()).toHaveLength(2);
+
+      const open = items().filter((details) => details.hasAttribute('open'));
+      expect(open).toHaveLength(1);
+      expect(open[0].querySelector('.title-link')?.textContent?.trim()).toBe(feedItem1.title);
+    });
+
     it('should show bookmarked item even if it disappears from feed', async () => {
       await element.updateComplete;
 
