@@ -1725,13 +1725,31 @@ describe('RssAccordion', () => {
       expect(stub.entity).toBe('sensor.your_rss_feed_sensor');
     });
 
-    it('should expose grid options for sections views', () => {
-      expect((element.constructor as typeof RssAccordion).getGridOptions()).toEqual({
+    // Home Assistant reads both off the card element it created - `hui-card`
+    // does `if (this._element.getGridOptions)` - so a static method is never
+    // seen and the card silently keeps the default sizing.
+    it('should expose grid options on the instance for sections views', () => {
+      expect(element.getGridOptions()).toEqual({
         columns: 12,
         rows: 'auto',
         min_columns: 6,
         min_rows: 1,
       });
+    });
+
+    it('should expose the pre-2024.11 layout options on the instance', () => {
+      expect(element.getLayoutOptions()).toEqual({
+        grid_rows: 3,
+        grid_columns: 12,
+        grid_min_rows: 1,
+        grid_min_columns: 6,
+      });
+    });
+
+    it('should not hide the sizing API behind the constructor', () => {
+      const ctor = element.constructor as unknown as Record<string, unknown>;
+      expect(ctor.getGridOptions).toBeUndefined();
+      expect(ctor.getLayoutOptions).toBeUndefined();
     });
   });
 
