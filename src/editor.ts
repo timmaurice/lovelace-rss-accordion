@@ -1,9 +1,11 @@
 import { LitElement, html, css, TemplateResult, unsafeCSS } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardEditor, RssAccordionConfig, FeedEntry } from './types';
 import { localize } from './localize';
 import { fireEvent } from './utils';
 import editorStyles from './styles/editor.styles.scss';
+
+const EDITOR_ELEMENT_NAME = 'rss-accordion-editor';
 
 interface ValueChangedEventTarget extends HTMLElement {
   configValue?: keyof RssAccordionConfig;
@@ -13,7 +15,6 @@ interface ValueChangedEventTarget extends HTMLElement {
   tagName: string;
 }
 
-@customElement('rss-accordion-editor')
 export class RssAccordionEditor extends LitElement implements LovelaceCardEditor {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private _config!: RssAccordionConfig;
@@ -608,4 +609,10 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
   static styles = css`
     ${unsafeCSS(editorStyles)}
   `;
+}
+
+// Same reason as the card itself: a duplicate resource evaluates this module twice and an
+// unguarded define would throw.
+if (!customElements.get(EDITOR_ELEMENT_NAME)) {
+  customElements.define(EDITOR_ELEMENT_NAME, RssAccordionEditor);
 }

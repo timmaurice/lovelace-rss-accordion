@@ -1416,4 +1416,32 @@ describe('RssAccordion', () => {
       expect(items?.[1].open).toBe(false);
     });
   });
+
+  describe('Duplicate resource registration', () => {
+    it('should not throw when the bundle is evaluated a second time', async () => {
+      // A duplicate Lovelace resource entry loads the bundle twice. Without the
+      // guarded define() the second evaluation throws while the module is still
+      // being evaluated, so the card never registers and the user loses the
+      // whole card instead of seeing an error.
+      vi.resetModules();
+      await expect(import('../src/rss-accordion')).resolves.toBeDefined();
+    });
+
+    it('should register the card in customCards only once when loaded twice', async () => {
+      vi.resetModules();
+      await import('../src/rss-accordion');
+
+      const entries = (window.customCards ?? []).filter((card) => card.type === 'rss-accordion');
+      expect(entries).toHaveLength(1);
+    });
+
+    it('should not throw when the editor module is evaluated a second time', async () => {
+      // The editor lives in the same bundle and is defined the same way, so it
+      // is the second element a duplicate load would trip over.
+      vi.resetModules();
+      await expect(import('../src/editor')).resolves.toBeDefined();
+      vi.resetModules();
+      await expect(import('../src/editor')).resolves.toBeDefined();
+    });
+  });
 });

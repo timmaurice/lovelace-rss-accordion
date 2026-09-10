@@ -1,5 +1,5 @@
 import { LitElement, TemplateResult, html, css, unsafeCSS } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import {
   HomeAssistant,
@@ -43,7 +43,6 @@ type LovelaceCardConstructor = {
   getConfigElement(): Promise<LovelaceCardEditor>;
 };
 
-@customElement(ELEMENT_NAME)
 export class RssAccordion extends LitElement implements LovelaceCard {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private _config!: RssAccordionConfig;
@@ -820,12 +819,21 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   ];
 }
 
+// A duplicate Lovelace resource entry loads this bundle twice. An unguarded define throws and
+// takes the second copy down with it, so register only if nobody registered us before.
+if (!customElements.get(ELEMENT_NAME)) {
+  customElements.define(ELEMENT_NAME, RssAccordion);
+}
+
 if (typeof window !== 'undefined') {
   window.customCards = window.customCards || [];
-  window.customCards.push({
-    type: ELEMENT_NAME,
-    name: 'RSS Accordion',
-    description: 'A card to display RSS feed items in an accordion style.',
-    documentationURL: 'https://github.com/timmaurice/lovelace-rss-accordion',
-  });
+  // Same duplicate load: a second push would list the card twice in the card picker.
+  if (!window.customCards.some((card) => card.type === ELEMENT_NAME)) {
+    window.customCards.push({
+      type: ELEMENT_NAME,
+      name: 'RSS Accordion',
+      description: 'A card to display RSS feed items in an accordion style.',
+      documentationURL: 'https://github.com/timmaurice/lovelace-rss-accordion',
+    });
+  }
 }
