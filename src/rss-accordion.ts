@@ -85,11 +85,12 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
     // Ensure that the required Home Assistant components are loaded before creating the editor
-    // by loading a core editor that uses them. This card requires Home Assistant 2023.4+
-    // which provides `loadCardHelpers`.
+    // by loading a core editor that uses them. `loadCardHelpers` has been there since
+    // Home Assistant 2023.4, but the editor renders `ha-input`, which arrived in 2026.4 -
+    // that is the minimum this card documents in the README and in `hacs.json`.
     const loadHelpers = (window as CustomWindow).loadCardHelpers;
     if (!loadHelpers) {
-      throw new Error('This card requires Home Assistant 2023.4+ and `loadCardHelpers` is not available.');
+      throw new Error('This card requires Home Assistant 2026.4+ and `loadCardHelpers` is not available.');
     }
     const helpers = await loadHelpers();
     // This is a trick to load the editor dependencies (e.g., ha-entity-picker)

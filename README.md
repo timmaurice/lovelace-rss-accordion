@@ -55,6 +55,13 @@ If you would like to contribute a new translation:
 
 </details>
 
+## Requirements
+
+Home Assistant **2026.4** or newer. The visual editor is built on `ha-input`, which
+Home Assistant introduced in that release; on older cores the editor fields render
+as empty unknown elements. The card itself is served through HACS, which enforces
+this minimum via `hacs.json`.
+
 ## Installation
 
 ### HACS (Recommended)
