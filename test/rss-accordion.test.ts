@@ -1501,6 +1501,35 @@ describe('RssAccordion', () => {
     });
   });
 
+  describe('card size with an entities list', () => {
+    it('should size itself from the aggregated items, not from `entity`', async () => {
+      hass.states['sensor.feed_a'] = {
+        entity_id: 'sensor.feed_a',
+        state: 'ok',
+        attributes: {
+          entries: [
+            { title: 'A1', link: 'https://example.com/a1', published: '2023-01-01T12:00:00Z' },
+            { title: 'A2', link: 'https://example.com/a2', published: '2023-01-02T12:00:00Z' },
+          ],
+        },
+      } as HassEntity;
+      hass.states['sensor.feed_b'] = {
+        entity_id: 'sensor.feed_b',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'B1', link: 'https://example.com/b1', published: '2023-01-03T12:00:00Z' }],
+        },
+      } as HassEntity;
+
+      element.hass = hass;
+      element.setConfig({ type: 'custom:rss-accordion', entities: ['sensor.feed_a', 'sensor.feed_b'] });
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelectorAll('.accordion-item').length).toBe(3);
+      expect(element.getCardSize()).toBe(3);
+    });
+  });
+
   describe('audio playback coordination', () => {
     const entries = [
       {
@@ -1670,6 +1699,42 @@ describe('RssAccordion', () => {
     });
   });
 
+  describe('card picker metadata', () => {
+    it('should stub a configuration with a real feed entity', () => {
+      hass.states['sensor.not_a_feed'] = {
+        entity_id: 'sensor.not_a_feed',
+        state: 'ok',
+        attributes: {},
+      } as HassEntity;
+      hass.states['sensor.real_feed'] = {
+        entity_id: 'sensor.real_feed',
+        state: 'ok',
+        attributes: { entries: [{ title: 'One', link: 'https://example.com/one' }] },
+      } as HassEntity;
+
+      const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, [
+        'sensor.not_a_feed',
+        'sensor.real_feed',
+      ]);
+
+      expect(stub.entity).toBe('sensor.real_feed');
+    });
+
+    it('should fall back to a placeholder entity when no feed entity exists', () => {
+      const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, []);
+      expect(stub.entity).toBe('sensor.your_rss_feed_sensor');
+    });
+
+    it('should expose grid options for sections views', () => {
+      expect((element.constructor as typeof RssAccordion).getGridOptions()).toEqual({
+        columns: 12,
+        rows: 'auto',
+        min_columns: 6,
+        min_rows: 1,
+      });
+    });
+  });
+
   describe('image error handling', () => {
     it('should hide a channel image that fails to load and drop the cropped layout', async () => {
       hass.states['sensor.test_feed'] = {
@@ -1717,6 +1782,25 @@ describe('RssAccordion', () => {
       image?.dispatchEvent(new Event('error'));
 
       expect(image?.classList.contains('image-failed')).toBe(true);
+    });
+  });
+
+  describe('bookmark filter button', () => {
+    it('should use the supported ha-button size', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'Item', link: 'https://example.com/item', published: '2023-01-01T12:00:00Z' }],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig({ ...config, show_bookmarks: true });
+      await element.updateComplete;
+
+      // `size="small"` is deprecated and logs a warning on every render.
+      const button = element.shadowRoot?.querySelector('ha-button.bookmark-filter-button');
+      expect(button?.getAttribute('size')).toBe('s');
     });
   });
 

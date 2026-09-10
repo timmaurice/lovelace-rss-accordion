@@ -101,15 +101,26 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return document.createElement(EDITOR_ELEMENT_NAME) as LovelaceCardEditor;
   }
 
-  public static getStubConfig(): Record<string, unknown> {
+  /**
+   * Picks a real feed entity for the card picker preview. A placeholder id only
+   * ever renders as "Entity not found", which tells the user nothing about the
+   * card.
+   */
+  public static getStubConfig(hass?: HomeAssistant, entities?: string[]): Record<string, unknown> {
+    const candidates = entities?.length ? entities : Object.keys(hass?.states ?? {});
+    const feedEntity = candidates.find((entityId) => {
+      const attributes = hass?.states[entityId]?.attributes;
+      return !!(attributes?.entries || attributes?.events || attributes?.items);
+    });
+
     return {
-      entity: 'sensor.your_rss_feed_sensor',
+      entity: feedEntity ?? 'sensor.your_rss_feed_sensor',
       max_items: 5,
     };
   }
 
   public getCardSize(): number {
-    if (!this.hass || !this._config?.entity) {
+    if (!this.hass || this._entities.length === 0) {
       return 1;
     }
 
@@ -128,6 +139,24 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     }
 
     return size;
+  }
+
+  /**
+   * The sections-view sizing API. `getLayoutOptions` is what Home Assistant
+   * read before 2024.11 and is kept for those releases.
+   */
+  public static getGridOptions(): {
+    columns: number;
+    rows: string;
+    min_columns: number;
+    min_rows: number;
+  } {
+    return {
+      columns: 12,
+      rows: 'auto',
+      min_columns: 6,
+      min_rows: 1,
+    };
   }
 
   public static getLayoutOptions(): {
@@ -971,7 +1000,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         outlined
         class="bookmark-filter-button ${this._showOnlyBookmarks ? 'active' : ''}"
         ?disabled=${!hasAnyBookmarks}
-        size="small"
+        size="s"
         title="${
           !hasAnyBookmarks
             ? localize(this.hass, 'component.rss-accordion.card.no_bookmarks_yet_tooltip')
