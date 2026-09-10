@@ -303,45 +303,47 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
             <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.use_multiple_entities')}>
               <ha-switch .checked=${this._isMultiEntityMode()} @change=${this._toggleMultiEntityMode}></ha-switch>
             </ha-formfield>
-            ${this._isMultiEntityMode()
-              ? html`
-                  <div class="entities-list">
-                    ${this._getEntities().map(
-                      (entityId, index) => html`
-                        <div class="entity-row">
-                          <ha-entity-picker
-                            .hass=${this.hass}
-                            .label=${localize(this.hass, 'component.rss-accordion.editor.entity')}
-                            .value=${entityId}
-                            .includeDomains=${['sensor', 'event']}
-                            @value-changed=${(ev: CustomEvent) => this._entityChanged(index, ev)}
-                            allow-custom-entity
-                            required
-                          ></ha-entity-picker>
-                          <ha-icon-button
-                            .label=${localize(this.hass, 'component.rss-accordion.editor.remove_entity')}
-                            .path=${'M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z'}
-                            @click=${() => this._removeEntity(index)}
-                          ></ha-icon-button>
-                        </div>
-                      `,
-                    )}
-                    <ha-button @click=${this._addEntity}>
-                      ${localize(this.hass, 'component.rss-accordion.editor.add_entity')}
-                    </ha-button>
-                  </div>
-                `
-              : html`
-                  <ha-entity-picker
-                    .hass=${this.hass}
-                    .label=${localize(this.hass, 'component.rss-accordion.editor.entity')}
-                    .value=${this._config.entity || ''}
-                    .includeDomains=${['sensor', 'event']}
-                    @value-changed=${this._singleEntityChanged}
-                    allow-custom-entity
-                    required
-                  ></ha-entity-picker>
-                `}
+            ${
+              this._isMultiEntityMode()
+                ? html`
+                    <div class="entities-list">
+                      ${this._getEntities().map(
+                        (entityId, index) => html`
+                          <div class="entity-row">
+                            <ha-entity-picker
+                              .hass=${this.hass}
+                              .label=${localize(this.hass, 'component.rss-accordion.editor.entity')}
+                              .value=${entityId}
+                              .includeDomains=${['sensor', 'event']}
+                              @value-changed=${(ev: CustomEvent) => this._entityChanged(index, ev)}
+                              allow-custom-entity
+                              required
+                            ></ha-entity-picker>
+                            <ha-icon-button
+                              .label=${localize(this.hass, 'component.rss-accordion.editor.remove_entity')}
+                              .path=${'M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z'}
+                              @click=${() => this._removeEntity(index)}
+                            ></ha-icon-button>
+                          </div>
+                        `,
+                      )}
+                      <ha-button @click=${this._addEntity}>
+                        ${localize(this.hass, 'component.rss-accordion.editor.add_entity')}
+                      </ha-button>
+                    </div>
+                  `
+                : html`
+                    <ha-entity-picker
+                      .hass=${this.hass}
+                      .label=${localize(this.hass, 'component.rss-accordion.editor.entity')}
+                      .value=${this._config.entity || ''}
+                      .includeDomains=${['sensor', 'event']}
+                      @value-changed=${this._singleEntityChanged}
+                      allow-custom-entity
+                      required
+                    ></ha-entity-picker>
+                  `
+            }
           </div>
 
           <div class="group">
@@ -430,17 +432,19 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 @change=${this._valueChanged}
               ></ha-switch>
             </ha-formfield>
-            ${hasAudio
-              ? html`
-                  <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_audio_player')}>
-                    <ha-switch
-                      .checked=${this._config.show_audio_player !== false}
-                      .configValue=${'show_audio_player'}
-                      @change=${this._valueChanged}
-                    ></ha-switch>
-                  </ha-formfield>
-                `
-              : ''}
+            ${
+              hasAudio
+                ? html`
+                    <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_audio_player')}>
+                      <ha-switch
+                        .checked=${this._config.show_audio_player !== false}
+                        .configValue=${'show_audio_player'}
+                        @change=${this._valueChanged}
+                      ></ha-switch>
+                    </ha-formfield>
+                  `
+                : ''
+            }
             <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_bookmarks')}>
               <ha-switch
                 .checked=${!!this._config.show_bookmarks}
@@ -450,9 +454,9 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
             </ha-formfield>
             <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_source')}>
               <ha-switch
-                .checked=${this._config.show_source !== undefined
-                  ? this._config.show_source
-                  : this._getEntities().length > 1}
+                .checked=${
+                  this._config.show_source !== undefined ? this._config.show_source : this._getEntities().length > 1
+                }
                 .configValue=${'show_source'}
                 @change=${this._valueChanged}
               ></ha-switch>
@@ -466,141 +470,155 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
             </ha-formfield>
           </div>
 
-          ${this._config.show_item_image !== false
-            ? html`
-                <div class="group">
-                  <div class="group-header">
-                    ${localize(this.hass, 'component.rss-accordion.editor.groups.item_images')}
-                  </div>
-                  <div class="row">
-                    <ha-input
-                      .label=${localize(this.hass, 'component.rss-accordion.editor.image_ratio')}
-                      .value=${this._config.image_ratio || ''}
-                      .configValue=${'image_ratio'}
-                      @input=${this._valueChanged}
-                      .placeholder=${'auto'}
-                      .pattern=${'^auto$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)?\\s*\\/\\s*\\d+(\\.\\d+)?$'}
-                      .validationMessage=${localize(
-                        this.hass,
-                        'component.rss-accordion.editor.image_ratio_validation_message',
-                      )}
-                    ></ha-input>
-                    ${this._config.image_ratio && this._config.image_ratio !== 'auto'
-                      ? html`
-                          <div class="dropdown-wrapper">
-                            <ha-dropdown
-                              @wa-select=${(ev: CustomEvent) => {
-                                const target = {
-                                  configValue: 'image_fit_mode',
-                                  value: ev.detail.item.value,
-                                } as unknown as EventTarget;
-                                this._valueChanged({ target } as unknown as Event);
-                              }}
-                              @closed=${(ev: Event) => ev.stopPropagation()}
-                              fixedMenuPosition
-                              naturalMenuWidth
-                            >
-                              <div slot="trigger" class="dropdown-trigger">
-                                <ha-input
-                                  readonly
-                                  .label=${localize(this.hass, 'component.rss-accordion.editor.image_fit_mode')}
-                                  .value=${imageFitModeLabel}
-                                  class="dropdown-textfield"
-                                >
-                                  <ha-icon slot="end" icon="mdi:menu-down"></ha-icon>
-                                </ha-input>
-                              </div>
-                              <ha-dropdown-item value="cover"
-                                >${localize(
-                                  this.hass,
-                                  'component.rss-accordion.editor.image_fit_mode_options.cover',
-                                )}</ha-dropdown-item
-                              >
-                              <ha-dropdown-item value="contain"
-                                >${localize(
-                                  this.hass,
-                                  'component.rss-accordion.editor.image_fit_mode_options.contain',
-                                )}</ha-dropdown-item
-                              >
-                            </ha-dropdown>
-                          </div>
-                        `
-                      : ''}
-                  </div>
-                </div>
-              `
-            : ''}
-          ${channel && !this._isMultiEntityMode()
-            ? html`
-                <div class="group">
-                  <div class="group-header">
-                    ${localize(this.hass, 'component.rss-accordion.editor.groups.channel')}
-                  </div>
-                  <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_info')}>
-                    <ha-switch
-                      .checked=${!!this._config.show_channel_info}
-                      .configValue=${'show_channel_info'}
-                      @change=${this._valueChanged}
-                    ></ha-switch>
-                  </ha-formfield>
-                  ${this._config.show_channel_info && channelImage
-                    ? html`
-                        <ha-formfield
-                          .label=${localize(this.hass, 'component.rss-accordion.editor.crop_channel_image')}
-                        >
-                          <ha-switch
-                            .checked=${!!this._config.crop_channel_image}
-                            .configValue=${'crop_channel_image'}
-                            @change=${this._valueChanged}
-                          ></ha-switch>
-                        </ha-formfield>
-                      `
-                    : ''}
-                  ${this._config.show_channel_info && channelPublished
-                    ? html`
-                        <ha-formfield
-                          .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_published_date')}
-                        >
-                          <ha-switch
-                            .checked=${!!this._config.show_published_date}
-                            .configValue=${'show_published_date'}
-                            @change=${this._valueChanged}
-                          ></ha-switch>
-                        </ha-formfield>
-                      `
-                    : ''}
-                  ${this._config.show_channel_info && (channel.description || channel.subtitle)
-                    ? html`
-                        <ha-formfield
-                          .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_description')}
-                        >
-                          <ha-switch
-                            .checked=${this._config.show_channel_description !== false}
-                            .configValue=${'show_channel_description'}
-                            @change=${this._valueChanged}
-                          ></ha-switch>
-                        </ha-formfield>
-                        ${(this._config.show_channel_description ?? true)
+          ${
+            this._config.show_item_image !== false
+              ? html`
+                  <div class="group">
+                    <div class="group-header">
+                      ${localize(this.hass, 'component.rss-accordion.editor.groups.item_images')}
+                    </div>
+                    <div class="row">
+                      <ha-input
+                        .label=${localize(this.hass, 'component.rss-accordion.editor.image_ratio')}
+                        .value=${this._config.image_ratio || ''}
+                        .configValue=${'image_ratio'}
+                        @input=${this._valueChanged}
+                        .placeholder=${'auto'}
+                        .pattern=${'^auto$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)?\\s*\\/\\s*\\d+(\\.\\d+)?$'}
+                        .validationMessage=${localize(
+                          this.hass,
+                          'component.rss-accordion.editor.image_ratio_validation_message',
+                        )}
+                      ></ha-input>
+                      ${
+                        this._config.image_ratio && this._config.image_ratio !== 'auto'
                           ? html`
-                              <ha-input
-                                .label=${localize(
-                                  this.hass,
-                                  'component.rss-accordion.editor.max_channel_description_length',
-                                )}
-                                type="number"
-                                min="1"
-                                .value=${this._config.max_channel_description_length || ''}
-                                .configValue=${'max_channel_description_length'}
-                                @input=${this._valueChanged}
-                                .placeholder="180"
-                              ></ha-input>
+                              <div class="dropdown-wrapper">
+                                <ha-dropdown
+                                  @wa-select=${(ev: CustomEvent) => {
+                                    const target = {
+                                      configValue: 'image_fit_mode',
+                                      value: ev.detail.item.value,
+                                    } as unknown as EventTarget;
+                                    this._valueChanged({ target } as unknown as Event);
+                                  }}
+                                  @closed=${(ev: Event) => ev.stopPropagation()}
+                                  fixedMenuPosition
+                                  naturalMenuWidth
+                                >
+                                  <div slot="trigger" class="dropdown-trigger">
+                                    <ha-input
+                                      readonly
+                                      .label=${localize(this.hass, 'component.rss-accordion.editor.image_fit_mode')}
+                                      .value=${imageFitModeLabel}
+                                      class="dropdown-textfield"
+                                    >
+                                      <ha-icon slot="end" icon="mdi:menu-down"></ha-icon>
+                                    </ha-input>
+                                  </div>
+                                  <ha-dropdown-item value="cover"
+                                    >${localize(
+                                      this.hass,
+                                      'component.rss-accordion.editor.image_fit_mode_options.cover',
+                                    )}</ha-dropdown-item
+                                  >
+                                  <ha-dropdown-item value="contain"
+                                    >${localize(
+                                      this.hass,
+                                      'component.rss-accordion.editor.image_fit_mode_options.contain',
+                                    )}</ha-dropdown-item
+                                  >
+                                </ha-dropdown>
+                              </div>
                             `
-                          : ''}
-                      `
-                    : ''}
-                </div>
-              `
-            : ''}
+                          : ''
+                      }
+                    </div>
+                  </div>
+                `
+              : ''
+          }
+          ${
+            channel && !this._isMultiEntityMode()
+              ? html`
+                  <div class="group">
+                    <div class="group-header">
+                      ${localize(this.hass, 'component.rss-accordion.editor.groups.channel')}
+                    </div>
+                    <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_info')}>
+                      <ha-switch
+                        .checked=${!!this._config.show_channel_info}
+                        .configValue=${'show_channel_info'}
+                        @change=${this._valueChanged}
+                      ></ha-switch>
+                    </ha-formfield>
+                    ${
+                      this._config.show_channel_info && channelImage
+                        ? html`
+                            <ha-formfield
+                              .label=${localize(this.hass, 'component.rss-accordion.editor.crop_channel_image')}
+                            >
+                              <ha-switch
+                                .checked=${!!this._config.crop_channel_image}
+                                .configValue=${'crop_channel_image'}
+                                @change=${this._valueChanged}
+                              ></ha-switch>
+                            </ha-formfield>
+                          `
+                        : ''
+                    }
+                    ${
+                      this._config.show_channel_info && channelPublished
+                        ? html`
+                            <ha-formfield
+                              .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_published_date')}
+                            >
+                              <ha-switch
+                                .checked=${!!this._config.show_published_date}
+                                .configValue=${'show_published_date'}
+                                @change=${this._valueChanged}
+                              ></ha-switch>
+                            </ha-formfield>
+                          `
+                        : ''
+                    }
+                    ${
+                      this._config.show_channel_info && (channel.description || channel.subtitle)
+                        ? html`
+                            <ha-formfield
+                              .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_description')}
+                            >
+                              <ha-switch
+                                .checked=${this._config.show_channel_description !== false}
+                                .configValue=${'show_channel_description'}
+                                @change=${this._valueChanged}
+                              ></ha-switch>
+                            </ha-formfield>
+                            ${
+                              (this._config.show_channel_description ?? true)
+                                ? html`
+                                    <ha-input
+                                      .label=${localize(
+                                        this.hass,
+                                        'component.rss-accordion.editor.max_channel_description_length',
+                                      )}
+                                      type="number"
+                                      min="1"
+                                      .value=${this._config.max_channel_description_length || ''}
+                                      .configValue=${'max_channel_description_length'}
+                                      @input=${this._valueChanged}
+                                      .placeholder="180"
+                                    ></ha-input>
+                                  `
+                                : ''
+                            }
+                          `
+                        : ''
+                    }
+                  </div>
+                `
+              : ''
+          }
         </div>
       </ha-card>
     `;

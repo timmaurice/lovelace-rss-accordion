@@ -157,6 +157,7 @@ show_bookmarks: true
     ```
 
 4.  In your Home Assistant instance, you will need to configure Lovelace to use the local development version of the card from `dist/rss-accordion.js`.
+
 </details>
 
 ---
