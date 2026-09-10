@@ -15,12 +15,20 @@ export const fireEvent = <T>(node: HTMLElement, type: string, detail?: T, option
 
 /**
  * Formats a date string or object into a locale-aware string.
+ * Feeds are not obliged to carry a date, and the ones that do may use a format
+ * this browser cannot parse. Both end up as an unparsable `Date`, and an empty
+ * string is a better answer than the literal "Invalid Date".
+ *
  * @param date The date to format.
  * @param hass The Home Assistant object, used for locale and language settings.
- * @returns A formatted date string.
+ * @returns A formatted date string, or '' if the date cannot be parsed.
  */
 export function formatDate(date: string | Date, hass: HomeAssistant): string {
   const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) {
+    return '';
+  }
+
   const options: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'short',

@@ -1,6 +1,7 @@
 import { LitElement, TemplateResult, html, css, unsafeCSS } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { repeat } from 'lit/directives/repeat.js';
 import {
   HomeAssistant,
   LovelaceCardConfig,
@@ -51,6 +52,14 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   @state() private _entities: string[] = [];
   private _resizeObserver?: ResizeObserver;
   private _lastAudioSave = new Map<string, number>();
+  /**
+   * Which items the user expanded, by item key rather than by position. The
+   * feed reorders and grows underneath the card, so a positional flag would
+   * hand the open panel to whatever entry moved into that slot.
+   */
+  private _openKeys = new Set<string>();
+  /** Keys already rendered once, so `open_behavior: all` can expand new arrivals. */
+  private _seenKeys = new Set<string>();
   private _storageHelper!: StorageHelper;
   private _refreshTimer?: number;
 
@@ -152,6 +161,9 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       this._resizeObserver.disconnect();
     }
     this._stopRefreshTimer();
+    // A view switch tears the card out of the DOM but leaves the media elements
+    // alive, so a podcast would keep playing from a card that is no longer there.
+    this._pauseAudio();
   }
 
   private _startRefreshTimer(): void {
@@ -240,19 +252,59 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return true; // First render
   }
 
-  protected firstUpdated(): void {
-    const openBehavior = this._config?.open_behavior || (this._config?.initial_open ? 'latest' : 'none');
+  private _openBehavior(): 'none' | 'latest' | 'all' {
+    return this._config?.open_behavior || (this._config?.initial_open ? 'latest' : 'none');
+  }
 
-    if (openBehavior === 'all') {
-      setTimeout(() => {
-        const allItems = this.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item');
-        allItems?.forEach((item) => {
-          if (!item.open) {
-            this._openAccordion(item);
-          }
+  /**
+   * Re-applies the expanded state after a re-render.
+   *
+   * Items are rendered keyed, so an entry keeps its own DOM node when the feed
+   * reorders. What this adds is the state for nodes lit had to rebuild (an item
+   * that left the feed and came back) and a fresh height measurement, because
+   * the panel content may have changed since the inline `max-height` was set.
+   */
+  protected updated(changedProperties: Map<string | number | symbol, unknown>): void {
+    super.updated(changedProperties);
+
+    const openAll = this._openBehavior() === 'all';
+
+    this.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item').forEach((details) => {
+      const key = details.dataset.key;
+      if (!key) return;
+
+      const isNewItem = !this._seenKeys.has(key);
+      this._seenKeys.add(key);
+
+      if (openAll && isNewItem) {
+        void this._openAccordion(details);
+        return;
+      }
+
+      const content = details.querySelector<HTMLElement>('.accordion-content');
+      if (!content) return;
+
+      if (this._openKeys.has(key)) {
+        details.setAttribute('open', '');
+        // The height is re-measured, not carried over: a recycled node would
+        // otherwise clip or overshoot the new content.
+        const originalTransition = content.style.transition;
+        content.style.transition = 'none';
+        content.style.maxHeight = `${content.scrollHeight}px`;
+        requestAnimationFrame(() => {
+          content.style.transition = originalTransition;
         });
-      }, 0);
-    } else if (openBehavior === 'latest') {
+      } else if (details.open) {
+        details.removeAttribute('open');
+        content.style.maxHeight = '0px';
+      }
+    });
+  }
+
+  protected firstUpdated(): void {
+    const openBehavior = this._openBehavior();
+
+    if (openBehavior === 'latest') {
       // We need to wait for the DOM to be fully settled before we can measure scrollHeight for the animation.
       // A timeout of 0 pushes this to the end of the event queue, after the current render cycle.
       setTimeout(() => {
@@ -283,10 +335,36 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     }
   }
 
+  /**
+   * Pauses the media players of this card.
+   *
+   * @param except An element that may keep playing (the one that just started).
+   */
+  private _pauseAudio(except?: HTMLAudioElement): void {
+    this.shadowRoot?.querySelectorAll<HTMLAudioElement>('audio').forEach((audio) => {
+      if (audio !== except && !audio.paused) {
+        audio.pause();
+      }
+    });
+  }
+
+  /** Only one episode at a time - starting one silences the others. */
+  private _onAudioPlay(e: Event): void {
+    this._pauseAudio(e.target as HTMLAudioElement);
+  }
+
   private _closeAccordion(details: HTMLDetailsElement): void {
     details.classList.remove('loading'); // Ensure loading class is removed on close
+    const key = details.dataset.key;
+    if (key) {
+      this._openKeys.delete(key);
+    }
     const content = details.querySelector<HTMLElement>('.accordion-content');
     if (!content) return;
+
+    // A collapsed panel is invisible; audio playing on behind it is not what the
+    // user asked for when they closed it.
+    content.querySelectorAll<HTMLAudioElement>('audio').forEach((audio) => audio.pause());
 
     content.style.maxHeight = '0px';
 
@@ -311,6 +389,10 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     }
 
     details.setAttribute('open', '');
+    const key = details.dataset.key;
+    if (key) {
+      this._openKeys.add(key);
+    }
 
     const images = Array.from(content.querySelectorAll('img'));
     const imagesToLoad = images.filter((img) => !img.complete);
@@ -553,6 +635,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
                 class="channel-image"
                 src="${channelImage}"
                 alt="${channelTitle || localize(this.hass, 'component.rss-accordion.card.channel_image_alt')}"
+                @error=${this._onImageError}
               />`
             : ''
         }
@@ -600,6 +683,19 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     `;
   }
 
+  /**
+   * Removes an image that failed to load.
+   *
+   * A broken `<img>` paints its alt text - wrapped over several lines next to
+   * the title, or as a broken-file icon - which is worse than no image. The
+   * layout that reserves space for it goes with it.
+   */
+  private _onImageError(e: Event): void {
+    const img = e.target as HTMLImageElement;
+    img.classList.add('image-failed');
+    img.closest('.channel-info')?.classList.remove('cropped-image');
+  }
+
   private _toggleDescription(): void {
     this._isDescriptionExpanded = !this._isDescriptionExpanded;
   }
@@ -637,16 +733,19 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       objectFit: this._config.image_fit_mode || 'cover',
     };
 
+    // An entry without a title would otherwise render an empty, clickable row.
+    const title = item.title?.trim() || localize(this.hass, 'component.rss-accordion.card.untitled');
+
     return html`
-      <details class="accordion-item">
+      <details class="accordion-item" data-key=${this._storageHelper.getBookmarkKey(item)}>
         <summary class="accordion-header" @click=${this._onSummaryClick}>
           <div class="header-main">
             ${
               isSafeUrl(item.link)
                 ? html`<a class="title-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
-                    ${item.title}
+                    ${title}
                   </a>`
-                : html`<span class="title-link">${item.title}</span>`
+                : html`<span class="title-link">${title}</span>`
             }
             <div class="header-badges">
               ${
@@ -692,14 +791,18 @@ export class RssAccordion extends LitElement implements LovelaceCard {
                 </div>`
               : ''
           }
-          <div class="item-published">${formattedDate}</div>
+          ${
+            /* No parsable date at all: an empty row beats "Invalid Date". */
+            formattedDate ? html`<div class="item-published">${formattedDate}</div>` : ''
+          }
           ${
             showImage
               ? html`<img
                   class="item-image"
                   src="${imageUrl as string}"
-                  alt="${item.title}"
+                  alt="${title}"
                   style=${styleMap(imageStyles)}
+                  @error=${this._onImageError}
                 />`
               : ''
           }
@@ -710,6 +813,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
                     <audio
                       controls
                       .src=${audioUrlString}
+                      @play=${this._onAudioPlay}
                       @loadedmetadata=${(e: Event) => this._onAudioLoaded(e, audioUrlString as string)}
                       @timeupdate=${(e: Event) => this._onAudioTimeUpdate(e, audioUrlString as string)}
                       @ended=${(e: Event) => this._onAudioEnded(e, audioUrlString as string)}
@@ -793,11 +897,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
           </ha-card>
         `;
       }
-      return html`
-        <ha-card .header=${this._config.title}>
-          <div class="card-content"><i>${localize(this.hass, 'component.rss-accordion.card.no_entries')}</i></div>
-        </ha-card>
-      `;
+      return html`<ha-card .header=${this._config.title}>${this._renderEmptyState()}</ha-card>`;
     }
 
     return html`
@@ -808,10 +908,57 @@ export class RssAccordion extends LitElement implements LovelaceCard {
               ? this._renderChannelInfo(channel, hasAnyBookmarks)
               : this._renderChannelActions(undefined, hasAnyBookmarks) /* Render filter button */
           }
-          ${itemsToDisplay.map((item) => this._renderItem(item))}
+          ${
+            /* Keyed, so an entry keeps its own DOM node - and with it its open
+               panel, height and audio position - when the feed reorders. */
+            repeat(
+              itemsToDisplay,
+              (item) => this._storageHelper.getBookmarkKey(item),
+              (item) => this._renderItem(item),
+            )
+          }
         </div>
       </ha-card>
     `;
+  }
+
+  /** Whether an entity carries something this card can read as feed entries. */
+  private _hasFeedAttribute(entityId: string): boolean {
+    if (entityId.startsWith('event.')) return true;
+    const attributes = this.hass.states[entityId]?.attributes;
+    const entryArray = attributes?.entries || attributes?.events || attributes?.items;
+    return Array.isArray(entryArray);
+  }
+
+  /**
+   * Explains why there is nothing to show.
+   *
+   * An entity that is down and an entity that was never a feed both used to read
+   * as "No entries available in feed", which sends the user looking at the feed
+   * instead of at their configuration.
+   */
+  private _renderEmptyState(): TemplateResult {
+    const known = this._entities.filter((entityId) => this.hass.states[entityId]);
+
+    const unavailable = known.filter((entityId) =>
+      ['unavailable', 'unknown'].includes(this.hass.states[entityId].state),
+    );
+    if (unavailable.length === known.length) {
+      return html`<div class="card-content warning">
+        ${localize(this.hass, 'component.rss-accordion.card.entity_unavailable', { entity: unavailable.join(', ') })}
+      </div>`;
+    }
+
+    const withoutFeed = known.filter((entityId) => !this._hasFeedAttribute(entityId));
+    if (withoutFeed.length === known.length) {
+      return html`<div class="card-content warning">
+        ${localize(this.hass, 'component.rss-accordion.card.entity_no_feed', { entity: withoutFeed.join(', ') })}
+      </div>`;
+    }
+
+    return html`<div class="card-content">
+      <i>${localize(this.hass, 'component.rss-accordion.card.no_entries')}</i>
+    </div>`;
   }
 
   private _renderBookmarkFilter(hasAnyBookmarks: boolean): TemplateResult {

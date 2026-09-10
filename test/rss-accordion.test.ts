@@ -1417,6 +1417,309 @@ describe('RssAccordion', () => {
     });
   });
 
+  describe('keyed open state', () => {
+    const OLDER = {
+      title: 'Older story',
+      link: 'https://example.com/older',
+      summary: 'Older body',
+      published: '2023-01-01T12:00:00Z',
+    };
+    const NEWER = {
+      title: 'Newer story',
+      link: 'https://example.com/newer',
+      summary: 'Newer body',
+      published: '2023-01-02T12:00:00Z',
+    };
+    const NEWEST = {
+      title: 'Newest story',
+      link: 'https://example.com/newest',
+      summary: 'Newest body',
+      published: '2023-01-03T12:00:00Z',
+    };
+
+    const feedState = (entries: Record<string, unknown>[]): HassEntity =>
+      ({
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: { entries },
+      }) as HassEntity;
+
+    it('should keep the item the user opened open when a newer entry arrives', async () => {
+      hass.states['sensor.test_feed'] = feedState([OLDER, NEWER]);
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const header = element.shadowRoot?.querySelector<HTMLElement>('.accordion-item .accordion-header');
+      header?.click();
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelector<HTMLDetailsElement>('.accordion-item')?.open).toBe(true);
+
+      // A new entry pushes into the feed and takes over position 0.
+      element.hass = {
+        ...hass,
+        states: { ...hass.states, 'sensor.test_feed': feedState([OLDER, NEWER, NEWEST]) },
+      } as HomeAssistant;
+      await element.updateComplete;
+
+      const items = element.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item');
+      expect(items?.length).toBe(3);
+      expect([...(items ?? [])].map((item) => item.querySelector('.title-link')?.textContent?.trim())).toEqual([
+        'Newest story',
+        'Newer story',
+        'Older story',
+      ]);
+
+      // The panel belongs to the entry the user opened, not to slot 0.
+      const open = element.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item[open]');
+      expect(open?.length).toBe(1);
+      expect(open?.[0].querySelector('.title-link')?.textContent?.trim()).toBe('Newer story');
+      expect(items?.[0].open).toBe(false);
+    });
+
+    it('should keep the item open when the same entry moves down the list', async () => {
+      hass.states['sensor.test_feed'] = feedState([OLDER, NEWER]);
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      // Open the older entry, which sits at the bottom.
+      const items = element.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item');
+      items?.[1].querySelector<HTMLElement>('.accordion-header')?.click();
+      await element.updateComplete;
+
+      element.hass = {
+        ...hass,
+        states: { ...hass.states, 'sensor.test_feed': feedState([OLDER, NEWER, NEWEST]) },
+      } as HomeAssistant;
+      await element.updateComplete;
+
+      const open = element.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item[open]');
+      expect(open?.length).toBe(1);
+      expect(open?.[0].querySelector('.title-link')?.textContent?.trim()).toBe('Older story');
+    });
+  });
+
+  describe('audio playback coordination', () => {
+    const entries = [
+      {
+        title: 'Episode 1',
+        link: 'https://example.com/e1',
+        published: '2023-01-02T12:00:00Z',
+        audio: 'https://example.com/e1.mp3',
+      },
+      {
+        title: 'Episode 2',
+        link: 'https://example.com/e2',
+        published: '2023-01-01T12:00:00Z',
+        audio: 'https://example.com/e2.mp3',
+      },
+    ];
+
+    let players: HTMLAudioElement[];
+
+    beforeEach(async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: { entries },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig({ ...config, allow_multiple: true });
+      await element.updateComplete;
+
+      players = [...(element.shadowRoot?.querySelectorAll<HTMLAudioElement>('audio') ?? [])];
+      expect(players.length).toBe(2);
+      // JSDOM has no media stack: it reports every element as paused and its
+      // pause() is a stub, so both sides of the coordination are mocked in.
+      players.forEach((player) => {
+        Object.defineProperty(player, 'paused', { value: false, configurable: true });
+        vi.spyOn(player, 'pause').mockImplementation(() => {});
+      });
+    });
+
+    it('should pause the other players when one starts', async () => {
+      players[1].dispatchEvent(new Event('play'));
+
+      expect(players[0].pause).toHaveBeenCalled();
+      expect(players[1].pause).not.toHaveBeenCalled();
+    });
+
+    it('should pause the player of an item that is collapsed', async () => {
+      const header = element.shadowRoot?.querySelector<HTMLElement>('.accordion-item .accordion-header');
+      header?.click();
+      await element.updateComplete;
+      expect(element.shadowRoot?.querySelector<HTMLDetailsElement>('.accordion-item')?.open).toBe(true);
+
+      header?.click();
+      await element.updateComplete;
+
+      expect(players[0].pause).toHaveBeenCalled();
+    });
+
+    it('should pause playback when the card leaves the DOM', () => {
+      document.body.removeChild(element);
+
+      expect(players[0].pause).toHaveBeenCalled();
+      expect(players[1].pause).toHaveBeenCalled();
+
+      // afterEach removes the element again.
+      document.body.appendChild(element);
+    });
+  });
+
+  describe('entries with missing fields', () => {
+    it('should render no date row for an entry without a date', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'No date', link: 'https://example.com/no-date', summary: 'Body' }],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const published = element.shadowRoot?.querySelector('.item-published');
+      expect(published).toBeNull();
+      expect(element.shadowRoot?.textContent).not.toContain('Invalid Date');
+    });
+
+    it('should fall back to a placeholder title for an entry without a title', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ link: 'https://example.com/untitled', summary: 'Body', published: '2023-01-01T12:00:00Z' }],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const title = element.shadowRoot?.querySelector('.title-link');
+      expect(title?.textContent?.trim()).toBe('Untitled entry');
+    });
+
+    it('should render a title-less, link-less entry as plain text, not as a link', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ summary: 'Body', published: '2023-01-01T12:00:00Z' }],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      // An empty href points at the dashboard itself, so clicking the header
+      // would reload the page.
+      expect(element.shadowRoot?.querySelector('a.title-link')).toBeNull();
+      expect(element.shadowRoot?.querySelector('.item-link')).toBeNull();
+      const title = element.shadowRoot?.querySelector('span.title-link');
+      expect(title?.textContent?.trim()).toBe('Untitled entry');
+    });
+  });
+
+  describe('empty states', () => {
+    it('should say the entity is unavailable rather than that the feed is empty', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'unavailable',
+        attributes: {},
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const warning = element.shadowRoot?.querySelector('.card-content.warning');
+      expect(warning?.textContent).toContain('Entity unavailable');
+      expect(warning?.textContent).toContain('sensor.test_feed');
+    });
+
+    it('should say an entity carries no feed entries at all', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'above_horizon',
+        attributes: { friendly_name: 'Not a feed' },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const warning = element.shadowRoot?.querySelector('.card-content.warning');
+      expect(warning?.textContent).toContain('no feed entries');
+      expect(warning?.textContent).toContain('sensor.test_feed');
+    });
+
+    it('should keep the plain empty-feed message for a feed entity with no entries', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: { entries: [] },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelector('.card-content.warning')).toBeNull();
+      expect(element.shadowRoot?.querySelector('.card-content i')?.textContent).toContain('No entries available');
+    });
+  });
+
+  describe('image error handling', () => {
+    it('should hide a channel image that fails to load and drop the cropped layout', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'Item', link: 'https://example.com/item', published: '2023-01-01T12:00:00Z' }],
+          channel: { title: 'Channel', image: 'https://example.com/broken.png' },
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true, crop_channel_image: true });
+      await element.updateComplete;
+
+      const image = element.shadowRoot?.querySelector<HTMLImageElement>('.channel-image');
+      expect(image).not.toBeNull();
+      expect(element.shadowRoot?.querySelector('.channel-info.cropped-image')).not.toBeNull();
+
+      image?.dispatchEvent(new Event('error'));
+
+      expect(image?.classList.contains('image-failed')).toBe(true);
+      expect(element.shadowRoot?.querySelector('.channel-info.cropped-image')).toBeNull();
+    });
+
+    it('should hide an item image that fails to load', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [
+            {
+              title: 'Item',
+              link: 'https://example.com/item',
+              published: '2023-01-01T12:00:00Z',
+              image: 'https://example.com/broken.png',
+            },
+          ],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const image = element.shadowRoot?.querySelector<HTMLImageElement>('.item-image');
+      image?.dispatchEvent(new Event('error'));
+
+      expect(image?.classList.contains('image-failed')).toBe(true);
+    });
+  });
+
   describe('Duplicate resource registration', () => {
     it('should not throw when the bundle is evaluated a second time', async () => {
       // A duplicate Lovelace resource entry loads the bundle twice. Without the
