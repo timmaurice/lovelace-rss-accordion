@@ -597,6 +597,19 @@ describe('RssAccordion', () => {
       expect(listenedIcon?.getAttribute('title')).toContain('Listened on:');
     });
 
+    it('should fall back to the plain label when the stored date is unparsable', async () => {
+      // completedAt comes out of localStorage, written by whatever version of
+      // this card finished the episode. An unparsable one formats to nothing,
+      // and the tooltip read "Listened on: " with the sentence left hanging.
+      audioProgressMock = { currentTime: 0, completed: true, completedAt: 'not a date' };
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const listenedIcon = element.shadowRoot?.querySelector('.listened-icon');
+      expect(listenedIcon).not.toBeNull();
+      expect(listenedIcon?.getAttribute('title')).toBe('Listened');
+    });
+
     it('should not load progress for a completed audio', async () => {
       audioProgressMock = { currentTime: 120, completed: true };
       element.setConfig(config);
@@ -741,6 +754,50 @@ describe('RssAccordion', () => {
       expect(items?.length).toBe(1);
       // The bookmarked item was feedItem2, so it should be the only one visible
       expect(items?.[0].querySelector('.title-link')?.textContent?.trim()).toBe(feedItem2.title);
+    });
+
+    it('re-opens only one panel when a filtered-out entry returns', async () => {
+      // A panel the bookmark filter hides is not in the DOM, so opening another
+      // one cannot collapse it - only its key can be dropped, and nothing was
+      // dropping it. Turning the filter off brought it back open beside the one
+      // the user had actually left open.
+      element.setConfig({ ...config, show_bookmarks: true, allow_multiple: false, open_behavior: 'none' });
+      await element.updateComplete;
+
+      const items = (): HTMLDetailsElement[] => [
+        ...element.shadowRoot!.querySelectorAll<HTMLDetailsElement>('.accordion-item'),
+      ];
+      const filterButton = (): HTMLElement =>
+        element.shadowRoot!.querySelector<HTMLElement>('.bookmark-filter-button')!;
+      const openHeader = (details: HTMLDetailsElement): void =>
+        details.querySelector<HTMLElement>('.accordion-header')!.click();
+
+      // feedItem2 is the newer one and renders first; bookmark the other.
+      element.shadowRoot!.querySelectorAll<HTMLElement>('.bookmark-button')[1].click();
+      await element.updateComplete;
+
+      // The user opens the entry that is not bookmarked.
+      openHeader(items()[0]);
+      await element.updateComplete;
+      expect(items()[0].hasAttribute('open')).toBe(true);
+
+      // Filter on: that entry leaves the DOM while its key stays behind.
+      filterButton().click();
+      await element.updateComplete;
+      expect(items()).toHaveLength(1);
+
+      // The user opens the bookmarked entry instead.
+      openHeader(items()[0]);
+      await element.updateComplete;
+
+      // Filter off: the first entry comes back.
+      filterButton().click();
+      await element.updateComplete;
+      expect(items()).toHaveLength(2);
+
+      const open = items().filter((details) => details.hasAttribute('open'));
+      expect(open).toHaveLength(1);
+      expect(open[0].querySelector('.title-link')?.textContent?.trim()).toBe(feedItem1.title);
     });
 
     it('should show bookmarked item even if it disappears from feed', async () => {
@@ -1414,6 +1471,882 @@ describe('RssAccordion', () => {
       expect(items?.length).toBe(2);
       expect(items?.[0].open).toBe(false);
       expect(items?.[1].open).toBe(false);
+    });
+  });
+
+  describe('keyed open state', () => {
+    const OLDER = {
+      title: 'Older story',
+      link: 'https://example.com/older',
+      summary: 'Older body',
+      published: '2023-01-01T12:00:00Z',
+    };
+    const NEWER = {
+      title: 'Newer story',
+      link: 'https://example.com/newer',
+      summary: 'Newer body',
+      published: '2023-01-02T12:00:00Z',
+    };
+    const NEWEST = {
+      title: 'Newest story',
+      link: 'https://example.com/newest',
+      summary: 'Newest body',
+      published: '2023-01-03T12:00:00Z',
+    };
+
+    const feedState = (entries: Record<string, unknown>[]): HassEntity =>
+      ({
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: { entries },
+      }) as HassEntity;
+
+    it('should keep the item the user opened open when a newer entry arrives', async () => {
+      hass.states['sensor.test_feed'] = feedState([OLDER, NEWER]);
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const header = element.shadowRoot?.querySelector<HTMLElement>('.accordion-item .accordion-header');
+      header?.click();
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelector<HTMLDetailsElement>('.accordion-item')?.open).toBe(true);
+
+      // A new entry pushes into the feed and takes over position 0.
+      element.hass = {
+        ...hass,
+        states: { ...hass.states, 'sensor.test_feed': feedState([OLDER, NEWER, NEWEST]) },
+      } as HomeAssistant;
+      await element.updateComplete;
+
+      const items = element.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item');
+      expect(items?.length).toBe(3);
+      expect([...(items ?? [])].map((item) => item.querySelector('.title-link')?.textContent?.trim())).toEqual([
+        'Newest story',
+        'Newer story',
+        'Older story',
+      ]);
+
+      // The panel belongs to the entry the user opened, not to slot 0.
+      const open = element.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item[open]');
+      expect(open?.length).toBe(1);
+      expect(open?.[0].querySelector('.title-link')?.textContent?.trim()).toBe('Newer story');
+      expect(items?.[0].open).toBe(false);
+    });
+
+    it('should keep the item open when the same entry moves down the list', async () => {
+      hass.states['sensor.test_feed'] = feedState([OLDER, NEWER]);
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      // Open the older entry, which sits at the bottom.
+      const items = element.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item');
+      items?.[1].querySelector<HTMLElement>('.accordion-header')?.click();
+      await element.updateComplete;
+
+      element.hass = {
+        ...hass,
+        states: { ...hass.states, 'sensor.test_feed': feedState([OLDER, NEWER, NEWEST]) },
+      } as HomeAssistant;
+      await element.updateComplete;
+
+      const open = element.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item[open]');
+      expect(open?.length).toBe(1);
+      expect(open?.[0].querySelector('.title-link')?.textContent?.trim()).toBe('Older story');
+    });
+  });
+
+  describe('card size with an entities list', () => {
+    it('should size itself from the aggregated items, not from `entity`', async () => {
+      hass.states['sensor.feed_a'] = {
+        entity_id: 'sensor.feed_a',
+        state: 'ok',
+        attributes: {
+          entries: [
+            { title: 'A1', link: 'https://example.com/a1', published: '2023-01-01T12:00:00Z' },
+            { title: 'A2', link: 'https://example.com/a2', published: '2023-01-02T12:00:00Z' },
+          ],
+        },
+      } as HassEntity;
+      hass.states['sensor.feed_b'] = {
+        entity_id: 'sensor.feed_b',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'B1', link: 'https://example.com/b1', published: '2023-01-03T12:00:00Z' }],
+        },
+      } as HassEntity;
+
+      element.hass = hass;
+      element.setConfig({ type: 'custom:rss-accordion', entities: ['sensor.feed_a', 'sensor.feed_b'] });
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelectorAll('.accordion-item').length).toBe(3);
+      expect(element.getCardSize()).toBe(3);
+    });
+  });
+
+  describe('audio playback coordination', () => {
+    const entries = [
+      {
+        title: 'Episode 1',
+        link: 'https://example.com/e1',
+        published: '2023-01-02T12:00:00Z',
+        audio: 'https://example.com/e1.mp3',
+      },
+      {
+        title: 'Episode 2',
+        link: 'https://example.com/e2',
+        published: '2023-01-01T12:00:00Z',
+        audio: 'https://example.com/e2.mp3',
+      },
+    ];
+
+    let players: HTMLAudioElement[];
+
+    beforeEach(async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: { entries },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig({ ...config, allow_multiple: true });
+      await element.updateComplete;
+
+      players = [...(element.shadowRoot?.querySelectorAll<HTMLAudioElement>('audio') ?? [])];
+      expect(players.length).toBe(2);
+      // JSDOM has no media stack: it reports every element as paused and its
+      // pause() is a stub, so both sides of the coordination are mocked in.
+      players.forEach((player) => {
+        Object.defineProperty(player, 'paused', { value: false, configurable: true });
+        vi.spyOn(player, 'pause').mockImplementation(() => {});
+      });
+    });
+
+    it('should pause the other players when one starts', async () => {
+      players[1].dispatchEvent(new Event('play'));
+
+      expect(players[0].pause).toHaveBeenCalled();
+      expect(players[1].pause).not.toHaveBeenCalled();
+    });
+
+    it('should pause the player of an item that is collapsed', async () => {
+      const header = element.shadowRoot?.querySelector<HTMLElement>('.accordion-item .accordion-header');
+      header?.click();
+      await element.updateComplete;
+      expect(element.shadowRoot?.querySelector<HTMLDetailsElement>('.accordion-item')?.open).toBe(true);
+
+      header?.click();
+      await element.updateComplete;
+
+      expect(players[0].pause).toHaveBeenCalled();
+    });
+
+    /** The pause is deferred by a task, so let that task run. */
+    const settleTeardown = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it('should pause playback when the card leaves the DOM', async () => {
+      document.body.removeChild(element);
+      await settleTeardown();
+
+      expect(players[0].pause).toHaveBeenCalled();
+      expect(players[1].pause).toHaveBeenCalled();
+
+      // afterEach removes the element again.
+      document.body.appendChild(element);
+    });
+
+    // Home Assistant re-parents cards: a masonry view rebuilds its columns on a
+    // column-count change (a window resize, the sidebar toggling) and a sections
+    // drag-reorder re-appends the node. Each of those disconnects the card, and
+    // a podcast the user deliberately started must survive it.
+    it('should keep playing when the card is only re-parented', async () => {
+      const column = document.createElement('div');
+      document.body.appendChild(column);
+
+      document.body.removeChild(element);
+      column.appendChild(element);
+      await settleTeardown();
+
+      expect(players[0].pause).not.toHaveBeenCalled();
+      expect(players[1].pause).not.toHaveBeenCalled();
+
+      // afterEach removes the element from document.body.
+      column.removeChild(element);
+      document.body.removeChild(column);
+      document.body.appendChild(element);
+    });
+
+    it('should still pause when a re-parented card is later torn down', async () => {
+      const column = document.createElement('div');
+      document.body.appendChild(column);
+
+      document.body.removeChild(element);
+      column.appendChild(element);
+      await settleTeardown();
+      expect(players[0].pause).not.toHaveBeenCalled();
+
+      column.removeChild(element);
+      await settleTeardown();
+
+      expect(players[0].pause).toHaveBeenCalled();
+      expect(players[1].pause).toHaveBeenCalled();
+
+      document.body.removeChild(column);
+      document.body.appendChild(element);
+    });
+  });
+
+  describe('measuring an open panel', () => {
+    /**
+     * jsdom lays nothing out and loads nothing, so both halves of a measurement
+     * are scripted: the panel reports the height the test wants, and an image
+     * counts as loaded only when the test says so.
+     *
+     * The switch sits on the prototype rather than on an instance, because the
+     * image under test is one lit creates during a render - it does not exist
+     * yet at the point the test would have to reach for it, and it is measured
+     * before the test gets control back. Not loaded is the default for the same
+     * reason.
+     */
+    const loaded = new WeakSet<HTMLImageElement>();
+    let originalComplete: PropertyDescriptor | undefined;
+
+    beforeEach(() => {
+      originalComplete = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'complete');
+      Object.defineProperty(HTMLImageElement.prototype, 'complete', {
+        configurable: true,
+        get(this: HTMLImageElement) {
+          return loaded.has(this);
+        },
+      });
+    });
+
+    afterEach(() => {
+      if (originalComplete) {
+        Object.defineProperty(HTMLImageElement.prototype, 'complete', originalComplete);
+      }
+    });
+
+    /** Arrives on load, the way a real picture does. */
+    const arrive = (img: HTMLImageElement): void => {
+      loaded.add(img);
+      img.dispatchEvent(new Event('load'));
+    };
+
+    const feedState = (image?: string): HassEntity =>
+      ({
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [
+            {
+              title: 'Story',
+              link: 'https://example.com/story',
+              published: '2023-01-01T12:00:00Z',
+              summary: '<p>The body.</p>',
+              ...(image ? { image } : {}),
+            },
+          ],
+        },
+      }) as HassEntity;
+
+    /** Enough animation frames for a measurement and its transition reset. */
+    const frames = async (): Promise<void> => {
+      for (let i = 0; i < 4; i++) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+    };
+
+    it('waits for the picture a re-rendered body gained before measuring', async () => {
+      element.hass = { ...hass, states: { 'sensor.test_feed': feedState() } };
+      element.setConfig({ ...config, open_behavior: 'none' });
+      await element.updateComplete;
+
+      const details = element.shadowRoot!.querySelector<HTMLDetailsElement>('.accordion-item')!;
+      const content = details.querySelector<HTMLElement>('.accordion-content')!;
+
+      let panelHeight = 300;
+      Object.defineProperty(content, 'scrollHeight', { get: () => panelHeight, configurable: true });
+
+      // The user opens an entry that carries no picture at all.
+      details.querySelector<HTMLElement>('.accordion-header')!.click();
+      await frames();
+      expect(content.style.maxHeight).toBe('300px');
+
+      // The feed rewrites the entry. Link and published are unchanged, so the
+      // item key and with it this very DOM node survive - but the body now
+      // carries a picture, and until it arrives the panel measures short.
+      panelHeight = 120;
+      element.hass = { ...hass, states: { 'sensor.test_feed': feedState('https://example.com/one.png') } };
+      await element.updateComplete;
+      await frames();
+
+      const img = details.querySelector<HTMLImageElement>('img.item-image')!;
+      expect(img).toBeTruthy();
+
+      // The panel is the same one, still open, and never took the short height.
+      expect(element.shadowRoot!.querySelector('.accordion-item')).toBe(details);
+      expect(details.open).toBe(true);
+      expect(content.style.maxHeight).toBe('300px');
+
+      // Once the picture is there the panel is measured around it.
+      panelHeight = 420;
+      arrive(img);
+      await frames();
+      expect(content.style.maxHeight).toBe('420px');
+    });
+
+    it('does not re-open a panel the user closed while its image was loading', async () => {
+      element.hass = { ...hass, states: { 'sensor.test_feed': feedState('https://example.com/one.png') } };
+      element.setConfig({ ...config, open_behavior: 'none' });
+      await element.updateComplete;
+
+      const details = element.shadowRoot!.querySelector<HTMLDetailsElement>('.accordion-item')!;
+      const content = details.querySelector<HTMLElement>('.accordion-content')!;
+      const img = details.querySelector<HTMLImageElement>('img.item-image')!;
+      Object.defineProperty(content, 'scrollHeight', { get: () => 300, configurable: true });
+
+      const header = details.querySelector<HTMLElement>('.accordion-header')!;
+      header.click();
+      await frames();
+      // Still waiting for the picture, so no height has been written yet.
+      expect(content.style.maxHeight).toBe('');
+
+      header.click(); // The user gives up and collapses it again.
+      arrive(img);
+      await frames();
+
+      expect(content.style.maxHeight).toBe('0px');
+    });
+  });
+
+  describe('closing a panel while the card re-renders', () => {
+    const entry = {
+      title: 'Story',
+      link: 'https://example.com/story',
+      published: '2023-01-01T12:00:00Z',
+      summary: '<p>The body.</p>',
+    };
+
+    const feed = (state: string): HassEntity =>
+      ({ entity_id: 'sensor.test_feed', state, attributes: { entries: [entry] } }) as HassEntity;
+
+    it('lets the collapse animation finish', async () => {
+      element.hass = { ...hass, states: { 'sensor.test_feed': feed('ok') } };
+      element.setConfig({ ...config, open_behavior: 'none' });
+      await element.updateComplete;
+
+      const details = element.shadowRoot!.querySelector<HTMLDetailsElement>('.accordion-item')!;
+      const content = details.querySelector<HTMLElement>('.accordion-content')!;
+      const header = details.querySelector<HTMLElement>('.accordion-header')!;
+
+      header.click();
+      await element.updateComplete;
+      expect(details.hasAttribute('open')).toBe(true);
+
+      // The close animates: max-height goes to zero now, the open attribute
+      // comes off when the transition ends.
+      header.click();
+      expect(content.style.maxHeight).toBe('0px');
+      expect(details.hasAttribute('open')).toBe(true);
+
+      // A feed update lands mid-animation. updated() used to strip the open
+      // attribute here and the panel vanished instead of collapsing.
+      element.hass = { ...hass, states: { 'sensor.test_feed': feed('updated') } };
+      await element.updateComplete;
+      expect(element.shadowRoot!.querySelector('.accordion-item')).toBe(details);
+      expect(details.hasAttribute('open')).toBe(true);
+
+      // The animation finishes on its own terms.
+      content.dispatchEvent(new Event('transitionend'));
+      expect(details.hasAttribute('open')).toBe(false);
+    });
+  });
+
+  describe('keys of entries that left the feed', () => {
+    const older = {
+      title: 'Older',
+      link: 'https://example.com/older',
+      published: '2023-01-01T10:00:00Z',
+      summary: '<p>Older.</p>',
+    };
+    const newer = {
+      title: 'Newer',
+      link: 'https://example.com/newer',
+      published: '2023-01-02T10:00:00Z',
+      summary: '<p>Newer.</p>',
+    };
+
+    const feed = (entries: Record<string, unknown>[]): HassEntity =>
+      ({ entity_id: 'sensor.test_feed', state: 'ok', attributes: { entries } }) as HassEntity;
+
+    const publish = async (entries: Record<string, unknown>[]): Promise<void> => {
+      element.hass = { ...hass, states: { 'sensor.test_feed': feed(entries) } };
+      await element.updateComplete;
+    };
+
+    /** The two sets are private, and their size is the whole point of this. */
+    const keySets = (): { open: Set<string>; seen: Set<string> } => {
+      const internals = element as unknown as { _openKeys: Set<string>; _seenKeys: Set<string> };
+      return { open: internals._openKeys, seen: internals._seenKeys };
+    };
+
+    const items = (): HTMLDetailsElement[] => [
+      ...element.shadowRoot!.querySelectorAll<HTMLDetailsElement>('.accordion-item'),
+    ];
+
+    it('forgets them, instead of re-opening them when they come back', async () => {
+      element.setConfig({ ...config, open_behavior: 'none' });
+      await publish([newer, older]);
+
+      // The user opens the newer entry, which renders first.
+      items()[0].querySelector<HTMLElement>('.accordion-header')!.click();
+      await element.updateComplete;
+      expect(items()[0].hasAttribute('open')).toBe(true);
+      expect(keySets().open.size).toBe(1);
+
+      // It scrolls out of the feed while it is still open.
+      await publish([older]);
+      expect(items()).toHaveLength(1);
+      expect(keySets().open.size).toBe(0);
+      expect(keySets().seen.size).toBe(1);
+
+      // The feed offers it again. Nothing asked for it to be open.
+      await publish([newer, older]);
+      expect(items()).toHaveLength(2);
+      expect(items().some((details) => details.hasAttribute('open'))).toBe(false);
+      expect(keySets().seen.size).toBe(2);
+    });
+
+    it('keeps them while the entity is briefly unavailable', async () => {
+      element.setConfig({ ...config, open_behavior: 'none' });
+      await publish([newer, older]);
+
+      items()[0].querySelector<HTMLElement>('.accordion-header')!.click();
+      await element.updateComplete;
+      expect(keySets().open.size).toBe(1);
+
+      element.hass = {
+        ...hass,
+        states: { 'sensor.test_feed': { entity_id: 'sensor.test_feed', state: 'unavailable', attributes: {} } },
+      } as HomeAssistant;
+      await element.updateComplete;
+
+      // An entity that is down is not the feed dropping everything it had.
+      expect(keySets().open.size).toBe(1);
+
+      await publish([newer, older]);
+      expect(items()[0].hasAttribute('open')).toBe(true);
+    });
+  });
+
+  describe('entries with missing fields', () => {
+    it('should render no date row for an entry without a date', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'No date', link: 'https://example.com/no-date', summary: 'Body' }],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const published = element.shadowRoot?.querySelector('.item-published');
+      expect(published).toBeNull();
+      expect(element.shadowRoot?.textContent).not.toContain('Invalid Date');
+    });
+
+    it('should fall back to a placeholder title for an entry without a title', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ link: 'https://example.com/untitled', summary: 'Body', published: '2023-01-01T12:00:00Z' }],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const title = element.shadowRoot?.querySelector('.title-link');
+      expect(title?.textContent?.trim()).toBe('Untitled entry');
+    });
+
+    it('should render a title-less, link-less entry as plain text, not as a link', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ summary: 'Body', published: '2023-01-01T12:00:00Z' }],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      // An empty href points at the dashboard itself, so clicking the header
+      // would reload the page.
+      expect(element.shadowRoot?.querySelector('a.title-link')).toBeNull();
+      expect(element.shadowRoot?.querySelector('.item-link')).toBeNull();
+      const title = element.shadowRoot?.querySelector('span.title-link');
+      expect(title?.textContent?.trim()).toBe('Untitled entry');
+    });
+  });
+
+  describe('empty states', () => {
+    it('should say the entity is unavailable rather than that the feed is empty', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'unavailable',
+        attributes: {},
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const warning = element.shadowRoot?.querySelector('.card-content.warning');
+      expect(warning?.textContent).toContain('Entity unavailable');
+      expect(warning?.textContent).toContain('sensor.test_feed');
+    });
+
+    it('should say an entity carries no feed entries at all', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'above_horizon',
+        attributes: { friendly_name: 'Not a feed' },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const warning = element.shadowRoot?.querySelector('.card-content.warning');
+      expect(warning?.textContent).toContain('no feed entries');
+      expect(warning?.textContent).toContain('sensor.test_feed');
+    });
+
+    it('should keep the plain empty-feed message for a feed entity with no entries', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: { entries: [] },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelector('.card-content.warning')).toBeNull();
+      expect(element.shadowRoot?.querySelector('.card-content i')?.textContent).toContain('No entries available');
+    });
+  });
+
+  it('should survive hass arriving before setConfig', async () => {
+    // Home Assistant sets hass on a freshly created card and only then calls
+    // setConfig. updated() runs for that first update too, with no config
+    // behind it and no DOM to re-apply anything to.
+    const errors: unknown[] = [];
+    const onRejection = (event: PromiseRejectionEvent): void => {
+      errors.push(event.reason);
+    };
+    window.addEventListener('unhandledrejection', onRejection);
+
+    element.hass = hass;
+    await element.updateComplete;
+    await Promise.resolve();
+
+    window.removeEventListener('unhandledrejection', onRejection);
+    expect(errors).toEqual([]);
+    expect(element.shadowRoot?.querySelector('ha-card')).toBeNull();
+  });
+
+  describe('item keys', () => {
+    // updated() used to skip an item whose key was falsy, which could not
+    // happen: the key is built by interpolation, so the emptiest entry there is
+    // still keys as "undefined|undefined". Pinning that here, because it is the
+    // reason that branch is gone.
+    it('are never empty, even for an entry with nothing to key on', () => {
+      const helper = new StorageHelper('sensor.test_feed');
+
+      expect(helper.getBookmarkKey({} as unknown as Parameters<StorageHelper['getBookmarkKey']>[0])).toBe(
+        'undefined|undefined',
+      );
+      expect(
+        helper.getBookmarkKey({ link: 'https://example.com/a' } as Parameters<StorageHelper['getBookmarkKey']>[0]),
+      ).toBe('https://example.com/a|undefined');
+    });
+  });
+
+  describe('card picker metadata', () => {
+    it('should stub a configuration with a real feed entity', () => {
+      hass.states['sensor.not_a_feed'] = {
+        entity_id: 'sensor.not_a_feed',
+        state: 'ok',
+        attributes: {},
+      } as HassEntity;
+      hass.states['sensor.real_feed'] = {
+        entity_id: 'sensor.real_feed',
+        state: 'ok',
+        attributes: { entries: [{ title: 'One', link: 'https://example.com/one' }] },
+      } as HassEntity;
+
+      const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, [
+        'sensor.not_a_feed',
+        'sensor.real_feed',
+      ]);
+
+      expect(stub.entity).toBe('sensor.real_feed');
+    });
+
+    it('should skip an entity whose feed attribute is not a list', () => {
+      // The picker tested these for truthiness while rendering requires an
+      // array, so an entity like this became the preview and the user's first
+      // sight of the card was "Entity has no feed entries".
+      hass.states['sensor.scalar_items'] = {
+        entity_id: 'sensor.scalar_items',
+        state: 'ok',
+        attributes: { items: 12 },
+      } as HassEntity;
+      hass.states['sensor.object_entries'] = {
+        entity_id: 'sensor.object_entries',
+        state: 'ok',
+        attributes: { entries: { title: 'One' } },
+      } as HassEntity;
+      hass.states['sensor.real_feed'] = {
+        entity_id: 'sensor.real_feed',
+        state: 'ok',
+        attributes: { entries: [{ title: 'One', link: 'https://example.com/one' }] },
+      } as HassEntity;
+
+      const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, [
+        'sensor.scalar_items',
+        'sensor.object_entries',
+        'sensor.real_feed',
+      ]);
+
+      expect(stub.entity).toBe('sensor.real_feed');
+    });
+
+    it('should stub an event entity, which the card also reads', () => {
+      hass.states['sensor.not_a_feed'] = {
+        entity_id: 'sensor.not_a_feed',
+        state: 'ok',
+        attributes: {},
+      } as HassEntity;
+      hass.states['event.podcast'] = {
+        entity_id: 'event.podcast',
+        state: '2023-01-01T12:00:00Z',
+        attributes: { title: 'Episode', link: 'https://example.com/episode' },
+      } as HassEntity;
+
+      const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, [
+        'sensor.not_a_feed',
+        'event.podcast',
+      ]);
+
+      expect(stub.entity).toBe('event.podcast');
+    });
+
+    it('should fall back to a placeholder entity when no feed entity exists', () => {
+      const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, []);
+      expect(stub.entity).toBe('sensor.your_rss_feed_sensor');
+    });
+
+    // Home Assistant reads both off the card element it created - `hui-card`
+    // does `if (this._element.getGridOptions)` - so a static method is never
+    // seen and the card silently keeps the default sizing.
+    it('should expose grid options on the instance for sections views', () => {
+      expect(element.getGridOptions()).toEqual({
+        columns: 12,
+        rows: 'auto',
+        min_columns: 6,
+        min_rows: 1,
+      });
+    });
+
+    it('should expose the pre-2024.11 layout options on the instance', () => {
+      expect(element.getLayoutOptions()).toEqual({
+        grid_rows: 3,
+        grid_columns: 12,
+        grid_min_rows: 1,
+        grid_min_columns: 6,
+      });
+    });
+
+    it('should not hide the sizing API behind the constructor', () => {
+      const ctor = element.constructor as unknown as Record<string, unknown>;
+      expect(ctor.getGridOptions).toBeUndefined();
+      expect(ctor.getLayoutOptions).toBeUndefined();
+    });
+  });
+
+  describe('image error handling', () => {
+    it('should hide a channel image that fails to load and drop the cropped layout', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'Item', link: 'https://example.com/item', published: '2023-01-01T12:00:00Z' }],
+          channel: { title: 'Channel', image: 'https://example.com/broken.png' },
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true, crop_channel_image: true });
+      await element.updateComplete;
+
+      const image = element.shadowRoot?.querySelector<HTMLImageElement>('.channel-image');
+      expect(image).not.toBeNull();
+      expect(element.shadowRoot?.querySelector('.channel-info.cropped-image')).not.toBeNull();
+
+      image?.dispatchEvent(new Event('error'));
+      await element.updateComplete;
+
+      expect(image?.classList.contains('image-failed')).toBe(true);
+      expect(element.shadowRoot?.querySelector('.channel-info.cropped-image')).toBeNull();
+
+      // The crop used to be removed by reaching into the class attribute lit
+      // owns. That held only while lit had no reason to rewrite it: toggling
+      // the crop off and on gives the binding a new value, and the crop came
+      // back around a picture that was still hidden.
+      element.setConfig({ ...config, show_channel_info: true, crop_channel_image: false });
+      await element.updateComplete;
+      element.setConfig({ ...config, show_channel_info: true, crop_channel_image: true });
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelector<HTMLImageElement>('.channel-image')).toBe(image);
+      expect(image?.classList.contains('image-failed')).toBe(true);
+      expect(element.shadowRoot?.querySelector('.channel-info.cropped-image')).toBeNull();
+    });
+
+    it('should show a channel image again once it loads', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'Item', link: 'https://example.com/item', published: '2023-01-01T12:00:00Z' }],
+          channel: { title: 'Channel', image: 'https://example.com/broken.png' },
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true, crop_channel_image: true });
+      await element.updateComplete;
+
+      const image = element.shadowRoot?.querySelector<HTMLImageElement>('.channel-image');
+      image?.dispatchEvent(new Event('error'));
+      await element.updateComplete;
+      expect(element.shadowRoot?.querySelector('.channel-info.cropped-image')).toBeNull();
+
+      // Nodes outlive their contents, so a src that rebinds to something that
+      // works has to be able to undo this.
+      image?.dispatchEvent(new Event('load'));
+      await element.updateComplete;
+
+      expect(image?.classList.contains('image-failed')).toBe(false);
+      expect(element.shadowRoot?.querySelector('.channel-info.cropped-image')).not.toBeNull();
+    });
+
+    it('should hide an item image that fails to load', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [
+            {
+              title: 'Item',
+              link: 'https://example.com/item',
+              published: '2023-01-01T12:00:00Z',
+              image: 'https://example.com/broken.png',
+            },
+          ],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const image = element.shadowRoot?.querySelector<HTMLImageElement>('.item-image');
+      image?.dispatchEvent(new Event('error'));
+
+      expect(image?.classList.contains('image-failed')).toBe(true);
+
+      // Items are keyed, so this node outlives the entry's contents. A feed
+      // that rewrites the entry around a picture that works has to be able to
+      // bring it back - without a load handler the <img> stayed hidden for the
+      // life of the card.
+      image?.dispatchEvent(new Event('load'));
+
+      expect(image?.classList.contains('image-failed')).toBe(false);
+    });
+  });
+
+  describe('bookmark filter button', () => {
+    /**
+     * `ha-button` renamed its size tokens in 2026.7: `small` up to 2026.6,
+     * `s` from 2026.7. Neither release understands the other's token and
+     * neither complains about one - it is dropped and the button falls back to
+     * its default size. The card supports 2026.4 upwards, so it has to speak
+     * both.
+     */
+    const sizeOn = async (version: string | undefined): Promise<string | null> => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [{ title: 'Item', link: 'https://example.com/item', published: '2023-01-01T12:00:00Z' }],
+        },
+      } as HassEntity;
+      element.hass = { ...hass, config: version === undefined ? undefined : { version } };
+      element.setConfig({ ...config, show_bookmarks: true });
+      await element.updateComplete;
+
+      return element.shadowRoot?.querySelector('ha-button.bookmark-filter-button')?.getAttribute('size') ?? null;
+    };
+
+    it('uses the pre-rename token on the cores that only know it', async () => {
+      expect(await sizeOn('2026.4.0')).toBe('small');
+      expect(await sizeOn('2026.6.3')).toBe('small');
+    });
+
+    it('uses the renamed token from 2026.7 on', async () => {
+      expect(await sizeOn('2026.7.0')).toBe('s');
+      expect(await sizeOn('2026.12.1')).toBe('s');
+      expect(await sizeOn('2027.1.0')).toBe('s');
+    });
+
+    it('falls back to the current token when the core version is unreadable', async () => {
+      expect(await sizeOn(undefined)).toBe('s');
+      expect(await sizeOn('dev')).toBe('s');
+    });
+  });
+
+  describe('Duplicate resource registration', () => {
+    it('should not throw when the bundle is evaluated a second time', async () => {
+      // A duplicate Lovelace resource entry loads the bundle twice. Without the
+      // guarded define() the second evaluation throws while the module is still
+      // being evaluated, so the card never registers and the user loses the
+      // whole card instead of seeing an error.
+      vi.resetModules();
+      await expect(import('../src/rss-accordion')).resolves.toBeDefined();
+    });
+
+    it('should register the card in customCards only once when loaded twice', async () => {
+      vi.resetModules();
+      await import('../src/rss-accordion');
+
+      const entries = (window.customCards ?? []).filter((card) => card.type === 'rss-accordion');
+      expect(entries).toHaveLength(1);
+    });
+
+    it('should not throw when the editor module is evaluated a second time', async () => {
+      // The editor lives in the same bundle and is defined the same way, so it
+      // is the second element a duplicate load would trip over.
+      vi.resetModules();
+      await expect(import('../src/editor')).resolves.toBeDefined();
+      vi.resetModules();
+      await expect(import('../src/editor')).resolves.toBeDefined();
     });
   });
 });

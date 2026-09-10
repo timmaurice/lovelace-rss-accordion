@@ -7,7 +7,9 @@ import prettierConfig from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['dist/'],
+    // `dist/` is generated; the two Playwright directories are too, and a failed
+    // end-to-end run drops thousands of lintable lines into them.
+    ignores: ['dist/', 'playwright-report/', 'test-results/'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
