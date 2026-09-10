@@ -57,10 +57,17 @@ If you would like to contribute a new translation:
 
 ## Requirements
 
-Home Assistant **2026.4** or newer. The visual editor is built on `ha-input`, which
-Home Assistant introduced in that release; on older cores the editor fields render
-as empty unknown elements. The card itself is served through HACS, which enforces
-this minimum via `hacs.json`.
+Home Assistant **2026.4** or newer, enforced by HACS through `hacs.json`.
+
+The minimum is the visual editor's, not the card's. The editor is built on `ha-input`,
+which Home Assistant introduced in 2026.4; on an older core its fields render as empty
+unknown elements. The card itself uses nothing newer and renders correctly on older cores,
+so a YAML-configured dashboard is unaffected - but the HACS minimum applies to
+installation, so those cores cannot install it from HACS.
+
+The bookmark filter button adapts to the core it runs on: `ha-button` renamed its size
+tokens from `small`/`medium`/`large` to `xs`/`s`/`m`/`l`/`xl` in 2026.7, and neither
+version understands the other's, so the card picks the one the running core knows.
 
 ## Installation
 

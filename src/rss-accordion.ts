@@ -1042,6 +1042,30 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     </div>`;
   }
 
+  /**
+   * The `size` token this core's `ha-button` understands.
+   *
+   * The vocabulary was renamed in 2026.7: up to and including 2026.6 the
+   * component documents `small`/`medium`/`large` and styles `:host([size="small"])`,
+   * from 2026.7 it documents `xs`/`s`/`m`/`l`/`xl` and styles `:host([size="s"])`.
+   * Neither version aliases the other's tokens and neither says anything about
+   * one it does not know - an unrecognised `size` is silently dropped and the
+   * button renders at its default size.
+   *
+   * That rename lands three releases above the minimum this card supports, so
+   * one hard-coded token is wrong on one side of it or the other. An
+   * unreadable version resolves to the current vocabulary, which is the one
+   * every core from here on will speak.
+   */
+  private _buttonSize(): 'small' | 's' {
+    const version = this.hass?.config?.version;
+    const match = /^(\d+)\.(\d+)/.exec(version ?? '');
+    if (!match) return 's';
+
+    const [year, month] = [Number(match[1]), Number(match[2])];
+    return year > 2026 || (year === 2026 && month >= 7) ? 's' : 'small';
+  }
+
   private _renderBookmarkFilter(hasAnyBookmarks: boolean): TemplateResult {
     if (!this._config.show_bookmarks) {
       return html``;
@@ -1052,7 +1076,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         outlined
         class="bookmark-filter-button ${this._showOnlyBookmarks ? 'active' : ''}"
         ?disabled=${!hasAnyBookmarks}
-        size="s"
+        size=${this._buttonSize()}
         title="${
           !hasAnyBookmarks
             ? localize(this.hass, 'component.rss-accordion.card.no_bookmarks_yet_tooltip')
