@@ -2009,6 +2009,55 @@ describe('RssAccordion', () => {
       expect(stub.entity).toBe('sensor.real_feed');
     });
 
+    it('should skip an entity whose feed attribute is not a list', () => {
+      // The picker tested these for truthiness while rendering requires an
+      // array, so an entity like this became the preview and the user's first
+      // sight of the card was "Entity has no feed entries".
+      hass.states['sensor.scalar_items'] = {
+        entity_id: 'sensor.scalar_items',
+        state: 'ok',
+        attributes: { items: 12 },
+      } as HassEntity;
+      hass.states['sensor.object_entries'] = {
+        entity_id: 'sensor.object_entries',
+        state: 'ok',
+        attributes: { entries: { title: 'One' } },
+      } as HassEntity;
+      hass.states['sensor.real_feed'] = {
+        entity_id: 'sensor.real_feed',
+        state: 'ok',
+        attributes: { entries: [{ title: 'One', link: 'https://example.com/one' }] },
+      } as HassEntity;
+
+      const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, [
+        'sensor.scalar_items',
+        'sensor.object_entries',
+        'sensor.real_feed',
+      ]);
+
+      expect(stub.entity).toBe('sensor.real_feed');
+    });
+
+    it('should stub an event entity, which the card also reads', () => {
+      hass.states['sensor.not_a_feed'] = {
+        entity_id: 'sensor.not_a_feed',
+        state: 'ok',
+        attributes: {},
+      } as HassEntity;
+      hass.states['event.podcast'] = {
+        entity_id: 'event.podcast',
+        state: '2023-01-01T12:00:00Z',
+        attributes: { title: 'Episode', link: 'https://example.com/episode' },
+      } as HassEntity;
+
+      const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, [
+        'sensor.not_a_feed',
+        'event.podcast',
+      ]);
+
+      expect(stub.entity).toBe('event.podcast');
+    });
+
     it('should fall back to a placeholder entity when no feed entity exists', () => {
       const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, []);
       expect(stub.entity).toBe('sensor.your_rss_feed_sensor');
