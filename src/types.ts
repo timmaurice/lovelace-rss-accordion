@@ -12,6 +12,10 @@ export interface HomeAssistant {
   localize: (key: string, ...args: unknown[]) => string;
   language: string;
   locale: FrontendLocaleData;
+  config?: {
+    /** The core version, e.g. "2026.7.0". */
+    version?: string;
+  };
   callWS: <T>(message: { type: string; [key: string]: unknown }) => Promise<T>;
   callService: (domain: string, service: string, serviceData?: Record<string, unknown>) => Promise<void>;
   themes?: {

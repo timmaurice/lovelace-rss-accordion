@@ -1972,7 +1972,14 @@ describe('RssAccordion', () => {
   });
 
   describe('bookmark filter button', () => {
-    it('should use the supported ha-button size', async () => {
+    /**
+     * `ha-button` renamed its size tokens in 2026.7: `small` up to 2026.6,
+     * `s` from 2026.7. Neither release understands the other's token and
+     * neither complains about one - it is dropped and the button falls back to
+     * its default size. The card supports 2026.4 upwards, so it has to speak
+     * both.
+     */
+    const sizeOn = async (version: string | undefined): Promise<string | null> => {
       hass.states['sensor.test_feed'] = {
         entity_id: 'sensor.test_feed',
         state: 'ok',
@@ -1980,13 +1987,27 @@ describe('RssAccordion', () => {
           entries: [{ title: 'Item', link: 'https://example.com/item', published: '2023-01-01T12:00:00Z' }],
         },
       } as HassEntity;
-      element.hass = hass;
+      element.hass = { ...hass, config: version === undefined ? undefined : { version } };
       element.setConfig({ ...config, show_bookmarks: true });
       await element.updateComplete;
 
-      // `size="small"` is deprecated and logs a warning on every render.
-      const button = element.shadowRoot?.querySelector('ha-button.bookmark-filter-button');
-      expect(button?.getAttribute('size')).toBe('s');
+      return element.shadowRoot?.querySelector('ha-button.bookmark-filter-button')?.getAttribute('size') ?? null;
+    };
+
+    it('uses the pre-rename token on the cores that only know it', async () => {
+      expect(await sizeOn('2026.4.0')).toBe('small');
+      expect(await sizeOn('2026.6.3')).toBe('small');
+    });
+
+    it('uses the renamed token from 2026.7 on', async () => {
+      expect(await sizeOn('2026.7.0')).toBe('s');
+      expect(await sizeOn('2026.12.1')).toBe('s');
+      expect(await sizeOn('2027.1.0')).toBe('s');
+    });
+
+    it('falls back to the current token when the core version is unreadable', async () => {
+      expect(await sizeOn(undefined)).toBe('s');
+      expect(await sizeOn('dev')).toBe('s');
     });
   });
 
