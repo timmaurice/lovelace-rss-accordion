@@ -402,8 +402,12 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     this._enforceSingleOpen();
 
     this.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item').forEach((details) => {
+      // Every item carries a data-key, and getBookmarkKey never answers with an
+      // empty string - an entry with neither a link nor a published date keys
+      // as "undefined|undefined". So this narrows the type and nothing else;
+      // the falsy check it replaces could not fire.
       const key = details.dataset.key;
-      if (!key) return;
+      if (key === undefined) return;
 
       const isNewItem = !this._seenKeys.has(key);
       this._seenKeys.add(key);
