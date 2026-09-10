@@ -1,3 +1,5 @@
+import { deflateSync } from 'node:zlib';
+
 /**
  * Builds sensor states in the exact shape the sibling `feedparser` integration
  * produces - the integration `docker-compose.yml` mounts as
@@ -96,4 +98,52 @@ export function feedSensor(
       entries,
     },
   };
+}
+
+/**
+ * A solid-colour PNG, as the bytes a route handler can serve.
+ *
+ * A feed under test needs a picture with real intrinsic dimensions - one that
+ * contributes no height at all until the browser has decoded it. A `data:` URI
+ * will not do: the bytes are already in the document, so the browser resolves
+ * them within the same task and the picture is never actually pending, which is
+ * the exact state the card has to survive. Serving it through an intercepted
+ * request is what makes the load deferrable, and generating it here is what
+ * keeps the suite off the network.
+ */
+export function pngBytes(width: number, height: number, rgb: [number, number, number]): Buffer {
+  const row = Buffer.concat([Buffer.of(0), Buffer.from(Array.from({ length: width }, () => rgb).flat())]);
+  const raw = Buffer.concat(Array.from({ length: height }, () => row));
+
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const typed = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(typed));
+    return Buffer.concat([length, typed, crc]);
+  };
+
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr.set([8, 2, 0, 0, 0], 8); // 8 bits per channel, truecolour, no interlace
+
+  return Buffer.concat([
+    Buffer.of(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+function crc32(buffer: Buffer): number {
+  let crc = 0xffffffff;
+  for (const byte of buffer) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) {
+      crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
 }

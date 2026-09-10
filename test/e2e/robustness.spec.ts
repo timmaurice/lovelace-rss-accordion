@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures/hass';
 import { removeState, setState, useDashboard } from './helpers/homeassistant';
-import { feedEntry, feedSensor, feedparserDate } from './helpers/feed';
+import { feedEntry, feedSensor, feedparserDate, pngBytes } from './helpers/feed';
 
 /**
  * The behaviour a browser is needed for and a unit test cannot reach.
@@ -148,6 +148,85 @@ test.describe('A feed that changes under the card', () => {
     expect(clipped).toBe(false);
 
     await expect(card.locator('.accordion-item').first().locator('.accordion-content')).toBeHidden();
+    expect(consoleErrors).toEqual([]);
+  });
+});
+
+test.describe('A body that re-renders around a new image', () => {
+  /**
+   * A panel is measured for the body it holds, and an `<img>` the browser has
+   * not decoded yet contributes no height at all. A feed that rewrites an entry
+   * without touching its link or its published date keeps the item key, so the
+   * DOM node - and the open panel with it - survives, and the rewritten body is
+   * measured while its picture is still in flight: `max-height` is pinned to
+   * the height without it and nothing measures it again.
+   *
+   * The entry gains a picture rather than swapping one, because swapping does
+   * not reproduce it: an `<img>` whose `src` is rebound keeps painting the
+   * previous image, at the previous size, until the new one arrives, so the
+   * panel never measures short. A picture that was not there before has no such
+   * stand-in and occupies nothing.
+   */
+  const IMAGE = '/local/rss-accordion-e2e/late.png';
+
+  const illustrated = (image?: string): Record<string, unknown> =>
+    feedEntry({
+      title: 'Illustrated story',
+      link: 'https://example.com/illustrated',
+      summary: '<p>The illustrated body.</p>',
+      published: NEWER,
+      id: 'e2e-robust-illustrated',
+      ...(image ? { image } : {}),
+    });
+
+  test('measures the panel around the new picture, not around its absence', async ({ page, consoleErrors }) => {
+    // Held back deliberately. The defect only exists while a picture is still
+    // in flight, so the delay is the test condition, not a convenience.
+    const body = pngBytes(400, 300, [20, 90, 200]);
+    await page.route(`**${IMAGE}`, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await route.fulfill({ status: 200, contentType: 'image/png', body });
+    });
+
+    await seed([illustrated()]);
+    await page.goto(`/${urlPath}/0`);
+
+    const card = page.locator('rss-accordion');
+    await expect(card.locator('.accordion-item')).toHaveCount(1, { timeout: 60_000 });
+
+    const item = card.locator('.accordion-item');
+    const content = item.locator('.accordion-content');
+
+    await item.locator('.accordion-header').click();
+    await expect(content).toBeVisible();
+    await expect(item.locator('img.item-image')).toHaveCount(0);
+
+    /**
+     * Whether the panel is tall enough for everything inside it.
+     *
+     * Polled rather than sampled once: a panel that opens by hand animates to
+     * its height, and a single read lands mid-transition and reports a clip
+     * that is not one. The failure this guards against is a `max-height` that
+     * is pinned short and never corrected, so it survives any amount of
+     * waiting - polling costs nothing but the settling time.
+     */
+    const fits = async (): Promise<boolean> =>
+      content.evaluate(async (el) => {
+        await Promise.all([...el.querySelectorAll('img')].map((img) => img.decode().catch(() => undefined)));
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        return el.scrollHeight <= el.clientHeight + 1;
+      });
+
+    await expect.poll(fits, { timeout: 15_000 }).toBe(true);
+
+    // Same link and same published date, so the same key and the same node -
+    // but a body that now carries a picture, and one still on its way.
+    await seed([illustrated(IMAGE)]);
+    await expect(item.locator('img.item-image')).toHaveAttribute('src', IMAGE, { timeout: 30_000 });
+
+    // The panel is still the one the user opened, and it still fits its body.
+    await expect(item).toHaveAttribute('open', '');
+    await expect.poll(fits, { timeout: 15_000 }).toBe(true);
     expect(consoleErrors).toEqual([]);
   });
 });
