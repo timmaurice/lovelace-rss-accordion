@@ -2044,6 +2044,23 @@ describe('RssAccordion', () => {
     });
   });
 
+  describe('item keys', () => {
+    // updated() used to skip an item whose key was falsy, which could not
+    // happen: the key is built by interpolation, so the emptiest entry there is
+    // still keys as "undefined|undefined". Pinning that here, because it is the
+    // reason that branch is gone.
+    it('are never empty, even for an entry with nothing to key on', () => {
+      const helper = new StorageHelper('sensor.test_feed');
+
+      expect(helper.getBookmarkKey({} as unknown as Parameters<StorageHelper['getBookmarkKey']>[0])).toBe(
+        'undefined|undefined',
+      );
+      expect(
+        helper.getBookmarkKey({ link: 'https://example.com/a' } as Parameters<StorageHelper['getBookmarkKey']>[0]),
+      ).toBe('https://example.com/a|undefined');
+    });
+  });
+
   describe('card picker metadata', () => {
     it('should stub a configuration with a real feed entity', () => {
       hass.states['sensor.not_a_feed'] = {
