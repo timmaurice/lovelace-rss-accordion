@@ -2044,6 +2044,25 @@ describe('RssAccordion', () => {
     });
   });
 
+  it('should survive hass arriving before setConfig', async () => {
+    // Home Assistant sets hass on a freshly created card and only then calls
+    // setConfig. updated() runs for that first update too, with no config
+    // behind it and no DOM to re-apply anything to.
+    const errors: unknown[] = [];
+    const onRejection = (event: PromiseRejectionEvent): void => {
+      errors.push(event.reason);
+    };
+    window.addEventListener('unhandledrejection', onRejection);
+
+    element.hass = hass;
+    await element.updateComplete;
+    await Promise.resolve();
+
+    window.removeEventListener('unhandledrejection', onRejection);
+    expect(errors).toEqual([]);
+    expect(element.shadowRoot?.querySelector('ha-card')).toBeNull();
+  });
+
   describe('item keys', () => {
     // updated() used to skip an item whose key was falsy, which could not
     // happen: the key is built by interpolation, so the emptiest entry there is
