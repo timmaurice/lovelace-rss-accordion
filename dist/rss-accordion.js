@@ -44,34 +44,34 @@ const he={attribute:!0,type:String,converter:$,reflect:!1,hasChanged:y},de=(e=he
  */const ge="important",fe=" !"+ge,ve=(e=>(...t)=>({_$litDirective$:e,values:t}))(class extends ue{constructor(e){if(super(e),e.type!==me||"style"!==e.name||e.strings?.length>2)throw Error("The `styleMap` directive must be used in the `style` attribute and must be the only part in the attribute.")}render(e){return Object.keys(e).reduce((t,i)=>{const o=e[i];return null==o?t:t+`${i=i.includes("-")?i:i.replace(/(?:^(webkit|moz|ms|o)|)(?=[A-Z])/g,"-$&").toLowerCase()}:${o};`},"")}update(e,[t]){const{style:i}=e.element;if(void 0===this.ft)return this.ft=new Set(Object.keys(t)),this.render(t);for(const e of this.ft)null==t[e]&&(this.ft.delete(e),e.includes("-")?i.removeProperty(e):i[e]=null);for(const e in t){const o=t[e];if(null!=o){this.ft.add(e);const t="string"==typeof o&&o.endsWith(fe);e.includes("-")||t?i.setProperty(e,t?o.slice(0,-11):o,t?ge:""):i[e]=o}}return F}});const be={de:{editor:{groups:{core:"Grundeinstellungen",feed:"Feed-Einträge & Verhalten",item_images:"Bilder der Einträge",channel:"Kanalinformationen"},title:"Titel (Optional)",entity:"Feed-Entität",allow_multiple:"Erlaube das Öffnen mehrerer Einträge",open_behavior:"Standard-Öffnungsverhalten",open_behavior_options:{none:"Alle geschlossen",latest:"Neuesten Eintrag öffnen",all:"Alle Einträge öffnen"},max_items:"Maximale Einträge (Gesamt)",max_items_placeholder:"Alle Einträge",max_items_per_entity:"Maximale Einträge (Pro Feed)",max_items_per_entity_placeholder:"Alle Einträge",new_pill_duration_hours:"Dauer für 'NEU'-Anzeige (Stunden)",refresh_interval:"Aktualisierungsintervall (Minuten)",refresh_interval_placeholder:"30",image_ratio:"Bild-Seitenverhältnis (z.B. 16/9 oder 1.77)",image_ratio_validation_message:"Ungültiges Format. Beispiel: 'auto', '16/9' oder '1.77'.",image_fit_mode:"Bild-Anpassung",image_fit_mode_options:{cover:"Ausfüllen (Cover)",contain:"Einfassen (Contain)"},show_channel_info:"Kanal-Infos anzeigen (vom 'channel'-Attribut)",show_channel_published_date:"Letzte Aktualisierung des Kanals anzeigen",crop_channel_image:"Kanalbild als zugeschnittenen Kreis anzeigen",show_channel_description:"Kanalbeschreibung anzeigen",max_channel_description_length:"Maximale Länge der Kanalbeschreibung",show_audio_player:"Audio-Player anzeigen",show_item_image:"Bilder der Einträge anzeigen",show_bookmarks:"Lesezeichen für Einträge aktivieren",use_multiple_entities:"Mehrere Entitäten verwenden",show_source:"Feed-Quelle anzeigen",add_entity:"Entität hinzufügen",remove_entity:"Entität entfernen"},card:{to_news_article:"Zum Nachrichtenartikel",new_pill:"NEU",visit_channel:"Kanal besuchen",last_updated:"Zuletzt aktualisiert",listened:"Angehört",listened_on:"Angehört am: {date}",entity_not_found:"Entität nicht gefunden: {entity}",no_entries:"Keine Einträge im Feed verfügbar.",no_bookmarked_entries:"Sie haben keine Lesezeichen.",channel_image_alt:"Kanalbild",add_bookmark:"Lesezeichen hinzufügen",remove_bookmark:"Lesezeichen entfernen",show_bookmarked:"Lesezeichen anzeigen",no_bookmarks_yet_tooltip:"Markieren Sie einen Eintrag als Lesezeichen, um diesen Filter zu aktivieren",source:"Quelle",show_more:"Mehr anzeigen",show_less:"Weniger anzeigen"}},en:{editor:{groups:{core:"Core Configuration",feed:"Feed Items & Behavior",item_images:"Item Images",channel:"Channel Information"},title:"Title (Optional)",entity:"Feed Entity",allow_multiple:"Allow multiple items to be open",open_behavior:"Default Open Behavior",open_behavior_options:{none:"Keep all closed",latest:"Open latest item",all:"Open all items"},max_items:"Maximum Items (Overall)",max_items_placeholder:"All items",max_items_per_entity:"Maximum Items (Per Feed)",max_items_per_entity_placeholder:"All items",new_pill_duration_hours:"Duration for 'NEW' pill (hours)",refresh_interval:"Refresh Interval (minutes)",refresh_interval_placeholder:"30",image_ratio:"Image aspect ratio (e.g. 16/9 or 1.77)",image_ratio_validation_message:"Invalid format. Use 'auto', '16/9', or '1.77'.",image_fit_mode:"Image Fit Mode",image_fit_mode_options:{cover:"Cover (fill & crop)",contain:"Contain (fit inside)"},show_channel_info:"Show Channel Info (from 'channel' attribute)",show_channel_published_date:"Show channel's last update time",crop_channel_image:"Display channel image as a cropped circle",show_channel_description:"Show channel description",max_channel_description_length:"Maximum channel description length",show_audio_player:"Show Audio Player",show_item_image:"Show Item Images",show_bookmarks:"Enable bookmarking for items",use_multiple_entities:"Use multiple entities",show_source:"Show item source",add_entity:"Add Entity",remove_entity:"Remove Entity"},card:{to_news_article:"To the news article",new_pill:"NEW",visit_channel:"Visit channel",last_updated:"Last updated",listened:"Listened",listened_on:"Listened on: {date}",entity_not_found:"Entity not found: {entity}",no_entries:"No entries available in feed.",no_bookmarked_entries:"You have no bookmarked items.",channel_image_alt:"Channel Image",add_bookmark:"Bookmark item",remove_bookmark:"Remove bookmark",show_bookmarked:"Show Bookmarked",no_bookmarks_yet_tooltip:"Bookmark an item to enable this filter",source:"Source",show_more:"Show more",show_less:"Show less"}},fr:{editor:{groups:{core:"Configuration de base",feed:"Éléments du flux et comportement",item_images:"Images des éléments",channel:"Informations sur le canal"},title:"Titre (Optionnel)",entity:"Entité du flux",allow_multiple:"Autoriser l'ouverture de plusieurs éléments",open_behavior:"Comportement d'ouverture par défaut",open_behavior_options:{none:"Tous fermés",latest:"Ouvrir le dernier élément",all:"Tout ouvrir"},max_items:"Nombre maximum d'éléments (Global)",max_items_placeholder:"Tous les éléments",max_items_per_entity:"Nombre maximum d'éléments (Par flux)",max_items_per_entity_placeholder:"Tous les éléments",new_pill_duration_hours:"Durée d'affichage de la pastille 'NOUVEAU' (heures)",refresh_interval:"Intervalle d'actualisation (minutes)",refresh_interval_placeholder:"30",image_ratio:"Ratio d'aspect de l'image (ex: 16/9 ou 1.77)",image_ratio_validation_message:"Format invalide. Utilisez 'auto', '16/9', ou '1.77'.",image_fit_mode:"Mode d'ajustement de l'image",image_fit_mode_options:{cover:"Couvrir (remplir et rogner)",contain:"Contenir (ajuster à l'intérieur)"},show_channel_info:"Afficher les informations du canal (de l'attribut 'channel')",show_channel_published_date:"Afficher la dernière heure de mise à jour du canal",crop_channel_image:"Afficher l'image du canal sous forme de cercle rogné",show_channel_description:"Afficher la description du canal",max_channel_description_length:"Longueur maximale de la description du canal",show_audio_player:"Afficher le lecteur audio",show_item_image:"Afficher les images des éléments",show_bookmarks:"Activer les favoris pour les éléments",use_multiple_entities:"Utiliser plusieurs entités",show_source:"Afficher la source",add_entity:"Ajouter une entité",remove_entity:"Supprimer l'entité"},card:{to_news_article:"Vers l'article",new_pill:"NOUVEAU",visit_channel:"Visiter le canal",last_updated:"Dernière mise à jour",listened:"Écouté",listened_on:"Écouté le : {date}",entity_not_found:"Entité non trouvée : {entity}",no_entries:"Aucun élément disponible dans le flux.",no_bookmarked_entries:"Vous n'avez aucun favori.",channel_image_alt:"Image du canal",add_bookmark:"Ajouter aux favoris",remove_bookmark:"Retirer des favoris",show_bookmarked:"Afficher les favoris",no_bookmarks_yet_tooltip:"Ajoutez un élément aux favoris pour activer ce filtre",source:"Source",show_more:"Voir plus",show_less:"Voir moins"}}};function $e(e,t){let i=be[e];for(const e of t){if("object"!=typeof i||null===i)return;i=i[e]}return"string"==typeof i?i:void 0}function ye(e,t,i={}){const o=e.language||"en",n=t.replace("component.rss-accordion.","").split("."),s=$e(o,n)??$e("en",n);if("string"==typeof s){let e=s;for(const t in i)e=e.replace(`{${t}}`,String(i[t]));return e}return t}const we=new Set(["a","abbr","b","blockquote","br","caption","code","dd","div","dl","dt","em","figcaption","figure","h1","h2","h3","h4","h5","h6","hr","i","img","li","ol","p","pre","q","s","small","span","strong","sub","sup","table","tbody","td","tfoot","th","thead","tr","u","ul"]),ke=new Set(["applet","audio","base","button","canvas","embed","form","frame","frameset","iframe","input","link","math","meta","noscript","object","option","script","select","slot","style","svg","template","textarea","title","video"]),xe={"*":new Set(["title","dir","lang"]),a:new Set(["href"]),img:new Set(["src","alt","width","height"]),td:new Set(["colspan","rowspan"]),th:new Set(["colspan","rowspan","scope"]),ol:new Set(["start"])},Ae=new Set(["href","src"]),Ee=new Set(["http:","https:","mailto:","tel:"]),Se=/^data:image\/(?:png|jpe?g|gif|webp|avif|bmp);base64,[a-z0-9+/=\s]+$/i;function Ce(e,t=!1){if(!e)return!1;const i=e.trim();if(!i)return!1;if(t&&Se.test(i))return!0;try{const e=new URL(i,document.baseURI);return Ee.has(e.protocol)}catch{return!1}}function Pe(e){const t=e.tagName.toLowerCase(),i=xe[t],o=xe["*"];for(const n of[...e.attributes]){const s=n.name.toLowerCase();i?.has(s)||o.has(s)?Ae.has(s)&&!Ce(n.value,"img"===t)&&e.removeAttribute(n.name):e.removeAttribute(n.name)}"a"===t&&e.hasAttribute("href")&&(e.setAttribute("target","_blank"),e.setAttribute("rel","noopener noreferrer")),"img"!==t||e.hasAttribute("src")||e.remove()}function Te(e){for(const t of[...e.childNodes]){if(t.nodeType===Node.TEXT_NODE)continue;if(t.nodeType!==Node.ELEMENT_NODE){t.parentNode?.removeChild(t);continue}const e=t,i=e.tagName.toLowerCase();ke.has(i)?e.remove():(Te(e),we.has(i)?Pe(e):e.replaceWith(...e.childNodes))}}function Oe(e){if(!e)return"";const t=(new DOMParser).parseFromString(String(e),"text/html");return Te(t.body),t.body.innerHTML}const Me=(e,t,i,o)=>{const n=new CustomEvent(t,{bubbles:!0,cancelable:!1,composed:!0,...o,detail:i});e.dispatchEvent(n)};function ze(e,t){const i=new Date(e),o={year:"numeric",month:"short",day:"2-digit",hour:"numeric",minute:"2-digit"};return t.locale&&("12"===t.locale.time_format?o.hour12=!0:"24"===t.locale.time_format&&(o.hour12=!1)),i.toLocaleString(t.language,o)}class Ue{constructor(e){this.audioStoragePrefix=`rss-accordion-progress-${e}-`,this.bookmarkStoragePrefix=`rss-accordion-bookmark-${e}-`}getAudioProgress(e){try{const t=localStorage.getItem(`${this.audioStoragePrefix}${e}`);return t?JSON.parse(t):null}catch(e){return console.error("Error reading audio progress from localStorage",e),null}}setAudioProgress(e,t){try{localStorage.setItem(`${this.audioStoragePrefix}${e}`,JSON.stringify(t))}catch(e){console.error("Error saving audio progress to localStorage",e)}}getBookmarkKey(e){return`${e.link}|${e.published}`}isBookmarked(e){const t=this.getBookmarkKey(e);return null!==localStorage.getItem(`${this.bookmarkStoragePrefix}${t}`)}setBookmark(e,t){const i=this.getBookmarkKey(e);t?localStorage.setItem(`${this.bookmarkStoragePrefix}${i}`,JSON.stringify(e)):localStorage.removeItem(`${this.bookmarkStoragePrefix}${i}`)}getBookmarkedItems(){const e=[];for(let t=0;t<localStorage.length;t++){const i=localStorage.key(t);if(i?.startsWith(this.bookmarkStoragePrefix))try{const t=JSON.parse(localStorage.getItem(i));e.push(t)}catch(e){console.error(`Error parsing bookmarked item from localStorage for key: ${i}`,e)}}return e}}const Ne=a`﻿:host{display:flex;flex-direction:column;height:100%}ha-card{display:flex;flex:1;flex-direction:column;height:100%}.card-content{flex:1;min-height:0;overflow-y:auto;padding:16px}.warning{color:var(--error-color);padding:16px}.channel-info{align-items:center;border-bottom:1px solid var(--divider-color);display:flex;gap:16px;margin-bottom:8px;padding-bottom:16px}.channel-info .channel-image{border-radius:0;height:auto;object-fit:contain;width:calc(25% - 8px)}.channel-info .channel-text{display:flex;flex-direction:column;flex-grow:1;justify-content:center;min-width:0}.channel-info .channel-title{color:var(--primary-text-color);font-size:1.2em;font-weight:bold;margin:0 0 4px 0}.channel-info .channel-description-container{display:flex;flex-direction:column;gap:4px;margin:0 0 8px 0;position:relative;transition:all .3s cubic-bezier(0.4, 0, 0.2, 1)}.channel-info .channel-description-container .channel-description{color:var(--secondary-text-color);font-size:.9em;line-height:1.5;margin:0;transition:all .3s cubic-bezier(0.4, 0, 0.2, 1)}.channel-info .channel-description-container .toggle-description{align-items:center;align-self:flex-start;background:none;border:none;color:var(--primary-color);cursor:pointer;display:flex;font-size:.85em;font-weight:bold;gap:4px;padding:4px 0;transition:all .2s ease}.channel-info .channel-description-container .toggle-description::after{content:"▸";display:inline-block;font-size:.8em;transform:rotate(90deg);transition:transform .3s ease}.channel-info .channel-description-container .toggle-description:hover{opacity:.8}.channel-info .channel-description-container .toggle-description:active{transform:scale(0.98)}.channel-info .channel-description-container:not(.expanded) .channel-description{overflow:hidden}.channel-info .channel-description-container.expanded .channel-description{color:var(--primary-text-color)}.channel-info .channel-description-container.expanded .toggle-description::after{transform:rotate(-90deg)}.channel-info .channel-published{color:var(--secondary-text-color);font-size:.85em;margin:-4px 0 8px 0}.channel-info .channel-published .label{font-weight:bold;margin-right:4px}.channel-info .channel-actions{align-items:center;container-type:inline-size;display:flex;gap:8px;justify-content:space-between;margin-top:8px}.channel-info .channel-link{color:var(--primary-color);flex-shrink:0;font-weight:bold;text-decoration:none}.channel-info .channel-link:hover{text-decoration:underline}.channel-info.cropped-image{align-items:center;flex-direction:row}.channel-info.cropped-image .channel-image{border-radius:50%;flex-shrink:0;height:60px;margin-bottom:0;object-fit:cover;width:60px}.accordion-header{cursor:pointer;font-weight:bold;list-style:none;padding:12px 0;padding-left:20px;position:relative}.accordion-header::-webkit-details-marker{display:none}.accordion-header::before{content:"▸";left:0;position:absolute;top:50%;transform:translateY(-50%);transition:transform .2s ease-in-out}.accordion-header .header-main{align-items:center;display:grid;gap:8px;grid-template-columns:1fr auto;width:100%}.accordion-header .header-main .header-badges{align-items:center;display:flex;gap:8px}.accordion-header .header-main .title-link{color:var(--primary-text-color);cursor:default;overflow-wrap:break-word;pointer-events:none;text-decoration:none;white-space:normal}.accordion-header .header-main .title-link:visited{color:var(--secondary-text-color)}.accordion-header .header-main .new-pill{background-color:var(--primary-color);border-radius:10px;color:var(--text-primary-color);font-size:.7em;font-weight:bold;padding:2px 8px}.accordion-header .header-main .bookmark-button{--mdc-icon-button-size: 24px;color:var(--accent-color);cursor:pointer}.accordion-content{color:var(--secondary-text-color);font-size:.9em;max-height:0;overflow:hidden;padding:0 0 0 20px;transition:max-height .3s ease-in-out,padding-bottom .3s ease-in-out}.accordion-content .item-published{color:var(--secondary-text-color);font-size:1em;margin-bottom:1em}.accordion-content .item-source{color:var(--secondary-text-color);font-size:.9em;font-weight:500;margin-bottom:8px}.accordion-content .item-image{border-radius:var(--ha-card-border-radius, 4px);display:block;height:auto;margin-bottom:1em;max-width:100%}.accordion-content .item-link{color:var(--primary-color);display:inline-block;font-weight:bold;margin-top:8px;text-decoration:none}.accordion-content .item-link:hover{text-decoration:underline}.accordion-item{border-bottom:1px solid var(--divider-color)}.accordion-item:last-of-type{border-bottom:none}.accordion-item[open]>.accordion-header::before{transform:translateY(-50%) rotate(90deg)}.accordion-item[open]>.accordion-content{padding-bottom:12px}.accordion-item.loading>.accordion-header .header-main .new-pill{display:none}.accordion-item.loading>.accordion-header .header-main::after{animation:spin 1s linear infinite;border:2px solid var(--primary-color);border-radius:50%;border-top-color:rgba(0,0,0,0);content:"";display:inline-block;flex-shrink:0;height:16px;margin-left:8px;width:16px}@keyframes spin{to{transform:rotate(360deg)}}.audio-player-container{line-height:0;margin-bottom:1em}.audio-player-container audio{border-radius:50px;height:40px;width:100%}.listened-icon{color:var(--primary-color);vertical-align:middle}.bookmark-filter-button{--mdc-button-outline-color: var(--divider-color);--mdc-theme-primary: var(--primary-text-color);--ha-font-size-m: 12px;--icon-color: var(--primary-text-color);--mdc-typography-button-font-size: 0.8rem}.bookmark-filter-button ha-icon{--mdc-icon-size: 12px;margin-right:.5em;transform:translate(0, -1px)}.bookmark-filter-button.active{--mdc-theme-primary: var(--text-primary-color);--button-color-fill-loud-hover: var(--accent-color);--wa-color-fill-loud: var(--accent-color);--icon-color: var(--text-primary-color);--mdc-button-outline-color: var(--accent-color)}.bookmark-filter-button[disabled]{--mdc-button-outline-color: var(--disabled-text-color);color:var(--disabled-text-color);cursor:not-allowed}@container (max-width: 245px){.bookmark-filter-button ha-icon{--mdc-icon-size: 14px;margin-right:0;transform:none}.bookmark-filter-button .button-text{display:none}}`,Re="rss-accordion",Ie=`${Re}-editor`;class He extends ce{constructor(){super(...arguments),this._showOnlyBookmarks=!1,this._isDescriptionExpanded=!1,this._entities=[],this._lastAudioSave=new Map}setConfig(e){if(!e||!e.entity&&(!e.entities||0===e.entities.length))throw new Error("You need to define an entity or a list of entities");this._config=e,e.entities&&e.entities.length>0?this._entities=[...e.entities]:e.entity?this._entities=[e.entity]:this._entities=[];const t=this._entities.slice().sort().join(",");this._storageHelper=new Ue(t),this._startRefreshTimer()}static async getConfigElement(){const e=window.loadCardHelpers;if(!e)throw new Error("This card requires Home Assistant 2023.4+ and `loadCardHelpers` is not available.");const t=await e(),i=await t.createCardElement({type:"entities",entities:[]});return await i.constructor.getConfigElement(),await Promise.resolve().then(function(){return je}),document.createElement(Ie)}static getStubConfig(){return{entity:"sensor.your_rss_feed_sensor",max_items:5}}getCardSize(){if(!this.hass||!this._config?.entity)return 1;const e=this._getAllDisplayableItems().length,t=this._config.max_items??e,i=Math.min(e,t);let o=(this._config.title?1:0)+(i||1);const n=this._entities.length>0?this.hass.states[this._entities[0]]:void 0,s=n?.attributes.channel;return this._shouldRenderChannelInfo(s)&&(o+=2),o}static getLayoutOptions(){return{grid_rows:3,grid_columns:12,grid_min_rows:1,grid_min_columns:6}}connectedCallback(){super.connectedCallback(),this._resizeObserver||(this._resizeObserver=new ResizeObserver(()=>this._handleResize())),this._resizeObserver.observe(this),this._startRefreshTimer()}disconnectedCallback(){super.disconnectedCallback(),this._resizeObserver&&this._resizeObserver.disconnect(),this._stopRefreshTimer()}_startRefreshTimer(){this._stopRefreshTimer(),this._config&&this._config.refresh_interval&&this._config.refresh_interval>0&&(this._refreshTimer=window.setInterval(()=>{this._refreshEntities()},60*this._config.refresh_interval*1e3))}_stopRefreshTimer(){this._refreshTimer&&(clearInterval(this._refreshTimer),this._refreshTimer=void 0)}async _refreshEntities(){if(this.hass&&this._entities&&0!==this._entities.length)try{await Promise.all(this._entities.map(e=>this.hass.callService("homeassistant","update_entity",{entity_id:e})))}catch(e){console.error("Failed to refresh RSS feed entities:",e)}}_handleResize(){this.shadowRoot?.querySelectorAll(".accordion-item[open]").forEach(e=>{const t=e.querySelector(".accordion-content");if(t){const e=t.style.transition;t.style.transition="none",t.style.maxHeight=`${t.scrollHeight}px`,requestAnimationFrame(()=>{t.style.transition=e})}})}shouldUpdate(e){if(e.has("_config"))return!0;const t=e.get("hass");if(t){let e=!1;for(const i of this._entities)if(t.states[i]!==this.hass.states[i]){e=!0;break}return!(!e&&t.language===this.hass.language)}return!0}firstUpdated(){const e=this._config?.open_behavior||(this._config?.initial_open?"latest":"none");"all"===e?setTimeout(()=>{const e=this.shadowRoot?.querySelectorAll(".accordion-item");e?.forEach(e=>{e.open||this._openAccordion(e)})},0):"latest"===e&&setTimeout(()=>{const e=this.shadowRoot?.querySelector(".accordion-item");e&&!e.open&&this._openAccordion(e)},0)}async _onSummaryClick(e){const t=e.target;if(t.closest&&t.closest("a.title-link"))return;e.preventDefault();const i=e.currentTarget.closest(".accordion-item");i&&(i.open?this._closeAccordion(i):await this._openAccordion(i))}_closeAccordion(e){e.classList.remove("loading");const t=e.querySelector(".accordion-content");if(!t)return;t.style.maxHeight="0px";const i=()=>{e.removeAttribute("open"),t.removeEventListener("transitionend",i)};t.addEventListener("transitionend",i)}async _openAccordion(e){const t=e.querySelector(".accordion-content");if(!t)return;const i=this._config.open_behavior||(this._config.initial_open?"latest":"none");this._config.allow_multiple||"all"===i||this.shadowRoot?.querySelectorAll(".accordion-item[open]").forEach(t=>{t!==e&&this._closeAccordion(t)}),e.setAttribute("open","");const o=Array.from(t.querySelectorAll("img")).filter(e=>!e.complete);o.length>0&&(e.classList.add("loading"),await Promise.all(o.map(e=>new Promise(t=>{e.addEventListener("load",t,{once:!0}),e.addEventListener("error",t,{once:!0})}))),e.classList.remove("loading")),requestAnimationFrame(()=>{t.style.maxHeight=`${t.scrollHeight}px`})}_onAudioLoaded(e,t){const i=e.target,o=this._storageHelper.getAudioProgress(t);o&&!o.completed&&(i.currentTime=o.currentTime)}_onAudioTimeUpdate(e,t){const i=Date.now(),o=this._lastAudioSave.get(t);if(void 0===o||i-o>5e3){const n=e.target;if(void 0===o&&0===n.currentTime)return void this._lastAudioSave.set(t,i);const s=this._storageHelper.getAudioProgress(t)||{currentTime:0,completed:!1};if(s.completed)return;s.currentTime=n.currentTime,this._storageHelper.setAudioProgress(t,s),this._lastAudioSave.set(t,i)}}_onAudioEnded(e,t){const i=this._storageHelper.getAudioProgress(t)||{currentTime:0,completed:!1};this._storageHelper.setAudioProgress(t,{...i,currentTime:0,completed:!0,completedAt:(new Date).toISOString()}),this.requestUpdate()}_toggleBookmark(e,t){e.stopPropagation(),e.preventDefault();const i=this._storageHelper.isBookmarked(t);this._storageHelper.setBookmark(t,!i),this.requestUpdate()}_getAllDisplayableItems(){const e=new Map;if(this._config.show_bookmarks){const t=this._storageHelper.getBookmarkedItems();for(const i of t)e.set(this._storageHelper.getBookmarkKey(i),i)}const t=this._getFeedItems();for(const i of t)e.set(this._storageHelper.getBookmarkKey(i),i);const i=Array.from(e.values());return i.sort((e,t)=>{const i=e.published||e.updated||"",o=t.published||t.updated||"";return new Date(o).getTime()-new Date(i).getTime()}),i}_getFeedItems(){const e=[];for(const t of this._entities){const i=this.hass.states[t];if(!i)continue;const o=i.attributes.entries||i.attributes.events||i.attributes.items;if(o&&Array.isArray(o)){let i=[...o||[]];i.sort((e,t)=>{const i=e.published||e.updated||"",o=t.published||t.updated||"";return new Date(o).getTime()-new Date(i).getTime()}),this._config.max_items_per_entity&&(i=i.slice(0,this._config.max_items_per_entity));const n=i.map(e=>({...e,source_entity_id:t}));e.push(...n)}else if(t.startsWith("event.")){const{title:o,link:n,summary:s,description:r,image:a}=i.attributes;"string"==typeof o&&"string"==typeof n&&e.push({title:o,link:n,summary:s??void 0,description:r??void 0,image:a??void 0,published:i.state,source_entity_id:t})}}return e}_getEntityName(e){const t=this.hass.states[e];return t?.attributes.friendly_name||e}_getItemSourceName(e){const t=e.source_entity_id?this._getEntityName(e.source_entity_id):"";let i="";return e.source&&"string"==typeof e.source?i=e.source:e.category&&("string"==typeof e.category&&(i=e.category),Array.isArray(e.category)&&(i=e.category.join(", "))),this._entities.length>1?i?`${t} (${i})`:t:i||t}_getItemImage(e){return e.image}_shouldRenderChannelInfo(e){return!(!this._config.show_channel_info||!e)&&!!(e.title||!1!==this._config.show_channel_description&&(e.description||e.subtitle)||e.image||e.link||this._config.show_published_date&&(e.published||e.updated))}_renderChannelActions(e,t){return q`
       <div class="channel-actions">
         ${e&&Ce(e)?q`<a class="channel-link" href="${e}" target="_blank" rel="noopener noreferrer"
-              >${ye(this.hass,"component.rss-accordion.card.visit_channel")}</a
-            >`:""}
+                >${ye(this.hass,"component.rss-accordion.card.visit_channel")}</a
+              >`:""}
         ${this._renderBookmarkFilter(t)}
       </div>
     `}_renderChannelInfo(e,t){if(!e)return q``;const i=e.title,o=e.link,n=e.description||e.subtitle,s=e.image,r=Ce(s,!0)?s:void 0,a=e.published||e.updated,c=a?ze(a,this.hass):void 0;return q`
       <div class="channel-info ${this._config.crop_channel_image?"cropped-image":""}">
         ${r?q`<img
-              class="channel-image"
-              src="${r}"
-              alt="${i||ye(this.hass,"component.rss-accordion.card.channel_image_alt")}"
-            />`:""}
+                class="channel-image"
+                src="${r}"
+                alt="${i||ye(this.hass,"component.rss-accordion.card.channel_image_alt")}"
+              />`:""}
         <div class="channel-text">
           ${i?q`<h2 class="channel-title">${i}</h2>`:""}
           ${this._config.show_published_date&&c?q`<p class="channel-published">
-                <span class="label">${ye(this.hass,"component.rss-accordion.card.last_updated")}:</span>
-                ${c}
-              </p>`:""}
+                  <span class="label">${ye(this.hass,"component.rss-accordion.card.last_updated")}:</span>
+                  ${c}
+                </p>`:""}
           ${!1!==this._config.show_channel_description&&n?q`<div
-                class="channel-description-container ${this._isDescriptionExpanded?"expanded":""}"
-                style="${this._isDescriptionExpanded?"max-height: 1000px":""}"
-              >
-                <p class="channel-description">
-                  ${this._isDescriptionExpanded?n:(l=n,h=this._config.max_channel_description_length??180,l.length<=h?l:l.substring(0,h).trim()+"...")}
-                </p>
-                ${n.length>(this._config.max_channel_description_length??180)?q`<button class="toggle-description" @click=${this._toggleDescription}>
-                      ${ye(this.hass,this._isDescriptionExpanded?"component.rss-accordion.card.show_less":"component.rss-accordion.card.show_more")}
-                    </button>`:""}
-              </div>`:""}
+                  class="channel-description-container ${this._isDescriptionExpanded?"expanded":""}"
+                  style="${this._isDescriptionExpanded?"max-height: 1000px":""}"
+                >
+                  <p class="channel-description">
+                    ${this._isDescriptionExpanded?n:(l=n,h=this._config.max_channel_description_length??180,l.length<=h?l:l.substring(0,h).trim()+"...")}
+                  </p>
+                  ${n.length>(this._config.max_channel_description_length??180)?q`<button class="toggle-description" @click=${this._toggleDescription}>
+                          ${ye(this.hass,this._isDescriptionExpanded?"component.rss-accordion.card.show_less":"component.rss-accordion.card.show_more")}
+                        </button>`:""}
+                </div>`:""}
           ${this._renderChannelActions(o,t)}
         </div>
       </div>
@@ -80,52 +80,52 @@ const he={attribute:!0,type:String,converter:$,reflect:!1,hasChanged:y},de=(e=he
         <summary class="accordion-header" @click=${this._onSummaryClick}>
           <div class="header-main">
             ${Ce(e.link)?q`<a class="title-link" href="${e.link}" target="_blank" rel="noopener noreferrer">
-                  ${e.title}
-                </a>`:q`<span class="title-link">${e.title}</span>`}
+                    ${e.title}
+                  </a>`:q`<span class="title-link">${e.title}</span>`}
             <div class="header-badges">
               ${this._config.show_bookmarks?q`<span
-                    class="bookmark-button"
-                    role="button"
-                    tabindex="0"
-                    title="${ye(this.hass,d?"component.rss-accordion.card.remove_bookmark":"component.rss-accordion.card.add_bookmark")}"
-                    @click=${t=>this._toggleBookmark(t,e)}
-                    ><ha-icon icon=${d?"mdi:star":"mdi:star-outline"}></ha-icon
-                  ></span>`:""}
+                      class="bookmark-button"
+                      role="button"
+                      tabindex="0"
+                      title="${ye(this.hass,d?"component.rss-accordion.card.remove_bookmark":"component.rss-accordion.card.add_bookmark")}"
+                      @click=${t=>this._toggleBookmark(t,e)}
+                      ><ha-icon icon=${d?"mdi:star":"mdi:star-outline"}></ha-icon
+                    ></span>`:""}
               ${h?q`<span class="new-pill">${ye(this.hass,"component.rss-accordion.card.new_pill")}</span>`:""}
               ${p&&m?q`<ha-icon
-                    class="listened-icon"
-                    icon="mdi:check-circle-outline"
-                    title="${u}"
-                  ></ha-icon>`:""}
+                      class="listened-icon"
+                      icon="mdi:check-circle-outline"
+                      title="${u}"
+                    ></ha-icon>`:""}
             </div>
           </div>
         </summary>
         <div class="accordion-content">
           ${(void 0!==this._config.show_source?this._config.show_source:this._entities.length>1)&&(e.source_entity_id||e.category||e.source)?q`<div class="item-source">
-                ${ye(this.hass,"component.rss-accordion.card.source")}: ${this._getItemSourceName(e)}
-              </div>`:""}
+                  ${ye(this.hass,"component.rss-accordion.card.source")}: ${this._getItemSourceName(e)}
+                </div>`:""}
           <div class="item-published">${a}</div>
           ${o?q`<img
-                class="item-image"
-                src="${t}"
-                alt="${e.title}"
-                style=${ve(g)}
-              />`:""}
+                  class="item-image"
+                  src="${t}"
+                  alt="${e.title}"
+                  style=${ve(g)}
+                />`:""}
           ${!1!==this._config.show_audio_player&&e.audio?q`
-                <div class="audio-player-container">
-                  <audio
-                    controls
-                    .src=${p}
-                    @loadedmetadata=${e=>this._onAudioLoaded(e,p)}
-                    @timeupdate=${e=>this._onAudioTimeUpdate(e,p)}
-                    @ended=${e=>this._onAudioEnded(e,p)}
-                  ></audio>
-                </div>
-              `:""}
+                  <div class="audio-player-container">
+                    <audio
+                      controls
+                      .src=${p}
+                      @loadedmetadata=${e=>this._onAudioLoaded(e,p)}
+                      @timeupdate=${e=>this._onAudioTimeUpdate(e,p)}
+                      @ended=${e=>this._onAudioEnded(e,p)}
+                    ></audio>
+                  </div>
+                `:""}
           <div class="item-summary" .innerHTML=${Oe(n)}></div>
           ${Ce(e.link)?q`<a class="item-link" href="${e.link}" target="_blank" rel="noopener noreferrer">
-                ${ye(this.hass,"component.rss-accordion.card.to_news_article")}
-              </a>`:""}
+                  ${ye(this.hass,"component.rss-accordion.card.to_news_article")}
+                </a>`:""}
         </div>
       </details>
     `}render(){if(!this._config||!this.hass)return q``;if(0===this._entities.length)return q`
@@ -187,40 +187,40 @@ const he={attribute:!0,type:String,converter:$,reflect:!1,hasChanged:y},de=(e=he
               <ha-switch .checked=${this._isMultiEntityMode()} @change=${this._toggleMultiEntityMode}></ha-switch>
             </ha-formfield>
             ${this._isMultiEntityMode()?q`
-                  <div class="entities-list">
-                    ${this._getEntities().map((e,t)=>q`
-                        <div class="entity-row">
-                          <ha-entity-picker
-                            .hass=${this.hass}
-                            .label=${ye(this.hass,"component.rss-accordion.editor.entity")}
-                            .value=${e}
-                            .includeDomains=${["sensor","event"]}
-                            @value-changed=${e=>this._entityChanged(t,e)}
-                            allow-custom-entity
-                            required
-                          ></ha-entity-picker>
-                          <ha-icon-button
-                            .label=${ye(this.hass,"component.rss-accordion.editor.remove_entity")}
-                            .path=${"M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"}
-                            @click=${()=>this._removeEntity(t)}
-                          ></ha-icon-button>
-                        </div>
-                      `)}
-                    <ha-button @click=${this._addEntity}>
-                      ${ye(this.hass,"component.rss-accordion.editor.add_entity")}
-                    </ha-button>
-                  </div>
-                `:q`
-                  <ha-entity-picker
-                    .hass=${this.hass}
-                    .label=${ye(this.hass,"component.rss-accordion.editor.entity")}
-                    .value=${this._config.entity||""}
-                    .includeDomains=${["sensor","event"]}
-                    @value-changed=${this._singleEntityChanged}
-                    allow-custom-entity
-                    required
-                  ></ha-entity-picker>
-                `}
+                    <div class="entities-list">
+                      ${this._getEntities().map((e,t)=>q`
+                          <div class="entity-row">
+                            <ha-entity-picker
+                              .hass=${this.hass}
+                              .label=${ye(this.hass,"component.rss-accordion.editor.entity")}
+                              .value=${e}
+                              .includeDomains=${["sensor","event"]}
+                              @value-changed=${e=>this._entityChanged(t,e)}
+                              allow-custom-entity
+                              required
+                            ></ha-entity-picker>
+                            <ha-icon-button
+                              .label=${ye(this.hass,"component.rss-accordion.editor.remove_entity")}
+                              .path=${"M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"}
+                              @click=${()=>this._removeEntity(t)}
+                            ></ha-icon-button>
+                          </div>
+                        `)}
+                      <ha-button @click=${this._addEntity}>
+                        ${ye(this.hass,"component.rss-accordion.editor.add_entity")}
+                      </ha-button>
+                    </div>
+                  `:q`
+                    <ha-entity-picker
+                      .hass=${this.hass}
+                      .label=${ye(this.hass,"component.rss-accordion.editor.entity")}
+                      .value=${this._config.entity||""}
+                      .includeDomains=${["sensor","event"]}
+                      @value-changed=${this._singleEntityChanged}
+                      allow-custom-entity
+                      required
+                    ></ha-entity-picker>
+                  `}
           </div>
 
           <div class="group">
@@ -301,14 +301,14 @@ const he={attribute:!0,type:String,converter:$,reflect:!1,hasChanged:y},de=(e=he
               ></ha-switch>
             </ha-formfield>
             ${r?q`
-                  <ha-formfield .label=${ye(this.hass,"component.rss-accordion.editor.show_audio_player")}>
-                    <ha-switch
-                      .checked=${!1!==this._config.show_audio_player}
-                      .configValue=${"show_audio_player"}
-                      @change=${this._valueChanged}
-                    ></ha-switch>
-                  </ha-formfield>
-                `:""}
+                    <ha-formfield .label=${ye(this.hass,"component.rss-accordion.editor.show_audio_player")}>
+                      <ha-switch
+                        .checked=${!1!==this._config.show_audio_player}
+                        .configValue=${"show_audio_player"}
+                        @change=${this._valueChanged}
+                      ></ha-switch>
+                    </ha-formfield>
+                  `:""}
             <ha-formfield .label=${ye(this.hass,"component.rss-accordion.editor.show_bookmarks")}>
               <ha-switch
                 .checked=${!!this._config.show_bookmarks}
@@ -333,108 +333,108 @@ const he={attribute:!0,type:String,converter:$,reflect:!1,hasChanged:y},de=(e=he
           </div>
 
           ${!1!==this._config.show_item_image?q`
-                <div class="group">
-                  <div class="group-header">
-                    ${ye(this.hass,"component.rss-accordion.editor.groups.item_images")}
-                  </div>
-                  <div class="row">
-                    <ha-input
-                      .label=${ye(this.hass,"component.rss-accordion.editor.image_ratio")}
-                      .value=${this._config.image_ratio||""}
-                      .configValue=${"image_ratio"}
-                      @input=${this._valueChanged}
-                      .placeholder=${"auto"}
-                      .pattern=${"^auto$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)?\\s*\\/\\s*\\d+(\\.\\d+)?$"}
-                      .validationMessage=${ye(this.hass,"component.rss-accordion.editor.image_ratio_validation_message")}
-                    ></ha-input>
-                    ${this._config.image_ratio&&"auto"!==this._config.image_ratio?q`
-                          <div class="dropdown-wrapper">
-                            <ha-dropdown
-                              @wa-select=${e=>{const t={configValue:"image_fit_mode",value:e.detail.item.value};this._valueChanged({target:t})}}
-                              @closed=${e=>e.stopPropagation()}
-                              fixedMenuPosition
-                              naturalMenuWidth
-                            >
-                              <div slot="trigger" class="dropdown-trigger">
-                                <ha-input
-                                  readonly
-                                  .label=${ye(this.hass,"component.rss-accordion.editor.image_fit_mode")}
-                                  .value=${h}
-                                  class="dropdown-textfield"
+                  <div class="group">
+                    <div class="group-header">
+                      ${ye(this.hass,"component.rss-accordion.editor.groups.item_images")}
+                    </div>
+                    <div class="row">
+                      <ha-input
+                        .label=${ye(this.hass,"component.rss-accordion.editor.image_ratio")}
+                        .value=${this._config.image_ratio||""}
+                        .configValue=${"image_ratio"}
+                        @input=${this._valueChanged}
+                        .placeholder=${"auto"}
+                        .pattern=${"^auto$|^\\d+(\\.\\d+)?$|^\\d+(\\.\\d+)?\\s*\\/\\s*\\d+(\\.\\d+)?$"}
+                        .validationMessage=${ye(this.hass,"component.rss-accordion.editor.image_ratio_validation_message")}
+                      ></ha-input>
+                      ${this._config.image_ratio&&"auto"!==this._config.image_ratio?q`
+                              <div class="dropdown-wrapper">
+                                <ha-dropdown
+                                  @wa-select=${e=>{const t={configValue:"image_fit_mode",value:e.detail.item.value};this._valueChanged({target:t})}}
+                                  @closed=${e=>e.stopPropagation()}
+                                  fixedMenuPosition
+                                  naturalMenuWidth
                                 >
-                                  <ha-icon slot="end" icon="mdi:menu-down"></ha-icon>
-                                </ha-input>
+                                  <div slot="trigger" class="dropdown-trigger">
+                                    <ha-input
+                                      readonly
+                                      .label=${ye(this.hass,"component.rss-accordion.editor.image_fit_mode")}
+                                      .value=${h}
+                                      class="dropdown-textfield"
+                                    >
+                                      <ha-icon slot="end" icon="mdi:menu-down"></ha-icon>
+                                    </ha-input>
+                                  </div>
+                                  <ha-dropdown-item value="cover"
+                                    >${ye(this.hass,"component.rss-accordion.editor.image_fit_mode_options.cover")}</ha-dropdown-item
+                                  >
+                                  <ha-dropdown-item value="contain"
+                                    >${ye(this.hass,"component.rss-accordion.editor.image_fit_mode_options.contain")}</ha-dropdown-item
+                                  >
+                                </ha-dropdown>
                               </div>
-                              <ha-dropdown-item value="cover"
-                                >${ye(this.hass,"component.rss-accordion.editor.image_fit_mode_options.cover")}</ha-dropdown-item
-                              >
-                              <ha-dropdown-item value="contain"
-                                >${ye(this.hass,"component.rss-accordion.editor.image_fit_mode_options.contain")}</ha-dropdown-item
-                              >
-                            </ha-dropdown>
-                          </div>
-                        `:""}
-                  </div>
-                </div>
-              `:""}
-          ${o&&!this._isMultiEntityMode()?q`
-                <div class="group">
-                  <div class="group-header">
-                    ${ye(this.hass,"component.rss-accordion.editor.groups.channel")}
-                  </div>
-                  <ha-formfield .label=${ye(this.hass,"component.rss-accordion.editor.show_channel_info")}>
-                    <ha-switch
-                      .checked=${!!this._config.show_channel_info}
-                      .configValue=${"show_channel_info"}
-                      @change=${this._valueChanged}
-                    ></ha-switch>
-                  </ha-formfield>
-                  ${this._config.show_channel_info&&n?q`
-                        <ha-formfield
-                          .label=${ye(this.hass,"component.rss-accordion.editor.crop_channel_image")}
-                        >
-                          <ha-switch
-                            .checked=${!!this._config.crop_channel_image}
-                            .configValue=${"crop_channel_image"}
-                            @change=${this._valueChanged}
-                          ></ha-switch>
-                        </ha-formfield>
-                      `:""}
-                  ${this._config.show_channel_info&&s?q`
-                        <ha-formfield
-                          .label=${ye(this.hass,"component.rss-accordion.editor.show_channel_published_date")}
-                        >
-                          <ha-switch
-                            .checked=${!!this._config.show_published_date}
-                            .configValue=${"show_published_date"}
-                            @change=${this._valueChanged}
-                          ></ha-switch>
-                        </ha-formfield>
-                      `:""}
-                  ${this._config.show_channel_info&&(o.description||o.subtitle)?q`
-                        <ha-formfield
-                          .label=${ye(this.hass,"component.rss-accordion.editor.show_channel_description")}
-                        >
-                          <ha-switch
-                            .checked=${!1!==this._config.show_channel_description}
-                            .configValue=${"show_channel_description"}
-                            @change=${this._valueChanged}
-                          ></ha-switch>
-                        </ha-formfield>
-                        ${this._config.show_channel_description??!0?q`
-                              <ha-input
-                                .label=${ye(this.hass,"component.rss-accordion.editor.max_channel_description_length")}
-                                type="number"
-                                min="1"
-                                .value=${this._config.max_channel_description_length||""}
-                                .configValue=${"max_channel_description_length"}
-                                @input=${this._valueChanged}
-                                .placeholder="180"
-                              ></ha-input>
                             `:""}
-                      `:""}
-                </div>
-              `:""}
+                    </div>
+                  </div>
+                `:""}
+          ${o&&!this._isMultiEntityMode()?q`
+                  <div class="group">
+                    <div class="group-header">
+                      ${ye(this.hass,"component.rss-accordion.editor.groups.channel")}
+                    </div>
+                    <ha-formfield .label=${ye(this.hass,"component.rss-accordion.editor.show_channel_info")}>
+                      <ha-switch
+                        .checked=${!!this._config.show_channel_info}
+                        .configValue=${"show_channel_info"}
+                        @change=${this._valueChanged}
+                      ></ha-switch>
+                    </ha-formfield>
+                    ${this._config.show_channel_info&&n?q`
+                            <ha-formfield
+                              .label=${ye(this.hass,"component.rss-accordion.editor.crop_channel_image")}
+                            >
+                              <ha-switch
+                                .checked=${!!this._config.crop_channel_image}
+                                .configValue=${"crop_channel_image"}
+                                @change=${this._valueChanged}
+                              ></ha-switch>
+                            </ha-formfield>
+                          `:""}
+                    ${this._config.show_channel_info&&s?q`
+                            <ha-formfield
+                              .label=${ye(this.hass,"component.rss-accordion.editor.show_channel_published_date")}
+                            >
+                              <ha-switch
+                                .checked=${!!this._config.show_published_date}
+                                .configValue=${"show_published_date"}
+                                @change=${this._valueChanged}
+                              ></ha-switch>
+                            </ha-formfield>
+                          `:""}
+                    ${this._config.show_channel_info&&(o.description||o.subtitle)?q`
+                            <ha-formfield
+                              .label=${ye(this.hass,"component.rss-accordion.editor.show_channel_description")}
+                            >
+                              <ha-switch
+                                .checked=${!1!==this._config.show_channel_description}
+                                .configValue=${"show_channel_description"}
+                                @change=${this._valueChanged}
+                              ></ha-switch>
+                            </ha-formfield>
+                            ${this._config.show_channel_description??!0?q`
+                                    <ha-input
+                                      .label=${ye(this.hass,"component.rss-accordion.editor.max_channel_description_length")}
+                                      type="number"
+                                      min="1"
+                                      .value=${this._config.max_channel_description_length||""}
+                                      .configValue=${"max_channel_description_length"}
+                                      @input=${this._valueChanged}
+                                      .placeholder="180"
+                                    ></ha-input>
+                                  `:""}
+                          `:""}
+                  </div>
+                `:""}
         </div>
       </ha-card>
     `}static{this.styles=a`

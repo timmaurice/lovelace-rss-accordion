@@ -520,11 +520,13 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   private _renderChannelActions(channelLink: string | undefined, hasAnyBookmarks: boolean): TemplateResult {
     return html`
       <div class="channel-actions">
-        ${channelLink && isSafeUrl(channelLink)
-          ? html`<a class="channel-link" href="${channelLink}" target="_blank" rel="noopener noreferrer"
-              >${localize(this.hass, 'component.rss-accordion.card.visit_channel')}</a
-            >`
-          : ''}
+        ${
+          channelLink && isSafeUrl(channelLink)
+            ? html`<a class="channel-link" href="${channelLink}" target="_blank" rel="noopener noreferrer"
+                >${localize(this.hass, 'component.rss-accordion.card.visit_channel')}</a
+              >`
+            : ''
+        }
         ${this._renderBookmarkFilter(hasAnyBookmarks)}
       </div>
     `;
@@ -545,43 +547,53 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     return html`
       <div class="channel-info ${this._config.crop_channel_image ? 'cropped-image' : ''}">
-        ${channelImage
-          ? html`<img
-              class="channel-image"
-              src="${channelImage}"
-              alt="${channelTitle || localize(this.hass, 'component.rss-accordion.card.channel_image_alt')}"
-            />`
-          : ''}
+        ${
+          channelImage
+            ? html`<img
+                class="channel-image"
+                src="${channelImage}"
+                alt="${channelTitle || localize(this.hass, 'component.rss-accordion.card.channel_image_alt')}"
+              />`
+            : ''
+        }
         <div class="channel-text">
           ${channelTitle ? html`<h2 class="channel-title">${channelTitle}</h2>` : ''}
-          ${this._config.show_published_date && formattedChannelPublished
-            ? html`<p class="channel-published">
-                <span class="label">${localize(this.hass, 'component.rss-accordion.card.last_updated')}:</span>
-                ${formattedChannelPublished}
-              </p>`
-            : ''}
-          ${this._config.show_channel_description !== false && channelDescription
-            ? html`<div
-                class="channel-description-container ${this._isDescriptionExpanded ? 'expanded' : ''}"
-                style="${this._isDescriptionExpanded ? `max-height: 1000px` : ''}"
-              >
-                <p class="channel-description">
-                  ${this._isDescriptionExpanded
-                    ? channelDescription
-                    : truncate(channelDescription, this._config.max_channel_description_length ?? 180)}
-                </p>
-                ${channelDescription.length > (this._config.max_channel_description_length ?? 180)
-                  ? html`<button class="toggle-description" @click=${this._toggleDescription}>
-                      ${localize(
-                        this.hass,
-                        this._isDescriptionExpanded
-                          ? 'component.rss-accordion.card.show_less'
-                          : 'component.rss-accordion.card.show_more',
-                      )}
-                    </button>`
-                  : ''}
-              </div>`
-            : ''}
+          ${
+            this._config.show_published_date && formattedChannelPublished
+              ? html`<p class="channel-published">
+                  <span class="label">${localize(this.hass, 'component.rss-accordion.card.last_updated')}:</span>
+                  ${formattedChannelPublished}
+                </p>`
+              : ''
+          }
+          ${
+            this._config.show_channel_description !== false && channelDescription
+              ? html`<div
+                  class="channel-description-container ${this._isDescriptionExpanded ? 'expanded' : ''}"
+                  style="${this._isDescriptionExpanded ? `max-height: 1000px` : ''}"
+                >
+                  <p class="channel-description">
+                    ${
+                      this._isDescriptionExpanded
+                        ? channelDescription
+                        : truncate(channelDescription, this._config.max_channel_description_length ?? 180)
+                    }
+                  </p>
+                  ${
+                    channelDescription.length > (this._config.max_channel_description_length ?? 180)
+                      ? html`<button class="toggle-description" @click=${this._toggleDescription}>
+                          ${localize(
+                            this.hass,
+                            this._isDescriptionExpanded
+                              ? 'component.rss-accordion.card.show_less'
+                              : 'component.rss-accordion.card.show_more',
+                          )}
+                        </button>`
+                      : ''
+                  }
+                </div>`
+              : ''
+          }
           ${this._renderChannelActions(channelLink, hasAnyBookmarks)}
         </div>
       </div>
@@ -629,75 +641,91 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       <details class="accordion-item">
         <summary class="accordion-header" @click=${this._onSummaryClick}>
           <div class="header-main">
-            ${isSafeUrl(item.link)
-              ? html`<a class="title-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
-                  ${item.title}
-                </a>`
-              : html`<span class="title-link">${item.title}</span>`}
+            ${
+              isSafeUrl(item.link)
+                ? html`<a class="title-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
+                    ${item.title}
+                  </a>`
+                : html`<span class="title-link">${item.title}</span>`
+            }
             <div class="header-badges">
-              ${this._config.show_bookmarks
-                ? html`<span
-                    class="bookmark-button"
-                    role="button"
-                    tabindex="0"
-                    title="${localize(
-                      this.hass,
-                      isBookmarked
-                        ? 'component.rss-accordion.card.remove_bookmark'
-                        : 'component.rss-accordion.card.add_bookmark',
-                    )}"
-                    @click=${(e: Event) => this._toggleBookmark(e, item)}
-                    ><ha-icon icon=${isBookmarked ? 'mdi:star' : 'mdi:star-outline'}></ha-icon
-                  ></span>`
-                : ''}
-              ${isNew
-                ? html`<span class="new-pill">${localize(this.hass, 'component.rss-accordion.card.new_pill')}</span>`
-                : ''}
-              ${audioUrlString && isCompleted
-                ? html`<ha-icon
-                    class="listened-icon"
-                    icon="mdi:check-circle-outline"
-                    title="${listenedTooltip}"
-                  ></ha-icon>`
-                : ''}
+              ${
+                this._config.show_bookmarks
+                  ? html`<span
+                      class="bookmark-button"
+                      role="button"
+                      tabindex="0"
+                      title="${localize(
+                        this.hass,
+                        isBookmarked
+                          ? 'component.rss-accordion.card.remove_bookmark'
+                          : 'component.rss-accordion.card.add_bookmark',
+                      )}"
+                      @click=${(e: Event) => this._toggleBookmark(e, item)}
+                      ><ha-icon icon=${isBookmarked ? 'mdi:star' : 'mdi:star-outline'}></ha-icon
+                    ></span>`
+                  : ''
+              }
+              ${
+                isNew
+                  ? html`<span class="new-pill">${localize(this.hass, 'component.rss-accordion.card.new_pill')}</span>`
+                  : ''
+              }
+              ${
+                audioUrlString && isCompleted
+                  ? html`<ha-icon
+                      class="listened-icon"
+                      icon="mdi:check-circle-outline"
+                      title="${listenedTooltip}"
+                    ></ha-icon>`
+                  : ''
+              }
             </div>
           </div>
         </summary>
         <div class="accordion-content">
-          ${(this._config.show_source !== undefined ? this._config.show_source : this._entities.length > 1) &&
-          (item.source_entity_id || item.category || item.source)
-            ? html`<div class="item-source">
-                ${localize(this.hass, 'component.rss-accordion.card.source')}: ${this._getItemSourceName(item)}
-              </div>`
-            : ''}
+          ${
+            (this._config.show_source !== undefined ? this._config.show_source : this._entities.length > 1) &&
+            (item.source_entity_id || item.category || item.source)
+              ? html`<div class="item-source">
+                  ${localize(this.hass, 'component.rss-accordion.card.source')}: ${this._getItemSourceName(item)}
+                </div>`
+              : ''
+          }
           <div class="item-published">${formattedDate}</div>
-          ${showImage
-            ? html`<img
-                class="item-image"
-                src="${imageUrl as string}"
-                alt="${item.title}"
-                style=${styleMap(imageStyles)}
-              />`
-            : ''}
-          ${this._config.show_audio_player !== false && item.audio
-            ? html`
-                <div class="audio-player-container">
-                  <audio
-                    controls
-                    .src=${audioUrlString}
-                    @loadedmetadata=${(e: Event) => this._onAudioLoaded(e, audioUrlString as string)}
-                    @timeupdate=${(e: Event) => this._onAudioTimeUpdate(e, audioUrlString as string)}
-                    @ended=${(e: Event) => this._onAudioEnded(e, audioUrlString as string)}
-                  ></audio>
-                </div>
-              `
-            : ''}
+          ${
+            showImage
+              ? html`<img
+                  class="item-image"
+                  src="${imageUrl as string}"
+                  alt="${item.title}"
+                  style=${styleMap(imageStyles)}
+                />`
+              : ''
+          }
+          ${
+            this._config.show_audio_player !== false && item.audio
+              ? html`
+                  <div class="audio-player-container">
+                    <audio
+                      controls
+                      .src=${audioUrlString}
+                      @loadedmetadata=${(e: Event) => this._onAudioLoaded(e, audioUrlString as string)}
+                      @timeupdate=${(e: Event) => this._onAudioTimeUpdate(e, audioUrlString as string)}
+                      @ended=${(e: Event) => this._onAudioEnded(e, audioUrlString as string)}
+                    ></audio>
+                  </div>
+                `
+              : ''
+          }
           <div class="item-summary" .innerHTML=${sanitizeHtml(processedContent)}></div>
-          ${isSafeUrl(item.link)
-            ? html`<a class="item-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
-                ${localize(this.hass, 'component.rss-accordion.card.to_news_article')}
-              </a>`
-            : ''}
+          ${
+            isSafeUrl(item.link)
+              ? html`<a class="item-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
+                  ${localize(this.hass, 'component.rss-accordion.card.to_news_article')}
+                </a>`
+              : ''
+          }
         </div>
       </details>
     `;
@@ -797,9 +825,11 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         class="bookmark-filter-button ${this._showOnlyBookmarks ? 'active' : ''}"
         ?disabled=${!hasAnyBookmarks}
         size="small"
-        title="${!hasAnyBookmarks
-          ? localize(this.hass, 'component.rss-accordion.card.no_bookmarks_yet_tooltip')
-          : localize(this.hass, 'component.rss-accordion.card.show_bookmarked')}"
+        title="${
+          !hasAnyBookmarks
+            ? localize(this.hass, 'component.rss-accordion.card.no_bookmarks_yet_tooltip')
+            : localize(this.hass, 'component.rss-accordion.card.show_bookmarked')
+        }"
         @click=${() => {
           if (hasAnyBookmarks) {
             this._showOnlyBookmarks = !this._showOnlyBookmarks;
