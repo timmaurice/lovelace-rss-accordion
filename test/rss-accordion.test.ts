@@ -1642,6 +1642,130 @@ describe('RssAccordion', () => {
     });
   });
 
+  describe('measuring an open panel', () => {
+    /**
+     * jsdom lays nothing out and loads nothing, so both halves of a measurement
+     * are scripted: the panel reports the height the test wants, and an image
+     * counts as loaded only when the test says so.
+     *
+     * The switch sits on the prototype rather than on an instance, because the
+     * image under test is one lit creates during a render - it does not exist
+     * yet at the point the test would have to reach for it, and it is measured
+     * before the test gets control back. Not loaded is the default for the same
+     * reason.
+     */
+    const loaded = new WeakSet<HTMLImageElement>();
+    let originalComplete: PropertyDescriptor | undefined;
+
+    beforeEach(() => {
+      originalComplete = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'complete');
+      Object.defineProperty(HTMLImageElement.prototype, 'complete', {
+        configurable: true,
+        get(this: HTMLImageElement) {
+          return loaded.has(this);
+        },
+      });
+    });
+
+    afterEach(() => {
+      if (originalComplete) {
+        Object.defineProperty(HTMLImageElement.prototype, 'complete', originalComplete);
+      }
+    });
+
+    /** Arrives on load, the way a real picture does. */
+    const arrive = (img: HTMLImageElement): void => {
+      loaded.add(img);
+      img.dispatchEvent(new Event('load'));
+    };
+
+    const feedState = (image?: string): HassEntity =>
+      ({
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [
+            {
+              title: 'Story',
+              link: 'https://example.com/story',
+              published: '2023-01-01T12:00:00Z',
+              summary: '<p>The body.</p>',
+              ...(image ? { image } : {}),
+            },
+          ],
+        },
+      }) as HassEntity;
+
+    /** Enough animation frames for a measurement and its transition reset. */
+    const frames = async (): Promise<void> => {
+      for (let i = 0; i < 4; i++) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+    };
+
+    it('waits for the picture a re-rendered body gained before measuring', async () => {
+      element.hass = { ...hass, states: { 'sensor.test_feed': feedState() } };
+      element.setConfig({ ...config, open_behavior: 'none' });
+      await element.updateComplete;
+
+      const details = element.shadowRoot!.querySelector<HTMLDetailsElement>('.accordion-item')!;
+      const content = details.querySelector<HTMLElement>('.accordion-content')!;
+
+      let panelHeight = 300;
+      Object.defineProperty(content, 'scrollHeight', { get: () => panelHeight, configurable: true });
+
+      // The user opens an entry that carries no picture at all.
+      details.querySelector<HTMLElement>('.accordion-header')!.click();
+      await frames();
+      expect(content.style.maxHeight).toBe('300px');
+
+      // The feed rewrites the entry. Link and published are unchanged, so the
+      // item key and with it this very DOM node survive - but the body now
+      // carries a picture, and until it arrives the panel measures short.
+      panelHeight = 120;
+      element.hass = { ...hass, states: { 'sensor.test_feed': feedState('https://example.com/one.png') } };
+      await element.updateComplete;
+      await frames();
+
+      const img = details.querySelector<HTMLImageElement>('img.item-image')!;
+      expect(img).toBeTruthy();
+
+      // The panel is the same one, still open, and never took the short height.
+      expect(element.shadowRoot!.querySelector('.accordion-item')).toBe(details);
+      expect(details.open).toBe(true);
+      expect(content.style.maxHeight).toBe('300px');
+
+      // Once the picture is there the panel is measured around it.
+      panelHeight = 420;
+      arrive(img);
+      await frames();
+      expect(content.style.maxHeight).toBe('420px');
+    });
+
+    it('does not re-open a panel the user closed while its image was loading', async () => {
+      element.hass = { ...hass, states: { 'sensor.test_feed': feedState('https://example.com/one.png') } };
+      element.setConfig({ ...config, open_behavior: 'none' });
+      await element.updateComplete;
+
+      const details = element.shadowRoot!.querySelector<HTMLDetailsElement>('.accordion-item')!;
+      const content = details.querySelector<HTMLElement>('.accordion-content')!;
+      const img = details.querySelector<HTMLImageElement>('img.item-image')!;
+      Object.defineProperty(content, 'scrollHeight', { get: () => 300, configurable: true });
+
+      const header = details.querySelector<HTMLElement>('.accordion-header')!;
+      header.click();
+      await frames();
+      // Still waiting for the picture, so no height has been written yet.
+      expect(content.style.maxHeight).toBe('');
+
+      header.click(); // The user gives up and collapses it again.
+      arrive(img);
+      await frames();
+
+      expect(content.style.maxHeight).toBe('0px');
+    });
+  });
+
   describe('entries with missing fields', () => {
     it('should render no date row for an entry without a date', async () => {
       hass.states['sensor.test_feed'] = {

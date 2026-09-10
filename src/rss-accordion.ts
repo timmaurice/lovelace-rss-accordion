@@ -266,21 +266,67 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
   private _handleResize(): void {
     this.shadowRoot?.querySelectorAll<HTMLDetailsElement>('.accordion-item[open]').forEach((details) => {
-      const content = details.querySelector<HTMLElement>('.accordion-content');
-      if (content) {
-        // Temporarily disable transitions to avoid animating the height change on resize.
-        const originalTransition = content.style.transition;
-        content.style.transition = 'none';
+      void this._measureOpenPanel(details, false);
+    });
+  }
 
-        // Recalculate and apply the new max-height.
-        // The scrollHeight property gives the full height of the content, even if it's overflowing.
-        content.style.maxHeight = `${content.scrollHeight}px`;
+  /**
+   * Measures an open panel and writes the measurement onto its inline
+   * `max-height`.
+   *
+   * This is the only place a panel height is calculated. Every caller has to
+   * wait for the same thing: an `<img>` that has not loaded yet has no
+   * intrinsic size, so it contributes nothing to `scrollHeight`. Measuring
+   * before it arrives pins the panel to its pre-image height and leaves the
+   * picture clipped, and nothing measures it again afterwards.
+   *
+   * @param animate Whether the height change may animate. Opening a panel by
+   *   hand should; a re-measure the user did not ask for - after a re-render or
+   *   a resize - should not.
+   */
+  private async _measureOpenPanel(details: HTMLDetailsElement, animate: boolean): Promise<void> {
+    const content = details.querySelector<HTMLElement>('.accordion-content');
+    if (!content) return;
 
-        // Restore the transition after the browser has applied the new height.
-        // requestAnimationFrame is used to ensure this happens in the next frame.
-        requestAnimationFrame(() => {
-          content.style.transition = originalTransition;
-        });
+    const images = Array.from(content.querySelectorAll('img'));
+    const imagesToLoad = images.filter((img) => !img.complete);
+
+    if (imagesToLoad.length > 0) {
+      details.classList.add('loading');
+      await Promise.all(
+        imagesToLoad.map(
+          (img) =>
+            new Promise((resolve) => {
+              img.addEventListener('load', resolve, { once: true });
+              img.addEventListener('error', resolve, { once: true }); // Also resolve on error
+            }),
+        ),
+      );
+      details.classList.remove('loading');
+    }
+
+    // Waiting for an image takes time, and the user may have collapsed the
+    // panel in the meantime. `_openKeys` is the authority here and the `open`
+    // attribute is not: a close leaves that attribute in place until its
+    // animation finishes, so measuring on it would re-open what the user just
+    // shut.
+    const key = details.dataset.key;
+    if (key !== undefined && !this._openKeys.has(key)) return;
+
+    if (!animate) {
+      content.style.transition = 'none';
+    }
+
+    // Use requestAnimationFrame to ensure the browser has painted the final content
+    // (with loaded images) before we measure its height.
+    requestAnimationFrame(() => {
+      content.style.maxHeight = `${content.scrollHeight}px`;
+      if (!animate) {
+        // Restored a frame later, so the height lands while the transition is
+        // still off. The stylesheet owns the real value - the inline property
+        // is only ever this override - so it is removed rather than restored
+        // from a snapshot that a second, overlapping measure could poison.
+        requestAnimationFrame(() => content.style.removeProperty('transition'));
       }
     });
   }
@@ -346,13 +392,10 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       if (this._openKeys.has(key)) {
         details.setAttribute('open', '');
         // The height is re-measured, not carried over: a recycled node would
-        // otherwise clip or overshoot the new content.
-        const originalTransition = content.style.transition;
-        content.style.transition = 'none';
-        content.style.maxHeight = `${content.scrollHeight}px`;
-        requestAnimationFrame(() => {
-          content.style.transition = originalTransition;
-        });
+        // otherwise clip or overshoot the new content. Through the same path as
+        // opening by hand, so a body that re-rendered around an uncached image
+        // is measured once that image is there and not at its height without.
+        void this._measureOpenPanel(details, false);
       } else if (details.open) {
         details.removeAttribute('open');
         content.style.maxHeight = '0px';
@@ -453,28 +496,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       this._openKeys.add(key);
     }
 
-    const images = Array.from(content.querySelectorAll('img'));
-    const imagesToLoad = images.filter((img) => !img.complete);
-
-    if (imagesToLoad.length > 0) {
-      details.classList.add('loading');
-      await Promise.all(
-        imagesToLoad.map(
-          (img) =>
-            new Promise((resolve) => {
-              img.addEventListener('load', resolve, { once: true });
-              img.addEventListener('error', resolve, { once: true }); // Also resolve on error
-            }),
-        ),
-      );
-      details.classList.remove('loading');
-    }
-
-    // Use requestAnimationFrame to ensure the browser has painted the final content
-    // (with loaded images) before we measure its height.
-    requestAnimationFrame(() => {
-      content.style.maxHeight = `${content.scrollHeight}px`;
-    });
+    await this._measureOpenPanel(details, true);
   }
 
   private _onAudioLoaded(e: Event, audioUrl: string): void {
