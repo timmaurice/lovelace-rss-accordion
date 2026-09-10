@@ -397,6 +397,11 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   protected updated(changedProperties: Map<string | number | symbol, unknown>): void {
     super.updated(changedProperties);
 
+    // hass can arrive before setConfig does, and there is nothing here that
+    // means anything without a config - render() has already bailed out, so
+    // there is not even any DOM to re-apply state to.
+    if (!this._config) return;
+
     const openAll = this._openBehavior() === 'all';
     this._pruneKeys();
     this._enforceSingleOpen();
