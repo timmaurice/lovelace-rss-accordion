@@ -11,4 +11,4 @@ services:
       - TZ=Europe/Berlin
     restart: unless-stopped
     ports:
-      - '8136:8123'
+      - '8139:8123'
