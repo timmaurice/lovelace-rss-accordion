@@ -932,7 +932,13 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     let listenedTooltip = localize(this.hass, 'component.rss-accordion.card.listened');
     if (isCompleted && audioProgress?.completedAt) {
       const completedDate = formatDate(audioProgress.completedAt, this.hass);
-      listenedTooltip = localize(this.hass, 'component.rss-accordion.card.listened_on', { date: completedDate });
+      // formatDate answers an unparsable timestamp with an empty string, and
+      // "Listened on: " with nothing behind it says less than "Listened".
+      // Stored progress can carry one: it is whatever was in localStorage when
+      // the episode finished, from any version of this card.
+      if (completedDate) {
+        listenedTooltip = localize(this.hass, 'component.rss-accordion.card.listened_on', { date: completedDate });
+      }
     }
 
     const imageStyles = {

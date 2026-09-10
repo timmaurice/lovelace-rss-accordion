@@ -597,6 +597,19 @@ describe('RssAccordion', () => {
       expect(listenedIcon?.getAttribute('title')).toContain('Listened on:');
     });
 
+    it('should fall back to the plain label when the stored date is unparsable', async () => {
+      // completedAt comes out of localStorage, written by whatever version of
+      // this card finished the episode. An unparsable one formats to nothing,
+      // and the tooltip read "Listened on: " with the sentence left hanging.
+      audioProgressMock = { currentTime: 0, completed: true, completedAt: 'not a date' };
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const listenedIcon = element.shadowRoot?.querySelector('.listened-icon');
+      expect(listenedIcon).not.toBeNull();
+      expect(listenedIcon?.getAttribute('title')).toBe('Listened');
+    });
+
     it('should not load progress for a completed audio', async () => {
       audioProgressMock = { currentTime: 120, completed: true };
       element.setConfig(config);
