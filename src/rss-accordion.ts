@@ -39,6 +39,26 @@ interface CustomWindow extends Window {
   loadCardHelpers?: () => Promise<LovelaceCardHelpers>;
 }
 
+/**
+ * Whether an entity carries something this card can read as feed entries.
+ *
+ * A module function rather than a method, because the card picker asks the same
+ * question from a static context. Asking it two different ways is what let the
+ * picker preview an entity the card then refuses to read: it tested the feed
+ * attributes for truthiness where rendering requires an array, so an `items`
+ * that was a scalar or an object became the preview entity and the user's first
+ * sight of the card was "Entity has no feed entries".
+ *
+ * An `event.*` entity is a feed of one and carries its item in its own
+ * attributes rather than in a list, so it is admitted on its domain.
+ */
+function hasFeedAttribute(states: HomeAssistant['states'] | undefined, entityId: string): boolean {
+  if (entityId.startsWith('event.')) return true;
+
+  const attributes = states?.[entityId]?.attributes;
+  return Array.isArray(attributes?.entries || attributes?.events || attributes?.items);
+}
+
 type LovelaceCardConstructor = {
   new (): LovelaceCard;
   getConfigElement(): Promise<LovelaceCardEditor>;
@@ -118,10 +138,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
    */
   public static getStubConfig(hass?: HomeAssistant, entities?: string[]): Record<string, unknown> {
     const candidates = entities?.length ? entities : Object.keys(hass?.states ?? {});
-    const feedEntity = candidates.find((entityId) => {
-      const attributes = hass?.states[entityId]?.attributes;
-      return !!(attributes?.entries || attributes?.events || attributes?.items);
-    });
+    const feedEntity = candidates.find((entityId) => hasFeedAttribute(hass?.states, entityId));
 
     return {
       entity: feedEntity ?? 'sensor.your_rss_feed_sensor',
@@ -1100,12 +1117,8 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     `;
   }
 
-  /** Whether an entity carries something this card can read as feed entries. */
   private _hasFeedAttribute(entityId: string): boolean {
-    if (entityId.startsWith('event.')) return true;
-    const attributes = this.hass.states[entityId]?.attributes;
-    const entryArray = attributes?.entries || attributes?.events || attributes?.items;
-    return Array.isArray(entryArray);
+    return hasFeedAttribute(this.hass.states, entityId);
   }
 
   /**
