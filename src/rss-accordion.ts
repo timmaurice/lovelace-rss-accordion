@@ -423,7 +423,12 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         // opening by hand, so a body that re-rendered around an uncached image
         // is measured once that image is there and not at its height without.
         void this._measureOpenPanel(details, false);
-      } else if (details.open) {
+      } else if (details.open && !details.classList.contains('closing')) {
+        // A panel that is already animating shut is left to finish. Its key is
+        // gone from _openKeys the moment the user clicks, so this branch would
+        // otherwise catch it mid-transition and drop the open attribute at
+        // once - the panel would vanish rather than collapse, on nothing more
+        // than a feed update landing during the animation.
         details.removeAttribute('open');
         content.style.maxHeight = '0px';
       }
@@ -546,7 +551,12 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     content.style.maxHeight = '0px';
 
+    // Marks the panel as mid-animation, so a re-render arriving before the
+    // transition ends does not finish the job early.
+    details.classList.add('closing');
+
     const onTransitionEnd = (): void => {
+      details.classList.remove('closing');
       details.removeAttribute('open');
       content.removeEventListener('transitionend', onTransitionEnd);
     };
@@ -566,6 +576,9 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       });
     }
 
+    // Re-opening overrules a close that has not finished, and clears the mark
+    // in the case where no transition ever ran to clear it.
+    details.classList.remove('closing');
     details.setAttribute('open', '');
     const key = details.dataset.key;
     if (key) {
