@@ -378,3 +378,9 @@ ha-card {
     }
   }
 }
+
+// An image that failed to load paints its alt text (or a broken-file icon)
+// where the picture should be; hiding it is the better fallback.
+img.image-failed {
+  display: none;
+}
