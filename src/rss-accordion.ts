@@ -62,6 +62,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   private _seenKeys = new Set<string>();
   private _storageHelper!: StorageHelper;
   private _refreshTimer?: number;
+  private _teardownTimer?: number;
 
   public setConfig(config: RssAccordionConfig): void {
     if (!config || (!config.entity && (!config.entities || config.entities.length === 0))) {
@@ -180,6 +181,9 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
   public connectedCallback(): void {
     super.connectedCallback();
+    // We are back in the document, so the disconnect that just happened was a
+    // re-parent and not a teardown.
+    this._cancelTeardown();
     // Using ResizeObserver is more performant than a window resize event listener
     // as it only triggers when the element's size actually changes.
     if (!this._resizeObserver) {
@@ -197,7 +201,28 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     this._stopRefreshTimer();
     // A view switch tears the card out of the DOM but leaves the media elements
     // alive, so a podcast would keep playing from a card that is no longer there.
-    this._pauseAudio();
+    //
+    // Being disconnected is not the same as being torn down, though: Home
+    // Assistant re-parents cards, and a masonry view rebuilding its columns on a
+    // column-count change (a window resize, the sidebar toggling) or a sections
+    // drag-reorder re-appends the very same node. Pausing here and now would
+    // stop a podcast the user deliberately started, on a window resize, with no
+    // user action behind it. So defer the decision by a task: a re-parent has
+    // reconnected us long before it runs, a real teardown has not.
+    this._cancelTeardown();
+    this._teardownTimer = window.setTimeout(() => {
+      this._teardownTimer = undefined;
+      if (!this.isConnected) {
+        this._pauseAudio();
+      }
+    }, 0);
+  }
+
+  private _cancelTeardown(): void {
+    if (this._teardownTimer !== undefined) {
+      clearTimeout(this._teardownTimer);
+      this._teardownTimer = undefined;
+    }
   }
 
   private _startRefreshTimer(): void {

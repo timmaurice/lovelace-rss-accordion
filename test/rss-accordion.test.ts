@@ -1587,13 +1587,57 @@ describe('RssAccordion', () => {
       expect(players[0].pause).toHaveBeenCalled();
     });
 
-    it('should pause playback when the card leaves the DOM', () => {
+    /** The pause is deferred by a task, so let that task run. */
+    const settleTeardown = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it('should pause playback when the card leaves the DOM', async () => {
       document.body.removeChild(element);
+      await settleTeardown();
 
       expect(players[0].pause).toHaveBeenCalled();
       expect(players[1].pause).toHaveBeenCalled();
 
       // afterEach removes the element again.
+      document.body.appendChild(element);
+    });
+
+    // Home Assistant re-parents cards: a masonry view rebuilds its columns on a
+    // column-count change (a window resize, the sidebar toggling) and a sections
+    // drag-reorder re-appends the node. Each of those disconnects the card, and
+    // a podcast the user deliberately started must survive it.
+    it('should keep playing when the card is only re-parented', async () => {
+      const column = document.createElement('div');
+      document.body.appendChild(column);
+
+      document.body.removeChild(element);
+      column.appendChild(element);
+      await settleTeardown();
+
+      expect(players[0].pause).not.toHaveBeenCalled();
+      expect(players[1].pause).not.toHaveBeenCalled();
+
+      // afterEach removes the element from document.body.
+      column.removeChild(element);
+      document.body.removeChild(column);
+      document.body.appendChild(element);
+    });
+
+    it('should still pause when a re-parented card is later torn down', async () => {
+      const column = document.createElement('div');
+      document.body.appendChild(column);
+
+      document.body.removeChild(element);
+      column.appendChild(element);
+      await settleTeardown();
+      expect(players[0].pause).not.toHaveBeenCalled();
+
+      column.removeChild(element);
+      await settleTeardown();
+
+      expect(players[0].pause).toHaveBeenCalled();
+      expect(players[1].pause).toHaveBeenCalled();
+
+      document.body.removeChild(column);
       document.body.appendChild(element);
     });
   });
