@@ -12,3 +12,7 @@ start-test-env.sh
 
 # Home Assistant local test configuration
 /test/ha-config
+
+# Playwright
+test-results/
+playwright-report/
