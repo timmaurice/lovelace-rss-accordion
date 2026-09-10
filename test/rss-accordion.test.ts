@@ -1810,6 +1810,49 @@ describe('RssAccordion', () => {
     });
   });
 
+  describe('closing a panel while the card re-renders', () => {
+    const entry = {
+      title: 'Story',
+      link: 'https://example.com/story',
+      published: '2023-01-01T12:00:00Z',
+      summary: '<p>The body.</p>',
+    };
+
+    const feed = (state: string): HassEntity =>
+      ({ entity_id: 'sensor.test_feed', state, attributes: { entries: [entry] } }) as HassEntity;
+
+    it('lets the collapse animation finish', async () => {
+      element.hass = { ...hass, states: { 'sensor.test_feed': feed('ok') } };
+      element.setConfig({ ...config, open_behavior: 'none' });
+      await element.updateComplete;
+
+      const details = element.shadowRoot!.querySelector<HTMLDetailsElement>('.accordion-item')!;
+      const content = details.querySelector<HTMLElement>('.accordion-content')!;
+      const header = details.querySelector<HTMLElement>('.accordion-header')!;
+
+      header.click();
+      await element.updateComplete;
+      expect(details.hasAttribute('open')).toBe(true);
+
+      // The close animates: max-height goes to zero now, the open attribute
+      // comes off when the transition ends.
+      header.click();
+      expect(content.style.maxHeight).toBe('0px');
+      expect(details.hasAttribute('open')).toBe(true);
+
+      // A feed update lands mid-animation. updated() used to strip the open
+      // attribute here and the panel vanished instead of collapsing.
+      element.hass = { ...hass, states: { 'sensor.test_feed': feed('updated') } };
+      await element.updateComplete;
+      expect(element.shadowRoot!.querySelector('.accordion-item')).toBe(details);
+      expect(details.hasAttribute('open')).toBe(true);
+
+      // The animation finishes on its own terms.
+      content.dispatchEvent(new Event('transitionend'));
+      expect(details.hasAttribute('open')).toBe(false);
+    });
+  });
+
   describe('keys of entries that left the feed', () => {
     const older = {
       title: 'Older',
