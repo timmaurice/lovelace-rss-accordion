@@ -2160,7 +2160,7 @@ describe('RssAccordion', () => {
     // seen and the card silently keeps the default sizing.
     it('should expose grid options on the instance for sections views', () => {
       expect(element.getGridOptions()).toEqual({
-        columns: 12,
+        columns: 'full',
         rows: 'auto',
         min_columns: 6,
         min_rows: 1,

@@ -9,6 +9,7 @@ import {
   LovelaceCardEditor,
   RssAccordionConfig,
   FeedEntry,
+  LovelaceGridOptions,
 } from './types.js';
 import { localize } from './localize';
 import { isSafeUrl, sanitizeHtml } from './sanitize';
@@ -176,18 +177,8 @@ export class RssAccordion extends LitElement implements LovelaceCard {
    * card element it created (`if (this._element.getGridOptions)`), so a static
    * method is never found and the card falls back to the default sizing.
    */
-  public getGridOptions(): {
-    columns: number;
-    rows: string;
-    min_columns: number;
-    min_rows: number;
-  } {
-    return {
-      columns: 12,
-      rows: 'auto',
-      min_columns: 6,
-      min_rows: 1,
-    };
+  public getGridOptions(): LovelaceGridOptions {
+    return { columns: 'full', min_columns: 6, rows: 'auto', min_rows: 1 };
   }
 
   public getLayoutOptions(): {
