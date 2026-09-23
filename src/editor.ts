@@ -55,6 +55,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
         delete newConfig.show_audio_player;
       } else {
         newConfig.show_audio_player = false;
+        delete newConfig.audio_target;
       }
     } else if (configValue === 'show_channel_description') {
       if (value) {
@@ -180,6 +181,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
     const hasAudio = !!(stateObj?.attributes.audio as string | undefined) || entries.some((entry) => !!entry.audio);
     if (!hasAudio) {
       delete newConfig.show_audio_player;
+      delete newConfig.audio_target;
     }
 
     fireEvent(this, 'config-changed', { config: newConfig });
@@ -223,8 +225,26 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
 
     if (!hasAudio) {
       delete newConfig.show_audio_player;
+      delete newConfig.audio_target;
     }
 
+    fireEvent(this, 'config-changed', { config: newConfig });
+  }
+
+  private _audioTargetChanged(ev: CustomEvent): void {
+    if (!this._config || !this.hass) {
+      return;
+    }
+    const value = ev.detail.value as string | undefined;
+    if ((value || undefined) === this._config.audio_target) {
+      return;
+    }
+    const newConfig: RssAccordionConfig = { ...this._config };
+    if (value) {
+      newConfig.audio_target = value;
+    } else {
+      delete newConfig.audio_target;
+    }
     fireEvent(this, 'config-changed', { config: newConfig });
   }
 
@@ -442,6 +462,17 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                         @change=${this._valueChanged}
                       ></ha-switch>
                     </ha-formfield>
+                    ${
+                      this._config.show_audio_player !== false
+                        ? html`<ha-entity-picker
+                            .hass=${this.hass}
+                            .label=${localize(this.hass, 'component.rss-accordion.editor.audio_target')}
+                            .value=${this._config.audio_target || ''}
+                            .includeDomains=${['media_player']}
+                            @value-changed=${this._audioTargetChanged}
+                          ></ha-entity-picker>`
+                        : ''
+                    }
                   `
                 : ''
             }

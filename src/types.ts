@@ -26,7 +26,13 @@ export interface HomeAssistant {
     version?: string;
   };
   callWS: <T>(message: { type: string; [key: string]: unknown }) => Promise<T>;
-  callService: (domain: string, service: string, serviceData?: Record<string, unknown>) => Promise<void>;
+  callService: (
+    domain: string,
+    service: string,
+    serviceData?: Record<string, unknown>,
+    target?: Record<string, unknown>,
+    notifyOnError?: boolean,
+  ) => Promise<void>;
   themes?: {
     darkMode?: boolean;
     [key: string]: unknown;
@@ -96,6 +102,7 @@ export interface RssAccordionConfig extends LovelaceCardConfig {
   show_item_image?: boolean;
   new_pill_duration_hours?: number;
   show_audio_player?: boolean;
+  audio_target?: string;
   show_channel_info?: boolean;
   crop_channel_image?: boolean;
   show_published_date?: boolean;
@@ -110,4 +117,5 @@ export interface AudioProgress {
   currentTime: number;
   completed: boolean;
   completedAt?: string;
+  duration?: number;
 }

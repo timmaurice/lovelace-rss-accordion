@@ -4,6 +4,8 @@ import type { RssAccordion } from '../src/rss-accordion';
 import { HomeAssistant, RssAccordionConfig, HassEntity, AudioProgress } from '../src/types';
 import { StorageHelper } from '../src/storage-helper';
 import { formatDate } from '../src/utils';
+import { BrowserAudioPlayer } from '../src/audio-player';
+import { FakeAudio, installFakePlayer } from './fake-audio';
 
 // Mock console.info
 vi.spyOn(console, 'info').mockImplementation(() => {});
@@ -431,77 +433,72 @@ describe('RssAccordion', () => {
   });
 
   describe('audio player rendering', () => {
-    it('should render an audio player if item has an audio URL', async () => {
-      hass.states['sensor.test_feed'] = {
+    const feedWith = (entry: Record<string, unknown>): HassEntity =>
+      ({
         entity_id: 'sensor.test_feed',
         state: 'ok',
-        attributes: {
-          entries: [
-            {
-              title: 'Podcast Episode',
-              link: '#',
-              summary: 'An episode with audio.',
-              published: new Date().toISOString(),
-              audio: 'http://example.com/episode.mp3',
-            },
-          ],
-        },
-      } as HassEntity;
+        attributes: { entries: [{ title: 'Test 1', link: '#', published: new Date().toISOString(), ...entry }] },
+      }) as HassEntity;
+
+    it('should render player controls, not a media element, if item has an audio URL', async () => {
+      hass.states['sensor.test_feed'] = feedWith({ audio: 'http://example.com/episode.mp3' });
       element.hass = hass;
       element.setConfig(config); // show_audio_player defaults to true
       await element.updateComplete;
 
-      const audioPlayer = element.shadowRoot?.querySelector<HTMLAudioElement>('audio');
-      expect(audioPlayer).not.toBeNull();
-      expect(audioPlayer?.src).toBe('http://example.com/episode.mp3');
+      expect(element.shadowRoot?.querySelector('.audio-player .audio-play')).not.toBeNull();
+      expect(element.shadowRoot?.querySelector('.audio-player .audio-seek')).not.toBeNull();
+      expect(element.shadowRoot?.querySelector('audio')).toBeNull();
     });
 
-    it('should not render an audio player if item has no audio URL', async () => {
-      hass.states['sensor.test_feed'] = {
-        entity_id: 'sensor.test_feed',
-        state: 'ok',
-        attributes: {
-          entries: [{ title: 'Test 1', link: '#', summary: 'Summary 1', published: new Date().toISOString() }],
-        },
-      } as HassEntity;
+    it('should not render a player if item has no audio URL', async () => {
+      hass.states['sensor.test_feed'] = feedWith({});
       element.hass = hass;
       element.setConfig(config);
       await element.updateComplete;
 
-      const audioPlayer = element.shadowRoot?.querySelector('audio');
-      expect(audioPlayer).toBeNull();
+      expect(element.shadowRoot?.querySelector('.audio-player')).toBeNull();
     });
 
-    it('should not render an audio player if show_audio_player is false', async () => {
-      hass.states['sensor.test_feed'] = {
-        entity_id: 'sensor.test_feed',
-        state: 'ok',
-        attributes: {
-          entries: [{ title: 'Test 1', link: '#', audio: 'http://a.com/a.mp3', published: new Date().toISOString() }],
-        },
-      } as HassEntity;
+    it('should not render a player if show_audio_player is false', async () => {
+      hass.states['sensor.test_feed'] = feedWith({ audio: 'http://a.com/a.mp3' });
       element.hass = hass;
       element.setConfig({ ...config, show_audio_player: false });
       await element.updateComplete;
 
-      const audioPlayer = element.shadowRoot?.querySelector<HTMLAudioElement>('audio');
-      expect(audioPlayer).toBeNull();
+      expect(element.shadowRoot?.querySelector('.audio-player')).toBeNull();
+    });
+
+    it('should show the saved position of an episode that is not loaded', async () => {
+      localStorage.clear();
+      hass.states['sensor.test_feed'] = feedWith({ audio: 'http://a.com/a.mp3' });
+      element.hass = hass;
+      element.setConfig(config);
+      new StorageHelper('sensor.test_feed').setAudioProgress('http://a.com/a.mp3', {
+        currentTime: 75,
+        completed: false,
+        duration: 3725,
+      });
+      element.requestUpdate();
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelector('.audio-position')?.textContent).toBe('1:15');
+      expect(element.shadowRoot?.querySelector('.audio-duration')?.textContent).toBe('1:02:05');
+      localStorage.clear();
     });
   });
 
-  describe('audio persistence', () => {
+  describe('listened marker', () => {
     const audioUrl = 'http://example.com/episode.mp3';
     let audioProgressMock: AudioProgress | null = null;
 
     beforeEach(() => {
-      // Mock StorageHelper for audio
       audioProgressMock = null;
       vi.spyOn(StorageHelper.prototype, 'getAudioProgress').mockImplementation(() => audioProgressMock);
       vi.spyOn(StorageHelper.prototype, 'setAudioProgress').mockImplementation((_url, progress) => {
         audioProgressMock = progress;
       });
 
-      // Set up a feed item with audio
       hass.states['sensor.test_feed'] = {
         entity_id: 'sensor.test_feed',
         state: 'ok',
@@ -525,63 +522,25 @@ describe('RssAccordion', () => {
       vi.restoreAllMocks();
     });
 
-    it('should save audio progress on timeupdate after interval', async () => {
-      const setAudioProgressSpy = vi.spyOn(StorageHelper.prototype, 'setAudioProgress').mockImplementation(() => {});
-      vi.useFakeTimers();
+    it('should mark audio as completed and show icon when the episode ends', async () => {
+      const { audio } = installFakePlayer();
+      // Re-connect so the card subscribes to this test's player.
+      document.body.removeChild(element);
+      document.body.appendChild(element);
       element.setConfig(config);
       await element.updateComplete;
 
-      const audioEl = element.shadowRoot?.querySelector('audio');
-      expect(audioEl).not.toBeNull();
+      expect(element.shadowRoot?.querySelector('.listened-icon')).toBeNull();
 
-      // This first timeupdate will not save because the faked time is less than the interval
-      audioEl!.dispatchEvent(new Event('timeupdate'));
-      expect(setAudioProgressSpy).not.toHaveBeenCalled();
-
-      // Advance time past the save interval (5000ms)
-      vi.advanceTimersByTime(5001);
-
-      // This timeupdate should trigger a save
-      audioEl!.currentTime = 30;
-      audioEl!.dispatchEvent(new Event('timeupdate'));
-
-      expect(setAudioProgressSpy).toHaveBeenCalledWith(audioUrl, {
-        currentTime: 30,
-        completed: false,
-      });
-
-      vi.useRealTimers();
-    });
-
-    it('should load audio progress on loadedmetadata', async () => {
-      audioProgressMock = { currentTime: 60, completed: false };
-      element.setConfig(config);
+      element.shadowRoot?.querySelector<HTMLButtonElement>('.audio-play')?.click();
+      await element.updateComplete;
+      audio.el.dispatchEvent(new Event('ended'));
       await element.updateComplete;
 
-      const audioEl = element.shadowRoot?.querySelector('audio');
-      audioEl!.dispatchEvent(new Event('loadedmetadata'));
-      await element.updateComplete;
-
-      expect(audioEl!.currentTime).toBe(60);
-    });
-
-    it('should mark audio as completed and show icon on "ended" event', async () => {
-      element.setConfig(config);
-      await element.updateComplete;
-
-      let listenedIcon = element.shadowRoot?.querySelector('.listened-icon');
-      expect(listenedIcon).toBeNull();
-
-      const audioEl = element.shadowRoot?.querySelector('audio');
-      audioEl!.dispatchEvent(new Event('ended'));
-      await element.updateComplete;
-
-      // Check that setAudioProgress was called with completed status
       expect(audioProgressMock?.completed).toBe(true);
-      expect(audioProgressMock?.completedAt).toBeDefined();
       expect(typeof audioProgressMock?.completedAt).toBe('string');
 
-      listenedIcon = element.shadowRoot?.querySelector('.listened-icon');
+      const listenedIcon = element.shadowRoot?.querySelector('.listened-icon');
       expect(listenedIcon).not.toBeNull();
       expect(listenedIcon?.getAttribute('icon')).toBe('mdi:check-circle-outline');
       expect(listenedIcon?.getAttribute('title')).toContain('Listened on:');
@@ -609,24 +568,7 @@ describe('RssAccordion', () => {
       expect(listenedIcon).not.toBeNull();
       expect(listenedIcon?.getAttribute('title')).toBe('Listened');
     });
-
-    it('should not load progress for a completed audio', async () => {
-      audioProgressMock = { currentTime: 120, completed: true };
-      element.setConfig(config);
-      await element.updateComplete;
-
-      const audioEl = element.shadowRoot?.querySelector('audio');
-      expect(audioEl).not.toBeNull();
-
-      audioEl!.currentTime = 10; // Set a non-zero time to see if it gets overwritten
-      audioEl!.dispatchEvent(new Event('loadedmetadata'));
-      await element.updateComplete;
-
-      // currentTime should not be changed because the track is marked as completed
-      expect(audioEl!.currentTime).toBe(10);
-    });
   });
-
   describe('bookmarking', () => {
     let bookmarksMock: Record<string, string>;
     let storageHelper: StorageHelper;
@@ -1587,7 +1529,7 @@ describe('RssAccordion', () => {
     });
   });
 
-  describe('audio playback coordination', () => {
+  describe('playback in the browser', () => {
     const entries = [
       {
         title: 'Episode 1',
@@ -1603,9 +1545,22 @@ describe('RssAccordion', () => {
       },
     ];
 
-    let players: HTMLAudioElement[];
+    let player: BrowserAudioPlayer;
+    let audio: FakeAudio;
+
+    const playButtons = (card: RssAccordion = element): HTMLButtonElement[] => [
+      ...(card.shadowRoot?.querySelectorAll<HTMLButtonElement>('.audio-play') ?? []),
+    ];
+    const icons = (card: RssAccordion = element): (string | null)[] =>
+      playButtons(card).map((b) => b.querySelector('ha-icon')?.getAttribute('icon') ?? null);
 
     beforeEach(async () => {
+      localStorage.clear();
+      ({ player, audio } = installFakePlayer());
+      // Re-connect so the card subscribes to this test's player.
+      document.body.removeChild(element);
+      document.body.appendChild(element);
+
       hass.states['sensor.test_feed'] = {
         entity_id: 'sensor.test_feed',
         state: 'ok',
@@ -1614,88 +1569,359 @@ describe('RssAccordion', () => {
       element.hass = hass;
       element.setConfig({ ...config, allow_multiple: true });
       await element.updateComplete;
-
-      players = [...(element.shadowRoot?.querySelectorAll<HTMLAudioElement>('audio') ?? [])];
-      expect(players.length).toBe(2);
-      // JSDOM has no media stack: it reports every element as paused and its
-      // pause() is a stub, so both sides of the coordination are mocked in.
-      players.forEach((player) => {
-        Object.defineProperty(player, 'paused', { value: false, configurable: true });
-        vi.spyOn(player, 'pause').mockImplementation(() => {});
-      });
+      expect(playButtons().length).toBe(2);
     });
 
-    it('should pause the other players when one starts', async () => {
-      players[1].dispatchEvent(new Event('play'));
+    it('should start the episode in the shared player', async () => {
+      playButtons()[0].click();
+      await element.updateComplete;
 
-      expect(players[0].pause).toHaveBeenCalled();
-      expect(players[1].pause).not.toHaveBeenCalled();
+      expect(audio.el.play).toHaveBeenCalled();
+      expect(player.state.url).toBe('https://example.com/e1.mp3');
+      expect(icons()).toEqual(['mdi:pause', 'mdi:play']);
     });
 
-    it('should pause the player of an item that is collapsed', async () => {
+    it('should pause from the same button', async () => {
+      playButtons()[0].click();
+      await element.updateComplete;
+      playButtons()[0].click();
+      await element.updateComplete;
+
+      expect(audio.el.pause).toHaveBeenCalled();
+      expect(icons()).toEqual(['mdi:play', 'mdi:play']);
+    });
+
+    it('should play one episode at a time', async () => {
+      playButtons()[0].click();
+      await element.updateComplete;
+      playButtons()[1].click();
+      await element.updateComplete;
+
+      expect(player.state.url).toBe('https://example.com/e2.mp3');
+      expect(icons()).toEqual(['mdi:play', 'mdi:pause']);
+    });
+
+    it('should keep playing when an item is collapsed', async () => {
       const header = element.shadowRoot?.querySelector<HTMLElement>('.accordion-item .accordion-header');
       header?.click();
       await element.updateComplete;
-      expect(element.shadowRoot?.querySelector<HTMLDetailsElement>('.accordion-item')?.open).toBe(true);
+      playButtons()[0].click();
+      await element.updateComplete;
 
       header?.click();
       await element.updateComplete;
 
-      expect(players[0].pause).toHaveBeenCalled();
+      expect(audio.el.pause).not.toHaveBeenCalled();
+      expect(player.state.playing).toBe(true);
     });
 
-    /** The pause is deferred by a task, so let that task run. */
-    const settleTeardown = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+    const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
-    it('should pause playback when the card leaves the DOM', async () => {
+    it('should keep playing when the card leaves the DOM', async () => {
+      playButtons()[0].click();
+      await element.updateComplete;
+
       document.body.removeChild(element);
-      await settleTeardown();
+      await settle();
 
-      expect(players[0].pause).toHaveBeenCalled();
-      expect(players[1].pause).toHaveBeenCalled();
+      expect(audio.el.pause).not.toHaveBeenCalled();
+      expect(player.state.playing).toBe(true);
 
       // afterEach removes the element again.
       document.body.appendChild(element);
     });
 
-    // Home Assistant re-parents cards: a masonry view rebuilds its columns on a
-    // column-count change (a window resize, the sidebar toggling) and a sections
-    // drag-reorder re-appends the node. Each of those disconnects the card, and
-    // a podcast the user deliberately started must survive it.
-    it('should keep playing when the card is only re-parented', async () => {
-      const column = document.createElement('div');
-      document.body.appendChild(column);
-
+    it('should show a running episode on a card created afterwards', async () => {
+      playButtons()[0].click();
+      await element.updateComplete;
       document.body.removeChild(element);
-      column.appendChild(element);
-      await settleTeardown();
 
-      expect(players[0].pause).not.toHaveBeenCalled();
-      expect(players[1].pause).not.toHaveBeenCalled();
+      const next = document.createElement('rss-accordion') as RssAccordion;
+      next.hass = hass;
+      next.setConfig({ ...config, allow_multiple: true });
+      document.body.appendChild(next);
+      await next.updateComplete;
 
-      // afterEach removes the element from document.body.
-      column.removeChild(element);
-      document.body.removeChild(column);
+      expect(icons(next)).toEqual(['mdi:pause', 'mdi:play']);
+
+      player.pause();
+      await next.updateComplete;
+      expect(icons(next)).toEqual(['mdi:play', 'mdi:play']);
+
+      document.body.removeChild(next);
       document.body.appendChild(element);
     });
 
-    it('should still pause when a re-parented card is later torn down', async () => {
-      const column = document.createElement('div');
-      document.body.appendChild(column);
-
+    it('should stop listening to the player once disconnected', async () => {
       document.body.removeChild(element);
-      column.appendChild(element);
-      await settleTeardown();
-      expect(players[0].pause).not.toHaveBeenCalled();
+      const update = vi.spyOn(element, 'requestUpdate');
 
-      column.removeChild(element);
-      await settleTeardown();
+      playButtons()[0].click();
+      audio.advanceTo(12);
 
-      expect(players[0].pause).toHaveBeenCalled();
-      expect(players[1].pause).toHaveBeenCalled();
-
-      document.body.removeChild(column);
+      expect(update).not.toHaveBeenCalled();
       document.body.appendChild(element);
+    });
+
+    it('should seek from the seek bar and the skip buttons', async () => {
+      playButtons()[0].click();
+      audio.setDuration(600);
+      await element.updateComplete;
+
+      const seek = element.shadowRoot!.querySelector<HTMLInputElement>('.audio-seek')!;
+      expect(seek.disabled).toBe(false);
+      seek.value = '200';
+      seek.dispatchEvent(new Event('change'));
+      expect(audio.el.currentTime).toBe(200);
+
+      element.shadowRoot!.querySelector<HTMLButtonElement>('.audio-forward')!.click();
+      expect(audio.el.currentTime).toBe(230);
+      element.shadowRoot!.querySelector<HTMLButtonElement>('.audio-rewind')!.click();
+      expect(audio.el.currentTime).toBe(215);
+    });
+
+    it('should not let the playhead fight a seek bar that is being dragged', async () => {
+      playButtons()[0].click();
+      audio.setDuration(600);
+      await element.updateComplete;
+
+      const seek = element.shadowRoot!.querySelector<HTMLInputElement>('.audio-seek')!;
+      seek.value = '300';
+      seek.dispatchEvent(new Event('input'));
+      audio.advanceTo(5);
+      await element.updateComplete;
+
+      expect(seek.value).toBe('300');
+    });
+  });
+
+  describe('playback on a media player', () => {
+    const url = 'https://example.com/e1.mp3';
+    let callService: ReturnType<typeof vi.fn<HomeAssistant['callService']>>;
+    let audio: FakeAudio;
+
+    const speaker = (state: string, attributes: Record<string, unknown> = {}): HassEntity =>
+      ({
+        entity_id: 'media_player.kitchen',
+        state,
+        attributes: { friendly_name: 'Kitchen', supported_features: 2 | 1 | 512, ...attributes },
+      }) as HassEntity;
+
+    const setSpeaker = async (stateObj: HassEntity): Promise<void> => {
+      hass = { ...hass, states: { ...hass.states, 'media_player.kitchen': stateObj } } as HomeAssistant;
+      element.hass = hass;
+      await element.updateComplete;
+    };
+
+    const button = (selector: string): HTMLButtonElement =>
+      element.shadowRoot!.querySelector<HTMLButtonElement>(selector)!;
+
+    beforeEach(async () => {
+      localStorage.clear();
+      ({ audio } = installFakePlayer());
+      callService = vi.fn<HomeAssistant['callService']>().mockResolvedValue(undefined);
+      hass.callService = callService;
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [
+            { title: 'Episode 1', link: 'https://example.com/e1', published: '2023-01-02T12:00:00Z', audio: url },
+          ],
+        },
+      } as HassEntity;
+      hass.states['media_player.kitchen'] = speaker('idle');
+      element.hass = hass;
+      element.setConfig({ ...config, audio_target: 'media_player.kitchen' });
+      await element.updateComplete;
+    });
+
+    it('should hand the episode to the speaker instead of the browser', async () => {
+      button('.audio-play').click();
+
+      expect(callService).toHaveBeenCalledWith(
+        'media_player',
+        'play_media',
+        {
+          entity_id: 'media_player.kitchen',
+          media_content_id: url,
+          media_content_type: 'music',
+          extra: { title: 'Episode 1' },
+        },
+        undefined,
+        true,
+      );
+      expect(audio.el.play).not.toHaveBeenCalled();
+      expect(element.shadowRoot?.querySelector('.audio-target')?.textContent).toContain('Kitchen');
+    });
+
+    it('should follow the speaker and pause it', async () => {
+      await setSpeaker(speaker('playing', { media_content_id: url, media_duration: 600, media_position: 0 }));
+
+      expect(button('.audio-play').querySelector('ha-icon')?.getAttribute('icon')).toBe('mdi:pause');
+      button('.audio-play').click();
+      expect(callService).toHaveBeenCalledWith(
+        'media_player',
+        'media_pause',
+        { entity_id: 'media_player.kitchen' },
+        undefined,
+        true,
+      );
+    });
+
+    it('should resume a paused episode rather than restart it', async () => {
+      await setSpeaker(speaker('paused', { media_content_id: url, media_duration: 600, media_position: 42 }));
+
+      button('.audio-play').click();
+      expect(callService).toHaveBeenCalledWith(
+        'media_player',
+        'media_play',
+        { entity_id: 'media_player.kitchen' },
+        undefined,
+        true,
+      );
+      expect(callService).not.toHaveBeenCalledWith('media_player', 'play_media', expect.anything());
+    });
+
+    it('should seek to the saved position once the speaker has started', async () => {
+      new StorageHelper('sensor.test_feed').setAudioProgress(url, { currentTime: 120, completed: false });
+
+      button('.audio-play').click();
+      expect(callService).not.toHaveBeenCalledWith('media_player', 'media_seek', expect.anything());
+
+      await setSpeaker(speaker('playing', { media_content_id: url, media_duration: 600, media_position: 0 }));
+      // Automatic, so no error toast if the speaker refuses it.
+      expect(callService).toHaveBeenCalledWith(
+        'media_player',
+        'media_seek',
+        { entity_id: 'media_player.kitchen', seek_position: 120 },
+        undefined,
+        false,
+      );
+    });
+
+    it('should seek on the speaker', async () => {
+      await setSpeaker(speaker('paused', { media_content_id: url, media_duration: 600, media_position: 100 }));
+
+      button('.audio-forward').click();
+      expect(callService).toHaveBeenCalledWith(
+        'media_player',
+        'media_seek',
+        { entity_id: 'media_player.kitchen', seek_position: 130 },
+        undefined,
+        true,
+      );
+    });
+
+    it('should stop offering seeking once the speaker has refused a seek', async () => {
+      await setSpeaker(speaker('paused', { media_content_id: url, media_duration: 600, media_position: 100 }));
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      callService.mockRejectedValueOnce(new Error('NotImplementedError'));
+
+      button('.audio-forward').click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await element.updateComplete;
+
+      expect(button('.audio-forward').disabled).toBe(true);
+      expect(element.shadowRoot!.querySelector<HTMLInputElement>('.audio-seek')!.disabled).toBe(true);
+    });
+
+    it('should not offer seeking on a speaker that cannot seek', async () => {
+      await setSpeaker(
+        speaker('playing', { media_content_id: url, media_duration: 600, media_position: 0, supported_features: 1 }),
+      );
+
+      expect(button('.audio-forward').disabled).toBe(true);
+      expect(element.shadowRoot!.querySelector<HTMLInputElement>('.audio-seek')!.disabled).toBe(true);
+    });
+
+    it('should show an unavailable speaker and not try to play on it', async () => {
+      await setSpeaker(speaker('unavailable'));
+
+      expect(button('.audio-play').disabled).toBe(true);
+      expect(element.shadowRoot?.querySelector('.audio-target.unavailable')?.textContent).toContain(
+        'Speaker unavailable: media_player.kitchen',
+      );
+    });
+
+    it('should treat something else playing on the speaker as not ours', async () => {
+      await setSpeaker(speaker('playing', { media_content_id: 'spotify:track:1', media_position: 0 }));
+
+      expect(button('.audio-play').querySelector('ha-icon')?.getAttribute('icon')).toBe('mdi:play');
+      expect(button('.audio-forward').disabled).toBe(true);
+    });
+
+    it('should save the speaker position while the card is on screen', async () => {
+      vi.useFakeTimers();
+      try {
+        const start = Date.now();
+        await setSpeaker(
+          speaker('playing', {
+            media_content_id: url,
+            media_duration: 600,
+            media_position: 50,
+            media_position_updated_at: new Date(start).toISOString(),
+          }),
+        );
+
+        vi.advanceTimersByTime(3000);
+        expect(new StorageHelper('sensor.test_feed').getAudioProgress(url)?.currentTime).toBeCloseTo(51, 0);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    const playing = (position: number, duration: number, updatedAt: number): HassEntity =>
+      speaker('playing', {
+        media_content_id: url,
+        media_duration: duration,
+        media_position: position,
+        media_position_updated_at: new Date(updatedAt).toISOString(),
+      });
+
+    it('should not mark an episode listened from the previous media position', async () => {
+      vi.useFakeTimers();
+      try {
+        button('.audio-play').click();
+        // The demo players keep counting from what they played before.
+        await setSpeaker(playing(1055, 300, Date.now()));
+        vi.advanceTimersByTime(3000);
+
+        expect(new StorageHelper('sensor.test_feed').getAudioProgress(url)).toBeNull();
+        expect(element.shadowRoot?.querySelector('.listened-icon')).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('should ignore a position reported before the episode was started', async () => {
+      vi.useFakeTimers();
+      try {
+        const before = Date.now() - 60_000;
+        button('.audio-play').click();
+        await setSpeaker(playing(200, 300, before));
+        vi.advanceTimersByTime(3000);
+
+        expect(new StorageHelper('sensor.test_feed').getAudioProgress(url)).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('should mark the episode listened when it plays to the end', async () => {
+      vi.useFakeTimers();
+      try {
+        button('.audio-play').click();
+        await setSpeaker(playing(100, 300, Date.now()));
+        vi.advanceTimersByTime(1000);
+        await setSpeaker(playing(295, 300, Date.now()));
+        vi.advanceTimersByTime(6000);
+        await element.updateComplete;
+
+        expect(new StorageHelper('sensor.test_feed').getAudioProgress(url)?.completed).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

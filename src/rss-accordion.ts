@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { repeat } from 'lit/directives/repeat.js';
 import {
+  HassEntity,
   HomeAssistant,
   LovelaceCardConfig,
   LovelaceCard,
@@ -13,8 +14,10 @@ import {
 } from './types.js';
 import { localize } from './localize';
 import { isSafeUrl, sanitizeHtml } from './sanitize';
-import { formatDate, truncate } from './utils';
+import { formatDate, formatDuration, truncate } from './utils';
 import { StorageHelper } from './storage-helper.js';
+import { PROGRESS_SAVE_INTERVAL_MS, PlaybackState, getBrowserAudioPlayer } from './audio-player';
+import { mediaPlayerAvailable, mediaPlayerCanSeek, mediaPlayerState } from './media-player-target';
 import styles from './styles/card.styles.scss';
 
 const ELEMENT_NAME = 'rss-accordion';
@@ -79,8 +82,17 @@ export class RssAccordion extends LitElement implements LovelaceCard {
    */
   @state() private _failedChannelImage?: string;
   @state() private _entities: string[] = [];
+  @state() private _scrub?: { url: string; value: number };
   private _resizeObserver?: ResizeObserver;
-  private _lastAudioSave = new Map<string, number>();
+  private _renderedAudioUrls = new Set<string>();
+  private _targetTicker?: number;
+  private _lastTargetSave?: number;
+  private _pendingTargetSeek?: { url: string; position: number; until: number };
+  // Some players advertise SEEK without implementing it (e.g. the demo players).
+  private _seekFailedOn?: string;
+  private _targetStartedAt?: { url: string; at: number };
+  // Completion only counts once the episode was seen mid-way, not from a stale position.
+  private _targetSeenMidway = new Set<string>();
   /**
    * Which items the user expanded, by item key rather than by position. The
    * feed reorders and grows underneath the card, so a positional flag would
@@ -91,7 +103,6 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   private _seenKeys = new Set<string>();
   private _storageHelper!: StorageHelper;
   private _refreshTimer?: number;
-  private _teardownTimer?: number;
 
   public setConfig(config: RssAccordionConfig): void {
     if (!config || (!config.entity && (!config.entities || config.entities.length === 0))) {
@@ -197,9 +208,6 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
   public connectedCallback(): void {
     super.connectedCallback();
-    // We are back in the document, so the disconnect that just happened was a
-    // re-parent and not a teardown.
-    this._cancelTeardown();
     // Using ResizeObserver is more performant than a window resize event listener
     // as it only triggers when the element's size actually changes.
     if (!this._resizeObserver) {
@@ -207,6 +215,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     }
     this._resizeObserver.observe(this);
     this._startRefreshTimer();
+    getBrowserAudioPlayer().addEventListener('change', this._onPlayerChange);
   }
 
   public disconnectedCallback(): void {
@@ -215,30 +224,9 @@ export class RssAccordion extends LitElement implements LovelaceCard {
       this._resizeObserver.disconnect();
     }
     this._stopRefreshTimer();
-    // A view switch tears the card out of the DOM but leaves the media elements
-    // alive, so a podcast would keep playing from a card that is no longer there.
-    //
-    // Being disconnected is not the same as being torn down, though: Home
-    // Assistant re-parents cards, and a masonry view rebuilding its columns on a
-    // column-count change (a window resize, the sidebar toggling) or a sections
-    // drag-reorder re-appends the very same node. Pausing here and now would
-    // stop a podcast the user deliberately started, on a window resize, with no
-    // user action behind it. So defer the decision by a task: a re-parent has
-    // reconnected us long before it runs, a real teardown has not.
-    this._cancelTeardown();
-    this._teardownTimer = window.setTimeout(() => {
-      this._teardownTimer = undefined;
-      if (!this.isConnected) {
-        this._pauseAudio();
-      }
-    }, 0);
-  }
-
-  private _cancelTeardown(): void {
-    if (this._teardownTimer !== undefined) {
-      clearTimeout(this._teardownTimer);
-      this._teardownTimer = undefined;
-    }
+    this._stopTargetTicker();
+    // Playback is left running on purpose: it lives in the shared player, not the card.
+    getBrowserAudioPlayer().removeEventListener('change', this._onPlayerChange);
   }
 
   private _startRefreshTimer(): void {
@@ -364,6 +352,11 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         }
       }
 
+      const target = this._config.audio_target;
+      if (target && oldHass.states[target] !== this.hass.states[target]) {
+        entitiesChanged = true;
+      }
+
       if (entitiesChanged || oldHass.language !== this.hass.language) {
         return true;
       }
@@ -392,6 +385,8 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     // means anything without a config - render() has already bailed out, so
     // there is not even any DOM to re-apply state to.
     if (!this._config) return;
+
+    this._syncTarget();
 
     const openAll = this._openBehavior() === 'all';
     this._pruneKeys();
@@ -518,24 +513,6 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     }
   }
 
-  /**
-   * Pauses the media players of this card.
-   *
-   * @param except An element that may keep playing (the one that just started).
-   */
-  private _pauseAudio(except?: HTMLAudioElement): void {
-    this.shadowRoot?.querySelectorAll<HTMLAudioElement>('audio').forEach((audio) => {
-      if (audio !== except && !audio.paused) {
-        audio.pause();
-      }
-    });
-  }
-
-  /** Only one episode at a time - starting one silences the others. */
-  private _onAudioPlay(e: Event): void {
-    this._pauseAudio(e.target as HTMLAudioElement);
-  }
-
   private _closeAccordion(details: HTMLDetailsElement): void {
     details.classList.remove('loading'); // Ensure loading class is removed on close
     const key = details.dataset.key;
@@ -544,10 +521,6 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     }
     const content = details.querySelector<HTMLElement>('.accordion-content');
     if (!content) return;
-
-    // A collapsed panel is invisible; audio playing on behind it is not what the
-    // user asked for when they closed it.
-    content.querySelectorAll<HTMLAudioElement>('audio').forEach((audio) => audio.pause());
 
     content.style.maxHeight = '0px';
 
@@ -591,51 +564,303 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     await this._measureOpenPanel(details, true);
   }
 
-  private _onAudioLoaded(e: Event, audioUrl: string): void {
-    const audioEl = e.target as HTMLAudioElement;
-    const progress = this._storageHelper.getAudioProgress(audioUrl);
-    if (progress && !progress.completed) {
-      audioEl.currentTime = progress.currentTime;
+  // --- Audio ---
+
+  private _lastPlayerUrl?: string;
+
+  private readonly _onPlayerChange = (): void => {
+    if (this._config?.audio_target) return;
+    const url = getBrowserAudioPlayer().state.url;
+    const previous = this._lastPlayerUrl;
+    this._lastPlayerUrl = url;
+    if ((url && this._renderedAudioUrls.has(url)) || (previous && this._renderedAudioUrls.has(previous))) {
+      this.requestUpdate();
+    }
+  };
+
+  private _targetStateObj(): HassEntity | undefined {
+    const target = this._config?.audio_target;
+    return target ? this.hass?.states[target] : undefined;
+  }
+
+  private _playbackFor(url: string): PlaybackState & { active: boolean; canSeek: boolean; available: boolean } {
+    const target = this._config.audio_target;
+    const stateObj = this._targetStateObj();
+    const current = target ? mediaPlayerState(stateObj) : getBrowserAudioPlayer().state;
+    const available = target ? mediaPlayerAvailable(stateObj) : true;
+
+    if (current.url === url) {
+      return {
+        ...current,
+        active: true,
+        available,
+        canSeek: available && (target ? this._targetCanSeek() : true),
+      };
+    }
+
+    const progress = this._storageHelper.getAudioProgress(url);
+    return {
+      url,
+      playing: false,
+      position: progress && !progress.completed ? progress.currentTime : 0,
+      duration: progress?.duration ?? 0,
+      active: false,
+      available,
+      canSeek: false,
+    };
+  }
+
+  private _togglePlay(item: FeedEntry, url: string): void {
+    if (this._playbackFor(url).playing) {
+      this._pauseEpisode();
+    } else {
+      this._playEpisode(item, url);
     }
   }
 
-  private _onAudioTimeUpdate(e: Event, audioUrl: string): void {
-    const now = Date.now();
-    const lastSave = this._lastAudioSave.get(audioUrl);
+  private _playEpisode(item: FeedEntry, url: string): void {
+    const image = this._getItemImage(item);
+    const track = {
+      url,
+      title: item.title?.trim() || localize(this.hass, 'component.rss-accordion.card.untitled'),
+      artist: this._getItemSourceName(item) || undefined,
+      artwork: isSafeUrl(image, true) ? image : undefined,
+      storage: this._storageHelper,
+    };
 
-    // This is a leading-edge throttle. It fires on the first event, then enforces a cooldown.
-    if (lastSave === undefined || now - lastSave > 5000) {
-      const audioEl = e.target as HTMLAudioElement;
-
-      // On the very first event, the time might be 0. Don't save a 0-progress state.
-      if (lastSave === undefined && audioEl.currentTime === 0) {
-        this._lastAudioSave.set(audioUrl, now); // Just start the timer
-        return;
-      }
-
-      const progress = this._storageHelper.getAudioProgress(audioUrl) || { currentTime: 0, completed: false };
-
-      if (progress.completed) {
-        return;
-      }
-
-      progress.currentTime = audioEl.currentTime;
-      this._storageHelper.setAudioProgress(audioUrl, progress);
-      this._lastAudioSave.set(audioUrl, now);
+    if (!this._config.audio_target) {
+      void getBrowserAudioPlayer().play(track);
+      return;
     }
-  }
 
-  private _onAudioEnded(e: Event, audioUrl: string): void {
-    const progress = this._storageHelper.getAudioProgress(audioUrl) || { currentTime: 0, completed: false };
-    this._storageHelper.setAudioProgress(audioUrl, {
-      ...progress,
-      currentTime: 0,
-      completed: true,
-      completedAt: new Date().toISOString(),
+    const stateObj = this._targetStateObj();
+    if (mediaPlayerState(stateObj).url === url && stateObj?.state === 'paused') {
+      this._callTarget('media_play');
+      return;
+    }
+
+    // Seek once the speaker reports the episode as playing.
+    const progress = this._storageHelper.getAudioProgress(url);
+    this._pendingTargetSeek =
+      progress && !progress.completed && progress.currentTime > 0
+        ? { url, position: progress.currentTime, until: Date.now() + 30_000 }
+        : undefined;
+    this._lastTargetSave = undefined;
+    this._targetStartedAt = { url, at: Date.now() };
+    this._targetSeenMidway.delete(url);
+    this._callTarget('play_media', {
+      media_content_id: url,
+      media_content_type: 'music',
+      extra: { title: track.title, ...(track.artwork ? { thumb: track.artwork } : {}) },
     });
-    this.requestUpdate();
   }
 
+  private _pauseEpisode(): void {
+    if (this._config.audio_target) {
+      this._callTarget('media_pause');
+    } else {
+      getBrowserAudioPlayer().pause();
+    }
+  }
+
+  private _seekEpisode(url: string, seconds: number): void {
+    const playback = this._playbackFor(url);
+    if (!playback.active || !playback.canSeek) return;
+    const position = Math.max(0, playback.duration ? Math.min(seconds, playback.duration) : seconds);
+
+    if (this._config.audio_target) {
+      this._seekTarget(position, true);
+    } else {
+      getBrowserAudioPlayer().seek(position);
+    }
+  }
+
+  private _skipEpisode(url: string, delta: number): void {
+    this._seekEpisode(url, this._playbackFor(url).position + delta);
+  }
+
+  private _onSeekInput(e: Event, url: string): void {
+    this._scrub = { url, value: Number((e.target as HTMLInputElement).value) };
+  }
+
+  private _onSeekChange(e: Event, url: string): void {
+    this._scrub = undefined;
+    this._seekEpisode(url, Number((e.target as HTMLInputElement).value));
+  }
+
+  private _callTarget(service: string, data: Record<string, unknown> = {}, notifyOnError = true): Promise<boolean> {
+    const entityId = this._config.audio_target;
+    if (!entityId || !this.hass) return Promise.resolve(false);
+    return this.hass
+      .callService('media_player', service, { entity_id: entityId, ...data }, undefined, notifyOnError)
+      .then(() => true)
+      .catch((err: unknown) => {
+        console.error(`rss-accordion: media_player.${service} on ${entityId} failed`, err);
+        return false;
+      });
+  }
+
+  private _targetCanSeek(): boolean {
+    const target = this._config.audio_target;
+    return !!target && this._seekFailedOn !== target && mediaPlayerCanSeek(this._targetStateObj());
+  }
+
+  /** Only a seek the user asked for may raise HA's error toast. */
+  private _seekTarget(position: number, userInitiated: boolean): void {
+    const target = this._config.audio_target;
+    void this._callTarget('media_seek', { seek_position: position }, userInitiated).then((ok) => {
+      if (!ok && target) {
+        this._seekFailedOn = target;
+        this.requestUpdate();
+      }
+    });
+  }
+
+  private _syncTarget(): void {
+    const stateObj = this._targetStateObj();
+    const current = mediaPlayerState(stateObj);
+
+    const pending = this._pendingTargetSeek;
+    if (pending && Date.now() > pending.until) {
+      this._pendingTargetSeek = undefined;
+    } else if (pending && current.url === pending.url && current.playing) {
+      this._pendingTargetSeek = undefined;
+      if (this._targetCanSeek() && current.position < pending.position - 2) {
+        this._seekTarget(pending.position, false);
+        this._lastTargetSave = Date.now();
+      }
+    }
+
+    const ours = !!current.url && this._renderedAudioUrls.has(current.url);
+    if (this._config.audio_target && ours && current.playing && this.isConnected) {
+      this._startTargetTicker();
+    } else {
+      this._stopTargetTicker();
+    }
+  }
+
+  private _startTargetTicker(): void {
+    if (this._targetTicker !== undefined) return;
+    this._targetTicker = window.setInterval(() => {
+      this._saveTargetProgress();
+      this.requestUpdate();
+    }, 1000);
+  }
+
+  private _stopTargetTicker(): void {
+    if (this._targetTicker !== undefined) {
+      clearInterval(this._targetTicker);
+      this._targetTicker = undefined;
+    }
+  }
+
+  private _saveTargetProgress(): void {
+    const stateObj = this._targetStateObj();
+    const current = mediaPlayerState(stateObj);
+    const url = current.url;
+    if (!url || !current.playing || !this._renderedAudioUrls.has(url)) return;
+
+    // Right after play_media a speaker may still report the previous media's position.
+    const reportedAt = Date.parse(stateObj?.attributes.media_position_updated_at as string);
+    const started = this._targetStartedAt;
+    if (started?.url === url && !(reportedAt >= started.at)) return;
+    if (current.duration && Number(stateObj?.attributes.media_position) > current.duration + 1) return;
+
+    const atEnd = !!current.duration && current.position >= current.duration - 10;
+    if (!atEnd) this._targetSeenMidway.add(url);
+    if (this._pendingTargetSeek?.url === url) return;
+
+    const now = Date.now();
+    if (this._lastTargetSave !== undefined && now - this._lastTargetSave <= PROGRESS_SAVE_INTERVAL_MS) return;
+    this._lastTargetSave = now;
+
+    const progress = this._storageHelper.getAudioProgress(url) || { currentTime: 0, completed: false };
+    if (progress.completed) return;
+
+    if (atEnd && this._targetSeenMidway.has(url)) {
+      this._storageHelper.setAudioProgress(url, {
+        ...progress,
+        currentTime: 0,
+        completed: true,
+        completedAt: new Date().toISOString(),
+        duration: current.duration,
+      });
+    } else if (!atEnd && current.position > 0) {
+      this._storageHelper.setAudioProgress(url, {
+        ...progress,
+        currentTime: current.position,
+        duration: current.duration || progress.duration,
+      });
+    }
+  }
+
+  private _renderAudioControls(item: FeedEntry, url: string): TemplateResult {
+    const t = (key: string, args?: Record<string, string>): string =>
+      localize(this.hass, `component.rss-accordion.card.${key}`, args);
+    const playback = this._playbackFor(url);
+    const position = this._scrub?.url === url ? this._scrub.value : playback.position;
+    const target = this._config.audio_target;
+    const targetState = this._targetStateObj();
+    const targetName = (targetState?.attributes.friendly_name as string | undefined) || target;
+
+    return html`
+      <div class="audio-player ${playback.active ? 'active' : ''}">
+        <button
+          class="audio-button audio-play"
+          ?disabled=${!playback.available}
+          aria-label=${playback.playing ? t('pause') : t('play')}
+          title=${playback.playing ? t('pause') : t('play')}
+          @click=${() => this._togglePlay(item, url)}
+        >
+          <ha-icon icon=${playback.playing ? 'mdi:pause' : 'mdi:play'}></ha-icon>
+        </button>
+        <button
+          class="audio-button audio-rewind"
+          ?disabled=${!playback.canSeek}
+          aria-label=${t('rewind')}
+          title=${t('rewind')}
+          @click=${() => this._skipEpisode(url, -15)}
+        >
+          <ha-icon icon="mdi:rewind-15"></ha-icon>
+        </button>
+        <div class="audio-track">
+          <input
+            class="audio-seek"
+            type="range"
+            min="0"
+            max=${Math.floor(playback.duration) || 0}
+            step="1"
+            .value=${String(Math.floor(position))}
+            ?disabled=${!playback.canSeek || !playback.duration}
+            aria-label=${t('seek')}
+            @input=${(e: Event) => this._onSeekInput(e, url)}
+            @change=${(e: Event) => this._onSeekChange(e, url)}
+          />
+          <div class="audio-time">
+            <span class="audio-position">${formatDuration(position)}</span>
+            <span class="audio-duration">${playback.duration ? formatDuration(playback.duration) : '--:--'}</span>
+          </div>
+        </div>
+        <button
+          class="audio-button audio-forward"
+          ?disabled=${!playback.canSeek}
+          aria-label=${t('forward')}
+          title=${t('forward')}
+          @click=${() => this._skipEpisode(url, 30)}
+        >
+          <ha-icon icon="mdi:fast-forward-30"></ha-icon>
+        </button>
+      </div>
+      ${
+        target
+          ? html`<div class="audio-target ${playback.available ? '' : 'unavailable'}">
+              <ha-icon icon=${playback.available ? 'mdi:speaker' : 'mdi:speaker-off'}></ha-icon>
+              <span> ${playback.available ? targetName : t('audio_target_unavailable', { entity: target })} </span>
+            </div>`
+          : ''
+      }
+    `;
+  }
   private _toggleBookmark(e: Event, item: FeedEntry): void {
     e.stopPropagation();
     e.preventDefault();
@@ -926,6 +1151,9 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const isBookmarked = this._storageHelper.isBookmarked(item);
 
     const audioUrlString = item.audio as string | undefined;
+    if (audioUrlString && this._config.show_audio_player !== false) {
+      this._renderedAudioUrls.add(audioUrlString);
+    }
     const audioProgress = audioUrlString ? this._storageHelper.getAudioProgress(audioUrlString) : null;
     const isCompleted = audioProgress?.completed ?? false;
 
@@ -1023,16 +1251,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
           ${
             this._config.show_audio_player !== false && item.audio
               ? html`
-                  <div class="audio-player-container">
-                    <audio
-                      controls
-                      .src=${audioUrlString}
-                      @play=${this._onAudioPlay}
-                      @loadedmetadata=${(e: Event) => this._onAudioLoaded(e, audioUrlString as string)}
-                      @timeupdate=${(e: Event) => this._onAudioTimeUpdate(e, audioUrlString as string)}
-                      @ended=${(e: Event) => this._onAudioEnded(e, audioUrlString as string)}
-                    ></audio>
-                  </div>
+                  <div class="audio-player-container">${this._renderAudioControls(item, audioUrlString as string)}</div>
                 `
               : ''
           }
@@ -1050,6 +1269,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   }
 
   protected render(): TemplateResult {
+    this._renderedAudioUrls.clear();
     if (!this._config || !this.hass) {
       return html``;
     }

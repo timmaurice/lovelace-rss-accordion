@@ -35,6 +35,7 @@
     "show_channel_description": "Show channel description",
     "max_channel_description_length": "Maximum channel description length",
     "show_audio_player": "Show Audio Player",
+    "audio_target": "Play on (optional, otherwise in this browser)",
     "show_item_image": "Show Item Images",
     "show_bookmarks": "Enable bookmarking for items",
     "use_multiple_entities": "Use multiple entities",
@@ -62,6 +63,12 @@
     "no_bookmarks_yet_tooltip": "Bookmark an item to enable this filter",
     "source": "Source",
     "show_more": "Show more",
-    "show_less": "Show less"
+    "show_less": "Show less",
+    "play": "Play",
+    "pause": "Pause",
+    "rewind": "Back 15 seconds",
+    "forward": "Forward 30 seconds",
+    "seek": "Playback position",
+    "audio_target_unavailable": "Speaker unavailable: {entity}"
   }
 }
