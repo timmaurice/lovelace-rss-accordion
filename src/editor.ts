@@ -368,6 +368,13 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
 
           <div class="group">
             <div class="group-header">${localize(this.hass, 'component.rss-accordion.editor.groups.feed')}</div>
+            <ha-input
+              .label=${localize(this.hass, 'component.rss-accordion.editor.description_attribute')}
+              .value=${this._config.description_attribute || ''}
+              .configValue=${'description_attribute'}
+              @input=${this._valueChanged}
+              .placeholder=${'summary'}
+            ></ha-input>
             <div class="row">
               <ha-input
                 .label=${localize(this.hass, 'component.rss-accordion.editor.max_items')}

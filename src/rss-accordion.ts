@@ -14,7 +14,7 @@ import {
 } from './types.js';
 import { localize } from './localize';
 import { isSafeUrl, sanitizeHtml } from './sanitize';
-import { formatDate, formatDuration, truncate } from './utils';
+import { formatDate, formatDuration, hasReadableText, truncate } from './utils';
 import { StorageHelper } from './storage-helper.js';
 import { PROGRESS_SAVE_INTERVAL_MS, PlaybackState, getBrowserAudioPlayer } from './audio-player';
 import { mediaPlayerAvailable, mediaPlayerCanSeek, mediaPlayerState } from './media-player-target';
@@ -939,6 +939,9 @@ export class RssAccordion extends LitElement implements LovelaceCard {
             summary: (summary as string) ?? undefined,
             description: (description as string) ?? undefined,
             image: (image as string) ?? undefined,
+            ...(this._config.description_attribute
+              ? { [this._config.description_attribute]: stateObj.attributes[this._config.description_attribute] }
+              : {}),
             published: stateObj.state,
             source_entity_id: entityId,
           });
@@ -1132,9 +1135,23 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     this._isDescriptionExpanded = !this._isDescriptionExpanded;
   }
 
+  /**
+   * Picks the item's body: the configured `description_attribute`, else a summary
+   * with readable text, else `description`.
+   * @param item The feed entry.
+   * @returns The HTML to render, unsanitized.
+   */
+  private _getItemContent(item: FeedEntry): string {
+    const attribute = this._config.description_attribute;
+    const custom = attribute ? item[attribute] : undefined;
+    if (typeof custom === 'string' && hasReadableText(custom)) return custom;
+    if (hasReadableText(item.summary)) return item.summary as string;
+    return item.description || item.summary || '';
+  }
+
   private _renderItem(item: FeedEntry): TemplateResult {
     const imageUrl = this._getItemImage(item);
-    const content = item.summary || item.description || '';
+    const content = this._getItemContent(item);
     const showImage = this._config.show_item_image !== false && isSafeUrl(imageUrl as string | undefined, true);
 
     // If a hero image is being displayed from the `item.image` field,
@@ -1255,7 +1272,11 @@ export class RssAccordion extends LitElement implements LovelaceCard {
                 `
               : ''
           }
-          <div class="item-summary" .innerHTML=${sanitizeHtml(processedContent)}></div>
+          ${
+            hasReadableText(processedContent) || /<img/i.test(processedContent)
+              ? html`<div class="item-summary" .innerHTML=${sanitizeHtml(processedContent)}></div>`
+              : ''
+          }
           ${
             isSafeUrl(item.link)
               ? html`<a class="item-link" href="${item.link}" target="_blank" rel="noopener noreferrer">

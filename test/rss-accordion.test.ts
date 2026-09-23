@@ -569,6 +569,78 @@ describe('RssAccordion', () => {
       expect(listenedIcon?.getAttribute('title')).toBe('Listened');
     });
   });
+  describe('item description', () => {
+    const teaser = '<img align="left" hspace="5" src="https://example.com/small.jpg" />...';
+    const entry = (fields: Record<string, unknown>) => ({
+      title: 'Story',
+      link: 'https://example.com/story',
+      published: '2023-01-01T12:00:00Z',
+      image: 'https://example.com/big.jpg',
+      ...fields,
+    });
+    const render = async (fields: Record<string, unknown>, extra: Partial<RssAccordionConfig> = {}) => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: { entries: [entry(fields)] },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig({ ...config, ...extra });
+      await element.updateComplete;
+      return element.shadowRoot?.querySelector('.item-summary');
+    };
+
+    it('should not render a teaser summary that is only an image and an ellipsis', async () => {
+      expect(await render({ summary: teaser })).toBeNull();
+    });
+
+    it('should fall back to description when the summary has no text', async () => {
+      const summary = await render({ summary: teaser, description: 'The real text.' });
+      expect(summary?.textContent).toBe('The real text.');
+    });
+
+    it('should prefer a summary with text over description', async () => {
+      const summary = await render({ summary: '<p>Summary text.</p>', description: 'Description text.' });
+      expect(summary?.textContent).toBe('Summary text.');
+    });
+
+    it('should read the configured description_attribute', async () => {
+      const summary = await render(
+        { summary: teaser, gera_description: 'Noch einmal Streetfood auf dem Neumarkt.' },
+        { description_attribute: 'gera_description' },
+      );
+      expect(summary?.textContent).toBe('Noch einmal Streetfood auf dem Neumarkt.');
+    });
+
+    it('should fall back when an item lacks the configured attribute', async () => {
+      const summary = await render({ summary: '<p>Summary text.</p>' }, { description_attribute: 'gera_description' });
+      expect(summary?.textContent).toBe('Summary text.');
+    });
+
+    it('should sanitize the configured attribute like any other content', async () => {
+      const summary = await render(
+        { gera_description: '<p>Text</p><img src="x" onerror="alert(1)"><script>alert(2)</script>' },
+        { description_attribute: 'gera_description', show_item_image: false },
+      );
+      expect(summary?.innerHTML).not.toContain('onerror');
+      expect(summary?.innerHTML).not.toContain('<script');
+      expect(summary?.textContent).toContain('Text');
+    });
+
+    it('should read the configured attribute from an event entity', async () => {
+      hass.states['event.news'] = {
+        entity_id: 'event.news',
+        state: '2023-01-01T12:00:00Z',
+        attributes: { title: 'Story', link: 'https://example.com/story', teaser_text: 'From the event.' },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig({ type: 'custom:rss-accordion', entity: 'event.news', description_attribute: 'teaser_text' });
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelector('.item-summary')?.textContent).toBe('From the event.');
+    });
+  });
+
   describe('bookmarking', () => {
     let bookmarksMock: Record<string, string>;
     let storageHelper: StorageHelper;

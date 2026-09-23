@@ -20,6 +20,7 @@
     "max_items_per_entity": "Maximum Items (Per Feed)",
     "max_items_per_entity_placeholder": "All items",
     "new_pill_duration_hours": "Duration for 'NEW' pill (hours)",
+    "description_attribute": "Description attribute (optional)",
     "refresh_interval": "Refresh Interval (minutes)",
     "refresh_interval_placeholder": "30",
     "image_ratio": "Image aspect ratio (e.g. 16/9 or 1.77)",

@@ -76,3 +76,17 @@ export function formatDuration(seconds: number): string {
   const s = String(total % 60).padStart(2, '0');
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
 }
+
+/**
+ * Checks whether HTML carries readable text, ignoring tags, whitespace and ellipses.
+ * @param html The HTML to check.
+ * @returns False for teaser markup such as `<img … />...`.
+ */
+export function hasReadableText(html: string | undefined): boolean {
+  if (!html) return false;
+  const text = html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&(nbsp|hellip|#8230|#160);/gi, '')
+    .replace(/[\s.…]+/g, '');
+  return text.length > 0;
+}

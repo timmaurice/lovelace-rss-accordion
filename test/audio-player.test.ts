@@ -3,7 +3,7 @@ import { BrowserAudioPlayer, getBrowserAudioPlayer } from '../src/audio-player';
 import { mediaPlayerCanSeek, mediaPlayerState } from '../src/media-player-target';
 import { StorageHelper } from '../src/storage-helper';
 import { HassEntity } from '../src/types';
-import { formatDuration } from '../src/utils';
+import { formatDuration, hasReadableText } from '../src/utils';
 import { FakeAudio, createFakeAudio } from './fake-audio';
 
 describe('BrowserAudioPlayer', () => {
@@ -139,5 +139,14 @@ describe('formatDuration', () => {
     expect(formatDuration(75.9)).toBe('1:15');
     expect(formatDuration(3725)).toBe('1:02:05');
     expect(formatDuration(NaN)).toBe('0:00');
+  });
+});
+
+describe('hasReadableText', () => {
+  it('should ignore tags, whitespace and ellipses', () => {
+    expect(hasReadableText('<img src="a.jpg" />...')).toBe(false);
+    expect(hasReadableText(' &hellip; … &nbsp;')).toBe(false);
+    expect(hasReadableText(undefined)).toBe(false);
+    expect(hasReadableText('<p>Hi</p>')).toBe(true);
   });
 });

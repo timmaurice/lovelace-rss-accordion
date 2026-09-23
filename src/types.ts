@@ -103,6 +103,7 @@ export interface RssAccordionConfig extends LovelaceCardConfig {
   new_pill_duration_hours?: number;
   show_audio_player?: boolean;
   audio_target?: string;
+  description_attribute?: string;
   show_channel_info?: boolean;
   crop_channel_image?: boolean;
   show_published_date?: boolean;

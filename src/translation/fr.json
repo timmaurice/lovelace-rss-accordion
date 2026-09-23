@@ -20,6 +20,7 @@
     "max_items_per_entity": "Nombre maximum d'éléments (Par flux)",
     "max_items_per_entity_placeholder": "Tous les éléments",
     "new_pill_duration_hours": "Durée d'affichage de la pastille 'NOUVEAU' (heures)",
+    "description_attribute": "Attribut de description (facultatif)",
     "refresh_interval": "Intervalle d'actualisation (minutes)",
     "refresh_interval_placeholder": "30",
     "image_ratio": "Ratio d'aspect de l'image (ex: 16/9 ou 1.77)",

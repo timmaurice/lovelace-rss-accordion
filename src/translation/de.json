@@ -20,6 +20,7 @@
     "max_items_per_entity": "Maximale Einträge (Pro Feed)",
     "max_items_per_entity_placeholder": "Alle Einträge",
     "new_pill_duration_hours": "Dauer für 'NEU'-Anzeige (Stunden)",
+    "description_attribute": "Beschreibungs-Attribut (optional)",
     "refresh_interval": "Aktualisierungsintervall (Minuten)",
     "refresh_interval_placeholder": "30",
     "image_ratio": "Bild-Seitenverhältnis (z.B. 16/9 oder 1.77)",
