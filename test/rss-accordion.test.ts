@@ -606,10 +606,10 @@ describe('RssAccordion', () => {
 
     it('should read the configured description_attribute', async () => {
       const summary = await render(
-        { summary: teaser, gera_description: 'Noch einmal Streetfood auf dem Neumarkt.' },
+        { summary: teaser, gera_description: 'The article text.' },
         { description_attribute: 'gera_description' },
       );
-      expect(summary?.textContent).toBe('Noch einmal Streetfood auf dem Neumarkt.');
+      expect(summary?.textContent).toBe('The article text.');
     });
 
     it('should fall back when an item lacks the configured attribute', async () => {
