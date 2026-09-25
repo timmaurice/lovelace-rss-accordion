@@ -11,10 +11,15 @@ test.describe('Lovelace resource registration', () => {
     // as /local/rss-accordion.js and the instance registers it once. Two
     // entries load the bundle twice, and an unguarded customElements.define()
     // then throws while the module is being evaluated.
-    const ours = (await resources()).filter((resource) => resource.url.split('?')[0].endsWith(`/${BUNDLE_NAME}`));
+    // Matched by path, not by the whole URL: a query string such as
+    // `?v=description-1` is a cache-bust stamp users legitimately put on the
+    // resource, and it does not change which file is served.
+    const pathOf = (url: string) => new URL(url, 'http://ha.invalid').pathname;
+    const ours = (await resources()).filter((resource) => pathOf(resource.url).endsWith(`/${BUNDLE_NAME}`));
 
     expect(ours).toHaveLength(1);
-    expect(ours[0].url).toBe(BUNDLE_URL);
+    expect(pathOf(ours[0].url)).toBe(BUNDLE_URL);
+    expect(ours[0].type).toBe('module');
   });
 
   test('serves the bundle and defines card and editor without a clash', async ({ page, consoleErrors }) => {

@@ -39,19 +39,19 @@ export const USERNAME = process.env.HA_E2E_USER ?? 'admin';
 export const PASSWORD = process.env.HA_E2E_PASSWORD ?? 'password';
 
 /**
- * The bundle is committed and bind-mounted into the container, so the browser
- * gets whatever is on disk - not what `src/` currently says. Rollup stamps
- * `v<version>` into the banner it prints on load, so the version in the file is
- * a cheap way of noticing that the committed bundle predates the package. That
- * has bitten sibling repositories: the suite passed against an old bundle and
- * said nothing about the code under test.
+ * The bundle is built locally (or by CI) and bind-mounted into the container,
+ * so the browser gets whatever is on disk - not what `src/` currently says.
+ * Rollup stamps `v<version>` into the banner it prints on load, so the version
+ * in the file is a cheap way of noticing that the built bundle predates the
+ * package. That has bitten sibling repositories: the suite passed against an
+ * old bundle and said nothing about the code under test.
  */
 function assertBundleIsCurrent(): void {
   const { version } = JSON.parse(readFileSync(PACKAGE_JSON, 'utf8')) as { version: string };
   const bundle = readFileSync(BUNDLE, 'utf8');
   if (!bundle.includes(`v${version}`)) {
     throw new Error(
-      `dist/${BUNDLE_NAME} does not carry v${version} - the committed bundle is stale, run \`npm run build\``,
+      `dist/${BUNDLE_NAME} does not carry v${version} - the built bundle is stale, run \`npm run build\``,
     );
   }
 }
@@ -213,6 +213,6 @@ export async function useDashboard(name: string, config: Record<string, unknown>
 }
 
 /** The Lovelace resources Home Assistant has persisted. */
-export async function resources(): Promise<{ id: string; url: string }[]> {
+export async function resources(): Promise<{ id: string; url: string; type: string }[]> {
   return callWebsocket({ type: 'lovelace/resources' });
 }
