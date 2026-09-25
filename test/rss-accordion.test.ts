@@ -770,6 +770,24 @@ describe('RssAccordion', () => {
       expect(items?.[0].querySelector('.title-link')?.textContent?.trim()).toBe(feedItem2.title);
     });
 
+    it('should outline the filter button and fill it once the filter is on', async () => {
+      // ha-button is Web Awesome's button: it picks its look from `appearance`
+      // and ignores mwc-button's `outlined`, so the button used to render
+      // filled in the brand colour whether the filter was on or off.
+      await element.updateComplete;
+      element.shadowRoot?.querySelector<HTMLElement>('.bookmark-button')?.click();
+      await element.updateComplete;
+
+      const filterButton = element.shadowRoot!.querySelector<HTMLElement>('.bookmark-filter-button')!;
+      expect(filterButton.hasAttribute('outlined')).toBe(false);
+      expect(filterButton.getAttribute('appearance')).toBe('outlined');
+
+      filterButton.click();
+      await element.updateComplete;
+
+      expect(filterButton.getAttribute('appearance')).toBe('accent');
+    });
+
     it('re-opens only one panel when a filtered-out entry returns', async () => {
       // A panel the bookmark filter hides is not in the DOM, so opening another
       // one cannot collapse it - only its key can be dropped, and nothing was

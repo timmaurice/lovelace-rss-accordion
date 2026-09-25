@@ -1443,7 +1443,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     return html`
       <ha-button
-        outlined
+        appearance=${this._showOnlyBookmarks ? 'accent' : 'outlined'}
         class="bookmark-filter-button ${this._showOnlyBookmarks ? 'active' : ''}"
         ?disabled=${!hasAnyBookmarks}
         size=${this._buttonSize()}
