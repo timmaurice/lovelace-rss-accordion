@@ -31,6 +31,7 @@ declare global {
       description: string;
       documentationURL: string;
       preview?: boolean;
+      getEntitySuggestion?: (hass: HomeAssistant, entityId: string) => { config: Record<string, unknown> } | null;
     }[];
   }
 }
@@ -61,6 +62,46 @@ function hasFeedAttribute(states: HomeAssistant['states'] | undefined, entityId:
 
   const attributes = states?.[entityId]?.attributes;
   return Array.isArray(attributes?.entries || attributes?.events || attributes?.items);
+}
+
+/**
+ * The attribution every feedparser sensor carries, the original
+ * custom-components/feedparser as well as the fork. It marks the sensor where
+ * the entity registry cannot: a YAML sensor from before the fork gave them a
+ * unique_id has no registry entry, so no `platform` to go by.
+ */
+const FEEDPARSER_ATTRIBUTION = 'Data retrieved using RSS feedparser';
+
+/** The event type of the `event.*` entities Home Assistant's own feedreader creates. */
+const FEEDREADER_EVENT_TYPE = 'feedreader';
+
+/**
+ * Options the picker's stub config and its per-entity suggestion share, so a
+ * suggested card previews as the card the picker would otherwise add.
+ */
+const DEFAULT_CARD_OPTIONS = { max_items: 5 } as const;
+
+/**
+ * Whether the card picker should suggest this card for an entity.
+ *
+ * Narrower than `hasFeedAttribute` on purpose: the card can read any sensor
+ * with a list of entries and any `event.*` entity, but the suggestion panel is
+ * only useful while it stays short, so only entities that clearly are feeds
+ * get it - feedparser sensors that carry entries, and feedreader's events.
+ */
+function isSuggestedFeed(hass: HomeAssistant, entityId: string): boolean {
+  const platform = hass.entities?.[entityId]?.platform;
+  const attributes = hass.states?.[entityId]?.attributes;
+
+  if (entityId.startsWith('event.')) {
+    const eventTypes = attributes?.event_types;
+    return (
+      platform === FEEDREADER_EVENT_TYPE || (Array.isArray(eventTypes) && eventTypes.includes(FEEDREADER_EVENT_TYPE))
+    );
+  }
+
+  const isFeedparser = platform === 'feedparser' || attributes?.attribution === FEEDPARSER_ATTRIBUTION;
+  return isFeedparser && hasFeedAttribute(hass.states, entityId);
 }
 
 type LovelaceCardConstructor = {
@@ -154,7 +195,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     return {
       entity: feedEntity ?? 'sensor.your_rss_feed_sensor',
-      max_items: 5,
+      ...DEFAULT_CARD_OPTIONS,
     };
   }
 
@@ -1472,6 +1513,13 @@ if (typeof window !== 'undefined') {
       description: 'A card to display RSS feed items in an accordion style.',
       documentationURL: 'https://github.com/timmaurice/lovelace-rss-accordion',
       preview: true,
+      // HA 2026.6+ asks this for every entity the "Add card" search turns up; older cores ignore it.
+      getEntitySuggestion: (hass: HomeAssistant, entityId: string) => {
+        if (!isSuggestedFeed(hass, entityId)) return null;
+        // `custom:` is only added to the entries HA builds from customCards itself;
+        // a config handed back from here is taken literally.
+        return { config: { type: `custom:${ELEMENT_NAME}`, entity: entityId, ...DEFAULT_CARD_OPTIONS } };
+      },
     });
   }
 }

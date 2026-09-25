@@ -2473,6 +2473,76 @@ describe('RssAccordion', () => {
       expect(entry?.preview).toBe(true);
     });
 
+    describe('entity suggestions', () => {
+      const suggest = (entityId: string): { config: Record<string, unknown> } | null => {
+        const entry = window.customCards?.find((card) => card.type === 'rss-accordion');
+        return entry!.getEntitySuggestion!(hass, entityId);
+      };
+      const entries = [{ title: 'One', link: 'https://example.com/one' }];
+
+      it('should suggest the card for a feedparser sensor, with the stub config', () => {
+        hass.states['sensor.local_news'] = {
+          entity_id: 'sensor.local_news',
+          state: '1',
+          attributes: { entries },
+        } as HassEntity;
+        hass.entities = { 'sensor.local_news': { entity_id: 'sensor.local_news', platform: 'feedparser' } };
+
+        const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, ['sensor.local_news']);
+        // The suggestion's preview has to be the card the picker would otherwise add.
+        expect(suggest('sensor.local_news')).toEqual({ config: { type: 'custom:rss-accordion', ...stub } });
+      });
+
+      it('should recognise a feedparser sensor that has no registry entry by its attribution', () => {
+        // YAML sensors of the original feedparser have no unique_id, so no platform to go by.
+        hass.states['sensor.local_news'] = {
+          entity_id: 'sensor.local_news',
+          state: '1',
+          attributes: { attribution: 'Data retrieved using RSS feedparser', entries },
+        } as HassEntity;
+
+        expect(suggest('sensor.local_news')?.config.entity).toBe('sensor.local_news');
+      });
+
+      it('should suggest the card for a feedreader event entity', () => {
+        hass.states['event.local_news'] = {
+          entity_id: 'event.local_news',
+          state: '2026-03-01T08:00:00.000+00:00',
+          attributes: { event_types: ['feedreader'], event_type: 'feedreader', title: 'One' },
+        } as HassEntity;
+
+        expect(suggest('event.local_news')).toEqual({
+          config: { type: 'custom:rss-accordion', entity: 'event.local_news', max_items: 5 },
+        });
+      });
+
+      it('should not suggest the card for entities that are not clearly feeds', () => {
+        // The card reads these, but the suggestion panel is only useful while it stays short.
+        hass.states['sensor.other_list'] = {
+          entity_id: 'sensor.other_list',
+          state: '1',
+          attributes: { entries },
+        } as HassEntity;
+        hass.states['event.doorbell'] = {
+          entity_id: 'event.doorbell',
+          state: '2026-03-01T08:00:00.000+00:00',
+          attributes: { event_types: ['ring'] },
+        } as HassEntity;
+        // A feedparser sensor that is unavailable has no entries to preview.
+        hass.states['sensor.broken_feed'] = {
+          entity_id: 'sensor.broken_feed',
+          state: 'unavailable',
+          attributes: {},
+        } as HassEntity;
+        hass.entities = { 'sensor.broken_feed': { entity_id: 'sensor.broken_feed', platform: 'feedparser' } };
+
+        expect(suggest('sensor.other_list')).toBeNull();
+        expect(suggest('event.doorbell')).toBeNull();
+        expect(suggest('sensor.broken_feed')).toBeNull();
+        expect(suggest('sensor.missing')).toBeNull();
+      });
+    });
+
     it('should fall back to a placeholder entity when no feed entity exists', () => {
       const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, []);
       expect(stub.entity).toBe('sensor.your_rss_feed_sensor');

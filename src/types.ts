@@ -53,6 +53,8 @@ export interface HassEntity {
 
 export interface HassEntityRegistryDisplayEntry {
   entity_id: string;
+  /** The integration that created the entity, e.g. `feedparser`. */
+  platform?: string;
   display_precision?: number;
 }
 
