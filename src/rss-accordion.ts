@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { repeat } from 'lit/directives/repeat.js';
 import {
+  EntityNameItem,
   HassEntity,
   HomeAssistant,
   LovelaceCardConfig,
@@ -31,6 +32,7 @@ declare global {
       description: string;
       documentationURL: string;
       preview?: boolean;
+      getEntitySuggestion?: (hass: HomeAssistant, entityId: string) => { config: Record<string, unknown> } | null;
     }[];
   }
 }
@@ -61,6 +63,53 @@ function hasFeedAttribute(states: HomeAssistant['states'] | undefined, entityId:
 
   const attributes = states?.[entityId]?.attributes;
   return Array.isArray(attributes?.entries || attributes?.events || attributes?.items);
+}
+
+/**
+ * The attribution every feedparser sensor carries, the original
+ * custom-components/feedparser as well as the fork. It marks the sensor where
+ * the entity registry cannot: a YAML sensor from before the fork gave them a
+ * unique_id has no registry entry, so no `platform` to go by.
+ */
+const FEEDPARSER_ATTRIBUTION = 'Data retrieved using RSS feedparser';
+
+/** The event type of the `event.*` entities Home Assistant's own feedreader creates. */
+const FEEDREADER_EVENT_TYPE = 'feedreader';
+
+/**
+ * How the card names an entity: device, then entity - the default Home
+ * Assistant's own cards compose names from. An entity that takes its device's
+ * name comes out as just that name, not as the name twice.
+ */
+const ENTITY_NAME: EntityNameItem[] = [{ type: 'device' }, { type: 'entity' }];
+
+/**
+ * Options the picker's stub config and its per-entity suggestion share, so a
+ * suggested card previews as the card the picker would otherwise add.
+ */
+const DEFAULT_CARD_OPTIONS = { max_items: 5 } as const;
+
+/**
+ * Whether the card picker should suggest this card for an entity.
+ *
+ * Narrower than `hasFeedAttribute` on purpose: the card can read any sensor
+ * with a list of entries and any `event.*` entity, but the suggestion panel is
+ * only useful while it stays short, so only entities that clearly are feeds
+ * get it - feedparser sensors that carry entries, and feedreader's events.
+ */
+function isSuggestedFeed(hass: HomeAssistant, entityId: string): boolean {
+  const platform = hass.entities?.[entityId]?.platform;
+  const attributes = hass.states?.[entityId]?.attributes;
+
+  if (entityId.startsWith('event.')) {
+    const eventTypes = attributes?.event_types;
+    return (
+      platform === FEEDREADER_EVENT_TYPE || (Array.isArray(eventTypes) && eventTypes.includes(FEEDREADER_EVENT_TYPE))
+    );
+  }
+
+  const isFeedparser = platform === 'feedparser' || attributes?.attribution === FEEDPARSER_ATTRIBUTION;
+  return isFeedparser && hasFeedAttribute(hass.states, entityId);
 }
 
 type LovelaceCardConstructor = {
@@ -154,7 +203,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     return {
       entity: feedEntity ?? 'sensor.your_rss_feed_sensor',
-      max_items: 5,
+      ...DEFAULT_CARD_OPTIONS,
     };
   }
 
@@ -181,29 +230,14 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   }
 
   /**
-   * The sections-view sizing API. `getLayoutOptions` is what Home Assistant
-   * read before 2024.11 and is kept for those releases.
+   * The sections-view sizing API.
    *
-   * Both are instance methods, not static ones: `hui-card` reads them off the
-   * card element it created (`if (this._element.getGridOptions)`), so a static
+   * An instance method, not a static one: `hui-card` reads it off the card
+   * element it created (`if (this._element.getGridOptions)`), so a static
    * method is never found and the card falls back to the default sizing.
    */
   public getGridOptions(): LovelaceGridOptions {
     return { columns: 'full', min_columns: 6, rows: 'auto', min_rows: 1 };
-  }
-
-  public getLayoutOptions(): {
-    grid_rows: number;
-    grid_columns: number;
-    grid_min_rows: number;
-    grid_min_columns: number;
-  } {
-    return {
-      grid_rows: 3,
-      grid_columns: 12,
-      grid_min_rows: 1,
-      grid_min_columns: 6,
-    };
   }
 
   public connectedCallback(): void {
@@ -357,7 +391,13 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         entitiesChanged = true;
       }
 
-      if (entitiesChanged || oldHass.language !== this.hass.language) {
+      // Home Assistant builds a new formatEntityName whenever the entity, device,
+      // area or floor registry changes, so a new one means a name may have changed.
+      if (
+        entitiesChanged ||
+        oldHass.language !== this.hass.language ||
+        oldHass.formatEntityName !== this.hass.formatEntityName
+      ) {
         return true;
       }
       return false; // All other hass changes are ignored
@@ -800,8 +840,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const playback = this._playbackFor(url);
     const position = this._scrub?.url === url ? this._scrub.value : playback.position;
     const target = this._config.audio_target;
-    const targetState = this._targetStateObj();
-    const targetName = (targetState?.attributes.friendly_name as string | undefined) || target;
+    const targetName = target ? this._getEntityName(target) : target;
 
     return html`
       <div class="audio-player ${playback.active ? 'active' : ''}">
@@ -952,9 +991,17 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return allItems;
   }
 
+  /**
+   * An entity's display name. `hass.formatEntityName` follows the device and
+   * entity names the user set in the registry, which `friendly_name` only
+   * approximates; a hass object without it (a test double, or a frontend from
+   * before 2026.4) falls back to the friendly name, and an entity Home
+   * Assistant does not know to its id.
+   */
   private _getEntityName(entityId: string): string {
     const stateObj = this.hass.states[entityId];
-    return stateObj?.attributes.friendly_name || entityId;
+    if (!stateObj) return entityId;
+    return this.hass.formatEntityName?.(stateObj, ENTITY_NAME) || stateObj.attributes.friendly_name || entityId;
   }
 
   private _getItemSourceName(item: FeedEntry): string {
@@ -1443,7 +1490,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     return html`
       <ha-button
-        outlined
+        appearance=${this._showOnlyBookmarks ? 'accent' : 'outlined'}
         class="bookmark-filter-button ${this._showOnlyBookmarks ? 'active' : ''}"
         ?disabled=${!hasAnyBookmarks}
         size=${this._buttonSize()}
@@ -1486,6 +1533,14 @@ if (typeof window !== 'undefined') {
       name: 'RSS Accordion',
       description: 'A card to display RSS feed items in an accordion style.',
       documentationURL: 'https://github.com/timmaurice/lovelace-rss-accordion',
+      preview: true,
+      // HA 2026.6+ asks this for every entity the "Add card" search turns up; older cores ignore it.
+      getEntitySuggestion: (hass: HomeAssistant, entityId: string) => {
+        if (!isSuggestedFeed(hass, entityId)) return null;
+        // `custom:` is only added to the entries HA builds from customCards itself;
+        // a config handed back from here is taken literally.
+        return { config: { type: `custom:${ELEMENT_NAME}`, entity: entityId, ...DEFAULT_CARD_OPTIONS } };
+      },
     });
   }
 }

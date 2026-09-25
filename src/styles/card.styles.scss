@@ -228,7 +228,6 @@ ha-card {
     }
 
     .bookmark-button {
-      --mdc-icon-button-size: 24px;
       color: var(--accent-color);
       cursor: pointer;
     }
@@ -420,11 +419,15 @@ ha-card {
 }
 
 .bookmark-filter-button {
-  --mdc-button-outline-color: var(--divider-color);
-  --mdc-theme-primary: var(--primary-text-color);
+  /*
+   * ha-button is Web Awesome's button. These are the tokens its `outlined`
+   * appearance reads for the border and the label, and the one its label
+   * takes the font size from; the --mdc-button-* ones went with mwc-button.
+   */
+  --wa-color-border-loud: var(--divider-color);
+  --wa-color-on-quiet: var(--primary-text-color);
   --ha-font-size-m: 12px;
   --icon-color: var(--primary-text-color);
-  --mdc-typography-button-font-size: 0.8rem;
 
   ha-icon {
     --mdc-icon-size: 12px;
@@ -432,16 +435,16 @@ ha-card {
     transform: translate(0, -1px);
   }
 
+  /* The active filter switches to the solid `accent` appearance, which has no border. */
   &.active {
-    --mdc-theme-primary: var(--text-primary-color);
+    --wa-color-on-loud: var(--text-primary-color);
     --button-color-fill-loud-hover: var(--accent-color);
     --wa-color-fill-loud: var(--accent-color);
     --icon-color: var(--text-primary-color);
-    --mdc-button-outline-color: var(--accent-color); // Match outline to background for a solid look
   }
 
+  /* ha-button greys out a disabled outlined button's border and label itself. */
   &[disabled] {
-    --mdc-button-outline-color: var(--disabled-text-color);
     color: var(--disabled-text-color);
     cursor: not-allowed;
   }

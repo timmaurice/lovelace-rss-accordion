@@ -37,8 +37,22 @@ export interface HomeAssistant {
     darkMode?: boolean;
     [key: string]: unknown;
   };
+  /**
+   * Composes an entity's name the way Home Assistant's own cards do (since
+   * 2026.4). Optional because a test double, or a hass object from an older
+   * frontend, does not carry it.
+   */
+  formatEntityName?: (
+    stateObj: HassEntity,
+    name: string | EntityNameItem | EntityNameItem[] | undefined,
+    options?: { separator?: string },
+  ) => string;
   // You can expand this with more properties from the hass object if needed
 }
+
+/** Mirrors the frontend's entity_name_config.ts, the shape hass.formatEntityName accepts. */
+export type EntityNameItem =
+  { type: 'floor' | 'area' | 'parent_device' | 'device' | 'entity' } | { type: 'text'; text: string };
 
 // A basic representation of a Home Assistant entity state object
 export interface HassEntity {
@@ -53,6 +67,8 @@ export interface HassEntity {
 
 export interface HassEntityRegistryDisplayEntry {
   entity_id: string;
+  /** The integration that created the entity, e.g. `feedparser`. */
+  platform?: string;
   display_precision?: number;
 }
 

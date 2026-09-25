@@ -770,6 +770,24 @@ describe('RssAccordion', () => {
       expect(items?.[0].querySelector('.title-link')?.textContent?.trim()).toBe(feedItem2.title);
     });
 
+    it('should outline the filter button and fill it once the filter is on', async () => {
+      // ha-button is Web Awesome's button: it picks its look from `appearance`
+      // and ignores mwc-button's `outlined`, so the button used to render
+      // filled in the brand colour whether the filter was on or off.
+      await element.updateComplete;
+      element.shadowRoot?.querySelector<HTMLElement>('.bookmark-button')?.click();
+      await element.updateComplete;
+
+      const filterButton = element.shadowRoot!.querySelector<HTMLElement>('.bookmark-filter-button')!;
+      expect(filterButton.hasAttribute('outlined')).toBe(false);
+      expect(filterButton.getAttribute('appearance')).toBe('outlined');
+
+      filterButton.click();
+      await element.updateComplete;
+
+      expect(filterButton.getAttribute('appearance')).toBe('accent');
+    });
+
     it('re-opens only one panel when a filtered-out entry returns', async () => {
       // A panel the bookmark filter hides is not in the DOM, so opening another
       // one cannot collapse it - only its key can be dropped, and nothing was
@@ -1285,6 +1303,31 @@ describe('RssAccordion', () => {
       const source = items?.[0].querySelector('.item-source');
       expect(source).not.toBeNull();
       expect(source?.textContent).toContain('Feed 1');
+    });
+
+    it('should name the source the way Home Assistant composes entity names', async () => {
+      // friendly_name is fixed when the state is written and does not follow
+      // the device and entity names the user set in the registry.
+      const formatEntityName = vi.fn<NonNullable<HomeAssistant['formatEntityName']>>(() => 'Local news');
+      element.hass = { ...hass, formatEntityName };
+      element.setConfig({ type: 'custom:rss-accordion', entity: 'sensor.feed1', show_source: true });
+      await element.updateComplete;
+
+      const source = element.shadowRoot?.querySelector('.item-source');
+      expect(source?.textContent).toContain('Local news');
+      expect(source?.textContent).not.toContain('Feed 1');
+      expect(formatEntityName).toHaveBeenCalledWith(hass.states['sensor.feed1'], [
+        { type: 'device' },
+        { type: 'entity' },
+      ]);
+    });
+
+    it('should fall back to the friendly name when the formatter has no name to give', async () => {
+      element.hass = { ...hass, formatEntityName: () => '' };
+      element.setConfig({ type: 'custom:rss-accordion', entity: 'sensor.feed1', show_source: true });
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelector('.item-source')?.textContent).toContain('Feed 1');
     });
 
     it('should prioritize item category over entity name if available', async () => {
@@ -1825,6 +1868,13 @@ describe('RssAccordion', () => {
       );
       expect(audio.el.play).not.toHaveBeenCalled();
       expect(element.shadowRoot?.querySelector('.audio-target')?.textContent).toContain('Kitchen');
+    });
+
+    it('should name the speaker the way Home Assistant composes entity names', async () => {
+      element.hass = { ...hass, formatEntityName: () => 'Kitchen Speaker' };
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelector('.audio-target')?.textContent).toContain('Kitchen Speaker');
     });
 
     it('should follow the speaker and pause it', async () => {
@@ -2448,12 +2498,89 @@ describe('RssAccordion', () => {
       expect(stub.entity).toBe('event.podcast');
     });
 
+    it('should ask the card picker for a live preview', () => {
+      // Without `preview` the picker lists the card by name only, so the stub
+      // entity getStubConfig picks for that preview is never seen.
+      const entry = window.customCards?.find((card) => card.type === 'rss-accordion');
+      expect(entry?.preview).toBe(true);
+    });
+
+    describe('entity suggestions', () => {
+      const suggest = (entityId: string): { config: Record<string, unknown> } | null => {
+        const entry = window.customCards?.find((card) => card.type === 'rss-accordion');
+        return entry!.getEntitySuggestion!(hass, entityId);
+      };
+      const entries = [{ title: 'One', link: 'https://example.com/one' }];
+
+      it('should suggest the card for a feedparser sensor, with the stub config', () => {
+        hass.states['sensor.local_news'] = {
+          entity_id: 'sensor.local_news',
+          state: '1',
+          attributes: { entries },
+        } as HassEntity;
+        hass.entities = { 'sensor.local_news': { entity_id: 'sensor.local_news', platform: 'feedparser' } };
+
+        const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, ['sensor.local_news']);
+        // The suggestion's preview has to be the card the picker would otherwise add.
+        expect(suggest('sensor.local_news')).toEqual({ config: { type: 'custom:rss-accordion', ...stub } });
+      });
+
+      it('should recognise a feedparser sensor that has no registry entry by its attribution', () => {
+        // YAML sensors of the original feedparser have no unique_id, so no platform to go by.
+        hass.states['sensor.local_news'] = {
+          entity_id: 'sensor.local_news',
+          state: '1',
+          attributes: { attribution: 'Data retrieved using RSS feedparser', entries },
+        } as HassEntity;
+
+        expect(suggest('sensor.local_news')?.config.entity).toBe('sensor.local_news');
+      });
+
+      it('should suggest the card for a feedreader event entity', () => {
+        hass.states['event.local_news'] = {
+          entity_id: 'event.local_news',
+          state: '2026-03-01T08:00:00.000+00:00',
+          attributes: { event_types: ['feedreader'], event_type: 'feedreader', title: 'One' },
+        } as HassEntity;
+
+        expect(suggest('event.local_news')).toEqual({
+          config: { type: 'custom:rss-accordion', entity: 'event.local_news', max_items: 5 },
+        });
+      });
+
+      it('should not suggest the card for entities that are not clearly feeds', () => {
+        // The card reads these, but the suggestion panel is only useful while it stays short.
+        hass.states['sensor.other_list'] = {
+          entity_id: 'sensor.other_list',
+          state: '1',
+          attributes: { entries },
+        } as HassEntity;
+        hass.states['event.doorbell'] = {
+          entity_id: 'event.doorbell',
+          state: '2026-03-01T08:00:00.000+00:00',
+          attributes: { event_types: ['ring'] },
+        } as HassEntity;
+        // A feedparser sensor that is unavailable has no entries to preview.
+        hass.states['sensor.broken_feed'] = {
+          entity_id: 'sensor.broken_feed',
+          state: 'unavailable',
+          attributes: {},
+        } as HassEntity;
+        hass.entities = { 'sensor.broken_feed': { entity_id: 'sensor.broken_feed', platform: 'feedparser' } };
+
+        expect(suggest('sensor.other_list')).toBeNull();
+        expect(suggest('event.doorbell')).toBeNull();
+        expect(suggest('sensor.broken_feed')).toBeNull();
+        expect(suggest('sensor.missing')).toBeNull();
+      });
+    });
+
     it('should fall back to a placeholder entity when no feed entity exists', () => {
       const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, []);
       expect(stub.entity).toBe('sensor.your_rss_feed_sensor');
     });
 
-    // Home Assistant reads both off the card element it created - `hui-card`
+    // Home Assistant reads this off the card element it created - `hui-card`
     // does `if (this._element.getGridOptions)` - so a static method is never
     // seen and the card silently keeps the default sizing.
     it('should expose grid options on the instance for sections views', () => {
@@ -2465,19 +2592,9 @@ describe('RssAccordion', () => {
       });
     });
 
-    it('should expose the pre-2024.11 layout options on the instance', () => {
-      expect(element.getLayoutOptions()).toEqual({
-        grid_rows: 3,
-        grid_columns: 12,
-        grid_min_rows: 1,
-        grid_min_columns: 6,
-      });
-    });
-
     it('should not hide the sizing API behind the constructor', () => {
       const ctor = element.constructor as unknown as Record<string, unknown>;
       expect(ctor.getGridOptions).toBeUndefined();
-      expect(ctor.getLayoutOptions).toBeUndefined();
     });
   });
 
