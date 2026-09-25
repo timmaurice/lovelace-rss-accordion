@@ -1305,6 +1305,31 @@ describe('RssAccordion', () => {
       expect(source?.textContent).toContain('Feed 1');
     });
 
+    it('should name the source the way Home Assistant composes entity names', async () => {
+      // friendly_name is fixed when the state is written and does not follow
+      // the device and entity names the user set in the registry.
+      const formatEntityName = vi.fn<NonNullable<HomeAssistant['formatEntityName']>>(() => 'Local news');
+      element.hass = { ...hass, formatEntityName };
+      element.setConfig({ type: 'custom:rss-accordion', entity: 'sensor.feed1', show_source: true });
+      await element.updateComplete;
+
+      const source = element.shadowRoot?.querySelector('.item-source');
+      expect(source?.textContent).toContain('Local news');
+      expect(source?.textContent).not.toContain('Feed 1');
+      expect(formatEntityName).toHaveBeenCalledWith(hass.states['sensor.feed1'], [
+        { type: 'device' },
+        { type: 'entity' },
+      ]);
+    });
+
+    it('should fall back to the friendly name when the formatter has no name to give', async () => {
+      element.hass = { ...hass, formatEntityName: () => '' };
+      element.setConfig({ type: 'custom:rss-accordion', entity: 'sensor.feed1', show_source: true });
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelector('.item-source')?.textContent).toContain('Feed 1');
+    });
+
     it('should prioritize item category over entity name if available', async () => {
       ((hass.states['sensor.feed1'].attributes.entries as unknown[])[0] as Record<string, unknown>).category =
         'Custom Category';
@@ -1843,6 +1868,13 @@ describe('RssAccordion', () => {
       );
       expect(audio.el.play).not.toHaveBeenCalled();
       expect(element.shadowRoot?.querySelector('.audio-target')?.textContent).toContain('Kitchen');
+    });
+
+    it('should name the speaker the way Home Assistant composes entity names', async () => {
+      element.hass = { ...hass, formatEntityName: () => 'Kitchen Speaker' };
+      await element.updateComplete;
+
+      expect(element.shadowRoot?.querySelector('.audio-target')?.textContent).toContain('Kitchen Speaker');
     });
 
     it('should follow the speaker and pause it', async () => {

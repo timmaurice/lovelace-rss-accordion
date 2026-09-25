@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { repeat } from 'lit/directives/repeat.js';
 import {
+  EntityNameItem,
   HassEntity,
   HomeAssistant,
   LovelaceCardConfig,
@@ -74,6 +75,13 @@ const FEEDPARSER_ATTRIBUTION = 'Data retrieved using RSS feedparser';
 
 /** The event type of the `event.*` entities Home Assistant's own feedreader creates. */
 const FEEDREADER_EVENT_TYPE = 'feedreader';
+
+/**
+ * How the card names an entity: device, then entity - the default Home
+ * Assistant's own cards compose names from. An entity that takes its device's
+ * name comes out as just that name, not as the name twice.
+ */
+const ENTITY_NAME: EntityNameItem[] = [{ type: 'device' }, { type: 'entity' }];
 
 /**
  * Options the picker's stub config and its per-entity suggestion share, so a
@@ -383,7 +391,13 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         entitiesChanged = true;
       }
 
-      if (entitiesChanged || oldHass.language !== this.hass.language) {
+      // Home Assistant builds a new formatEntityName whenever the entity, device,
+      // area or floor registry changes, so a new one means a name may have changed.
+      if (
+        entitiesChanged ||
+        oldHass.language !== this.hass.language ||
+        oldHass.formatEntityName !== this.hass.formatEntityName
+      ) {
         return true;
       }
       return false; // All other hass changes are ignored
@@ -826,8 +840,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const playback = this._playbackFor(url);
     const position = this._scrub?.url === url ? this._scrub.value : playback.position;
     const target = this._config.audio_target;
-    const targetState = this._targetStateObj();
-    const targetName = (targetState?.attributes.friendly_name as string | undefined) || target;
+    const targetName = target ? this._getEntityName(target) : target;
 
     return html`
       <div class="audio-player ${playback.active ? 'active' : ''}">
@@ -978,9 +991,17 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     return allItems;
   }
 
+  /**
+   * An entity's display name. `hass.formatEntityName` follows the device and
+   * entity names the user set in the registry, which `friendly_name` only
+   * approximates; a hass object without it (a test double, or a frontend from
+   * before 2026.4) falls back to the friendly name, and an entity Home
+   * Assistant does not know to its id.
+   */
   private _getEntityName(entityId: string): string {
     const stateObj = this.hass.states[entityId];
-    return stateObj?.attributes.friendly_name || entityId;
+    if (!stateObj) return entityId;
+    return this.hass.formatEntityName?.(stateObj, ENTITY_NAME) || stateObj.attributes.friendly_name || entityId;
   }
 
   private _getItemSourceName(item: FeedEntry): string {
