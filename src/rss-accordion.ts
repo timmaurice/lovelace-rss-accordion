@@ -181,29 +181,14 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   }
 
   /**
-   * The sections-view sizing API. `getLayoutOptions` is what Home Assistant
-   * read before 2024.11 and is kept for those releases.
+   * The sections-view sizing API.
    *
-   * Both are instance methods, not static ones: `hui-card` reads them off the
-   * card element it created (`if (this._element.getGridOptions)`), so a static
+   * An instance method, not a static one: `hui-card` reads it off the card
+   * element it created (`if (this._element.getGridOptions)`), so a static
    * method is never found and the card falls back to the default sizing.
    */
   public getGridOptions(): LovelaceGridOptions {
     return { columns: 'full', min_columns: 6, rows: 'auto', min_rows: 1 };
-  }
-
-  public getLayoutOptions(): {
-    grid_rows: number;
-    grid_columns: number;
-    grid_min_rows: number;
-    grid_min_columns: number;
-  } {
-    return {
-      grid_rows: 3,
-      grid_columns: 12,
-      grid_min_rows: 1,
-      grid_min_columns: 6,
-    };
   }
 
   public connectedCallback(): void {
