@@ -2466,6 +2466,13 @@ describe('RssAccordion', () => {
       expect(stub.entity).toBe('event.podcast');
     });
 
+    it('should ask the card picker for a live preview', () => {
+      // Without `preview` the picker lists the card by name only, so the stub
+      // entity getStubConfig picks for that preview is never seen.
+      const entry = window.customCards?.find((card) => card.type === 'rss-accordion');
+      expect(entry?.preview).toBe(true);
+    });
+
     it('should fall back to a placeholder entity when no feed entity exists', () => {
       const stub = (element.constructor as typeof RssAccordion).getStubConfig(hass, []);
       expect(stub.entity).toBe('sensor.your_rss_feed_sensor');

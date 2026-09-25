@@ -1471,6 +1471,7 @@ if (typeof window !== 'undefined') {
       name: 'RSS Accordion',
       description: 'A card to display RSS feed items in an accordion style.',
       documentationURL: 'https://github.com/timmaurice/lovelace-rss-accordion',
+      preview: true,
     });
   }
 }
