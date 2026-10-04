@@ -42,7 +42,8 @@
     "use_multiple_entities": "Utiliser plusieurs entités",
     "show_source": "Afficher la source",
     "add_entity": "Ajouter une entité",
-    "remove_entity": "Supprimer l'entité"
+    "remove_entity": "Supprimer l'entité",
+    "event_single_item": "Les entités event ne contiennent que la dernière entrée du flux, la carte n'affiche donc qu'un seul élément pour elles. Pour une liste d'entrées, utilisez un capteur feedparser :"
   },
   "card": {
     "to_news_article": "Vers l'article",

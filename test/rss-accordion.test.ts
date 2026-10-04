@@ -2737,6 +2737,45 @@ describe('RssAccordion', () => {
     });
   });
 
+  describe('editor', () => {
+    const renderEditor = async (editorConfig: RssAccordionConfig) => {
+      await import('../src/editor');
+      const editor = document.createElement('rss-accordion-editor') as HTMLElement & {
+        hass: HomeAssistant;
+        setConfig(config: RssAccordionConfig): void;
+        updateComplete: Promise<boolean>;
+      };
+      editor.hass = hass;
+      editor.setConfig(editorConfig);
+      document.body.appendChild(editor);
+      await editor.updateComplete;
+      return editor;
+    };
+
+    it('explains that an event entity shows a single item', async () => {
+      const editor = await renderEditor({ type: 'custom:rss-accordion', entity: 'event.news' });
+
+      const hint = editor.shadowRoot?.querySelector('.event-hint');
+      expect(hint?.textContent).toContain('newest feed entry');
+      expect(hint?.querySelector('a')?.getAttribute('href')).toBe('https://github.com/timmaurice/feedparser');
+      editor.remove();
+    });
+
+    it('shows the hint when one of several entities is an event', async () => {
+      const editor = await renderEditor({ type: 'custom:rss-accordion', entities: ['sensor.feed', 'event.news'] });
+
+      expect(editor.shadowRoot?.querySelector('.event-hint')).not.toBeNull();
+      editor.remove();
+    });
+
+    it('shows no hint for sensor entities', async () => {
+      const editor = await renderEditor({ type: 'custom:rss-accordion', entity: 'sensor.feed' });
+
+      expect(editor.shadowRoot?.querySelector('.event-hint')).toBeNull();
+      editor.remove();
+    });
+  });
+
   describe('Duplicate resource registration', () => {
     it('should not throw when the bundle is evaluated a second time', async () => {
       // A duplicate Lovelace resource entry loads the bundle twice. Without the
