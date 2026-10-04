@@ -42,7 +42,8 @@
     "use_multiple_entities": "Use multiple entities",
     "show_source": "Show item source",
     "add_entity": "Add Entity",
-    "remove_entity": "Remove Entity"
+    "remove_entity": "Remove Entity",
+    "event_single_item": "Event entities only hold the newest feed entry, so the card shows a single item for them. For a list of entries, use a feedparser sensor:"
   },
   "card": {
     "to_news_article": "To the news article",

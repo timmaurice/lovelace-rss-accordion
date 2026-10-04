@@ -364,6 +364,18 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                     ></ha-entity-picker>
                   `
             }
+            ${
+              entities.some((entityId) => entityId.startsWith('event.'))
+                ? html`
+                    <ha-alert class="event-hint" alert-type="info">
+                      ${localize(this.hass, 'component.rss-accordion.editor.event_single_item')}
+                      <a href="https://github.com/timmaurice/feedparser" target="_blank" rel="noopener noreferrer"
+                        >A better Feedparser</a
+                      >
+                    </ha-alert>
+                  `
+                : ''
+            }
           </div>
 
           <div class="group">
