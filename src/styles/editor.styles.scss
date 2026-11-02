@@ -32,7 +32,8 @@
   }
 }
 
-ha-formfield {
+// ha-switch draws its label from the slot since HA 2026.5; ha-formfield is gone from 2026.11.
+ha-switch {
   padding-bottom: 8px;
 }
 

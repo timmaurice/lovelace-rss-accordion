@@ -320,9 +320,9 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
               .configValue=${'title'}
               @input=${this._valueChanged}
             ></ha-input>
-            <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.use_multiple_entities')}>
-              <ha-switch .checked=${this._isMultiEntityMode()} @change=${this._toggleMultiEntityMode}></ha-switch>
-            </ha-formfield>
+            <ha-switch .checked=${this._isMultiEntityMode()} @change=${this._toggleMultiEntityMode}
+              >${localize(this.hass, 'component.rss-accordion.editor.use_multiple_entities')}</ha-switch
+            >
             ${
               this._isMultiEntityMode()
                 ? html`
@@ -464,23 +464,21 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                 >
               </ha-dropdown>
             </div>
-            <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.allow_multiple')}>
-              <ha-switch
-                .checked=${!!this._config.allow_multiple}
-                .configValue=${'allow_multiple'}
-                @change=${this._valueChanged}
-              ></ha-switch>
-            </ha-formfield>
+            <ha-switch
+              .checked=${!!this._config.allow_multiple}
+              .configValue=${'allow_multiple'}
+              @change=${this._valueChanged}
+              >${localize(this.hass, 'component.rss-accordion.editor.allow_multiple')}</ha-switch
+            >
             ${
               hasAudio
                 ? html`
-                    <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_audio_player')}>
-                      <ha-switch
-                        .checked=${this._config.show_audio_player !== false}
-                        .configValue=${'show_audio_player'}
-                        @change=${this._valueChanged}
-                      ></ha-switch>
-                    </ha-formfield>
+                    <ha-switch
+                      .checked=${this._config.show_audio_player !== false}
+                      .configValue=${'show_audio_player'}
+                      @change=${this._valueChanged}
+                      >${localize(this.hass, 'component.rss-accordion.editor.show_audio_player')}</ha-switch
+                    >
                     ${
                       this._config.show_audio_player !== false
                         ? html`<ha-entity-picker
@@ -495,29 +493,26 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                   `
                 : ''
             }
-            <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_bookmarks')}>
-              <ha-switch
-                .checked=${!!this._config.show_bookmarks}
-                .configValue=${'show_bookmarks'}
-                @change=${this._valueChanged}
-              ></ha-switch>
-            </ha-formfield>
-            <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_source')}>
-              <ha-switch
-                .checked=${
-                  this._config.show_source !== undefined ? this._config.show_source : this._getEntities().length > 1
-                }
-                .configValue=${'show_source'}
-                @change=${this._valueChanged}
-              ></ha-switch>
-            </ha-formfield>
-            <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_item_image')}>
-              <ha-switch
-                .checked=${this._config.show_item_image !== false}
-                .configValue=${'show_item_image'}
-                @change=${this._valueChanged}
-              ></ha-switch>
-            </ha-formfield>
+            <ha-switch
+              .checked=${!!this._config.show_bookmarks}
+              .configValue=${'show_bookmarks'}
+              @change=${this._valueChanged}
+              >${localize(this.hass, 'component.rss-accordion.editor.show_bookmarks')}</ha-switch
+            >
+            <ha-switch
+              .checked=${
+                this._config.show_source !== undefined ? this._config.show_source : this._getEntities().length > 1
+              }
+              .configValue=${'show_source'}
+              @change=${this._valueChanged}
+              >${localize(this.hass, 'component.rss-accordion.editor.show_source')}</ha-switch
+            >
+            <ha-switch
+              .checked=${this._config.show_item_image !== false}
+              .configValue=${'show_item_image'}
+              @change=${this._valueChanged}
+              >${localize(this.hass, 'component.rss-accordion.editor.show_item_image')}</ha-switch
+            >
           </div>
 
           ${
@@ -595,55 +590,45 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
                     <div class="group-header">
                       ${localize(this.hass, 'component.rss-accordion.editor.groups.channel')}
                     </div>
-                    <ha-formfield .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_info')}>
-                      <ha-switch
-                        .checked=${!!this._config.show_channel_info}
-                        .configValue=${'show_channel_info'}
-                        @change=${this._valueChanged}
-                      ></ha-switch>
-                    </ha-formfield>
+                    <ha-switch
+                      .checked=${!!this._config.show_channel_info}
+                      .configValue=${'show_channel_info'}
+                      @change=${this._valueChanged}
+                      >${localize(this.hass, 'component.rss-accordion.editor.show_channel_info')}</ha-switch
+                    >
                     ${
                       this._config.show_channel_info && channelImage
                         ? html`
-                            <ha-formfield
-                              .label=${localize(this.hass, 'component.rss-accordion.editor.crop_channel_image')}
+                            <ha-switch
+                              .checked=${!!this._config.crop_channel_image}
+                              .configValue=${'crop_channel_image'}
+                              @change=${this._valueChanged}
+                              >${localize(this.hass, 'component.rss-accordion.editor.crop_channel_image')}</ha-switch
                             >
-                              <ha-switch
-                                .checked=${!!this._config.crop_channel_image}
-                                .configValue=${'crop_channel_image'}
-                                @change=${this._valueChanged}
-                              ></ha-switch>
-                            </ha-formfield>
                           `
                         : ''
                     }
                     ${
                       this._config.show_channel_info && channelPublished
                         ? html`
-                            <ha-formfield
-                              .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_published_date')}
+                            <ha-switch
+                              .checked=${!!this._config.show_published_date}
+                              .configValue=${'show_published_date'}
+                              @change=${this._valueChanged}
+                              >${localize(this.hass, 'component.rss-accordion.editor.show_channel_published_date')}</ha-switch
                             >
-                              <ha-switch
-                                .checked=${!!this._config.show_published_date}
-                                .configValue=${'show_published_date'}
-                                @change=${this._valueChanged}
-                              ></ha-switch>
-                            </ha-formfield>
                           `
                         : ''
                     }
                     ${
                       this._config.show_channel_info && (channel.description || channel.subtitle)
                         ? html`
-                            <ha-formfield
-                              .label=${localize(this.hass, 'component.rss-accordion.editor.show_channel_description')}
+                            <ha-switch
+                              .checked=${this._config.show_channel_description !== false}
+                              .configValue=${'show_channel_description'}
+                              @change=${this._valueChanged}
+                              >${localize(this.hass, 'component.rss-accordion.editor.show_channel_description')}</ha-switch
                             >
-                              <ha-switch
-                                .checked=${this._config.show_channel_description !== false}
-                                .configValue=${'show_channel_description'}
-                                @change=${this._valueChanged}
-                              ></ha-switch>
-                            </ha-formfield>
                             ${
                               (this._config.show_channel_description ?? true)
                                 ? html`
