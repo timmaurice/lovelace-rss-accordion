@@ -1,6 +1,6 @@
 # RSS Accordion Card
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=flat-square)](https://github.com/hacs/integration)
+[![Marketplace / HACS](https://img.shields.io/badge/Marketplace%20%2F%20HACS-Default-41BDF5.svg?style=flat-square)](https://hacs.xyz/docs/marketplace/)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/timmaurice/lovelace-rss-accordion?style=flat-square)
 [![GH-downloads](https://img.shields.io/github/downloads/timmaurice/lovelace-rss-accordion/total?style=flat-square)](https://github.com/timmaurice/lovelace-rss-accordion/releases)
 [![GH-last-commit](https://img.shields.io/github/last-commit/timmaurice/lovelace-rss-accordion.svg?style=flat-square)](https://github.com/timmaurice/lovelace-rss-accordion/commits/master)
@@ -59,13 +59,15 @@ If you would like to contribute a new translation:
 
 ## Requirements
 
-Home Assistant **2026.4** or newer, enforced by HACS through `hacs.json`.
+Home Assistant **2026.5** or newer, declared in `hacs.json`. On an older core HACS shows
+the update but refuses to install it, and the installed version keeps working.
 
-The minimum is the visual editor's, not the card's. The editor is built on `ha-input`,
-which Home Assistant introduced in 2026.4; on an older core its fields render as empty
-unknown elements. The card itself uses nothing newer and renders correctly on older cores,
-so a YAML-configured dashboard is unaffected - but the HACS minimum applies to
-installation, so those cores cannot install it from HACS.
+The minimum is the visual editor's, not the card's. The editor labels its switches
+through `ha-switch`'s default slot, which Home Assistant renders since 2026.5, and builds
+its fields on `ha-input`, introduced in 2026.4; on an older core the switches lose their
+labels and the fields render as empty unknown elements. The card itself uses nothing newer
+and renders correctly on older cores, so a YAML-configured dashboard is unaffected - but
+the minimum applies to installation, so those cores cannot install this version.
 
 The bookmark filter button adapts to the core it runs on: `ha-button` renamed its size
 tokens from `small`/`medium`/`large` to `xs`/`s`/`m`/`l`/`xl` in 2026.7, and neither
@@ -73,11 +75,11 @@ version understands the other's, so the card picks the one the running core know
 
 ## Installation
 
-### HACS (Recommended)
+### Marketplace or HACS (Recommended)
 
-This card is available in the [Home Assistant Community Store (HACS)](https://hacs.xyz/).
+This card is in the default catalog. From Home Assistant 2026.11, find it under **Settings** → **Marketplace**; on earlier versions, in the [Home Assistant Community Store (HACS)](https://hacs.xyz/). The button opens it in whichever of the two your Home Assistant has:
 
-<a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=timmaurice&repository=lovelace-rss-accordion&category=plugin" target="_blank" rel="noreferrer noopener"><img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open your Home Assistant instance and open a repository inside the Home Assistant Community Store." /></a>
+<a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=timmaurice&repository=lovelace-rss-accordion&category=plugin" target="_blank" rel="noreferrer noopener"><img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open this repository in the Marketplace or HACS of your Home Assistant instance." /></a>
 
 <details>
 <summary>Manual Installation</summary>
