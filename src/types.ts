@@ -98,6 +98,9 @@ export interface FeedEntry {
   description?: string;
   published?: string;
   updated?: string;
+  /** ISO 8601 with UTC offset; feedparser adds these next to its formatted dates. */
+  published_iso?: string;
+  updated_iso?: string;
   image?: string;
   audio?: string;
   source_entity_id?: string; // Track which entity this item came from

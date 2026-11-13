@@ -15,7 +15,7 @@ import {
 } from './types.js';
 import { localize } from './localize';
 import { isSafeUrl, sanitizeHtml } from './sanitize';
-import { formatDate, formatDuration, hasReadableText, truncate } from './utils';
+import { formatDate, formatDuration, hasReadableText, itemDate, itemTime, truncate } from './utils';
 import { StorageHelper } from './storage-helper.js';
 import { PROGRESS_SAVE_INTERVAL_MS, PlaybackState, getBrowserAudioPlayer } from './audio-player';
 import { mediaPlayerAvailable, mediaPlayerCanSeek, mediaPlayerState } from './media-player-target';
@@ -931,9 +931,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     // Sort all items by date, newest first
     allItems.sort((a, b) => {
-      const dateA = a.published || a.updated || '';
-      const dateB = b.published || b.updated || '';
-      return new Date(dateB).getTime() - new Date(dateA).getTime();
+      return itemTime(b) - itemTime(a);
     });
 
     return allItems;
@@ -956,9 +954,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
         // Ensure entries are sorted newest first BEFORE slicing!
         entries.sort((a, b) => {
-          const dateA = a.published || a.updated || '';
-          const dateB = b.published || b.updated || '';
-          return new Date(dateB).getTime() - new Date(dateA).getTime();
+          return itemTime(b) - itemTime(a);
         });
 
         if (this._config.max_items_per_entity) {
@@ -1075,7 +1071,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     // Cropping a picture that is not being shown reserves a hole where it would
     // have been, so the crop comes off with the picture.
     const channelImageFailed = channelImage !== undefined && this._failedChannelImage === channelImage;
-    const channelPublished = (channel.published || channel.updated) as string | undefined;
+    const channelPublished = itemDate(channel);
     const formattedChannelPublished = channelPublished ? formatDate(channelPublished, this.hass) : undefined;
 
     return html`
@@ -1205,12 +1201,11 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     // strip all images from the summary to prevent duplicates.
     const processedContent = showImage ? content.replace(/<img[^>]*>/gi, '') : content;
 
-    const dateString = item.published || item.updated || '';
-    const publishedDate = new Date(dateString);
-    const formattedDate = formatDate(publishedDate, this.hass);
+    const publishedDate = itemDate(item);
+    const formattedDate = publishedDate ? formatDate(publishedDate, this.hass) : '';
 
     const newPillDurationHours = this._config.new_pill_duration_hours ?? 1;
-    const ageInMinutes = (new Date().getTime() - publishedDate.getTime()) / (1000 * 60);
+    const ageInMinutes = publishedDate ? (Date.now() - publishedDate.getTime()) / (1000 * 60) : NaN;
     const isNew = ageInMinutes >= 0 && ageInMinutes < newPillDurationHours * 60;
     const isBookmarked = this._storageHelper.isBookmarked(item);
 
