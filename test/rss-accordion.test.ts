@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import '../src/rss-accordion';
 import type { RssAccordion } from '../src/rss-accordion';
 import { HomeAssistant, RssAccordionConfig, HassEntity, AudioProgress } from '../src/types';
 import { StorageHelper } from '../src/storage-helper';
-import { formatDate } from '../src/utils';
+import { formatDate, itemDate } from '../src/utils';
 import { BrowserAudioPlayer } from '../src/audio-player';
 import { FakeAudio, installFakePlayer } from './fake-audio';
 
@@ -1172,6 +1172,116 @@ describe('RssAccordion', () => {
       expect(channelPublished).not.toBeNull();
       expect(channelPublished?.textContent).toContain('Jan');
       expect(channelPublished?.textContent).toContain('01');
+    });
+  });
+
+  describe('feedparser dates', () => {
+    // A zone east of UTC with no DST, so a date read as local time instead of
+    // UTC is off by a fixed 5:30 hours. Node re-reads TZ on assignment.
+    const originalTz = process.env.TZ;
+    beforeAll(() => {
+      process.env.TZ = 'Asia/Kolkata';
+    });
+    afterAll(() => {
+      if (originalTz === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTz;
+    });
+
+    /** feedparser's default `date_format`, `%a, %b %d %Y %I:%M %p`, in UTC: no zone in it. */
+    function defaultFormat(date: Date): string {
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const pad = (value: number) => String(value).padStart(2, '0');
+      const hours = date.getUTCHours();
+      return (
+        `${days[date.getUTCDay()]}, ${months[date.getUTCMonth()]} ${pad(date.getUTCDate())} ` +
+        `${date.getUTCFullYear()} ${pad(hours % 12 || 12)}:${pad(date.getUTCMinutes())} ${hours < 12 ? 'AM' : 'PM'}`
+      );
+    }
+
+    const PUBLISHED = new Date('2026-01-13T15:36:00Z');
+
+    const renderEntries = async (entries: Record<string, unknown>[], channel?: Record<string, unknown>) => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: String(entries.length),
+        attributes: { entries, ...(channel ? { channel } : {}) },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true, show_published_date: true });
+      await element.updateComplete;
+    };
+
+    it('reads the ISO date with its offset rather than the zone-less display string', async () => {
+      const entry = {
+        title: 'From Mumbai',
+        link: '#mumbai',
+        published: defaultFormat(PUBLISHED),
+        published_iso: '2026-01-13T21:06:00+05:30',
+      };
+      expect(itemDate(entry)?.toISOString()).toBe(PUBLISHED.toISOString());
+
+      await renderEntries([entry]);
+      const publishedEl = element.shadowRoot?.querySelector('.item-published');
+      expect(publishedEl?.textContent).toBe(formatDate(PUBLISHED, hass));
+    });
+
+    it('still reads the formatted string of an integration without ISO dates', async () => {
+      const entry = { title: 'Legacy', link: '#legacy', published: 'Tue, 13 Jan 2026 15:36:00 UTC' };
+      expect(itemDate(entry)?.toISOString()).toBe(PUBLISHED.toISOString());
+
+      await renderEntries([entry]);
+      const publishedEl = element.shadowRoot?.querySelector('.item-published');
+      expect(publishedEl?.textContent).toBe(formatDate(PUBLISHED, hass));
+    });
+
+    it('falls back to the formatted string when the ISO date is unreadable', () => {
+      const entry = { published: 'Tue, 13 Jan 2026 15:36:00 UTC', published_iso: 'garbage' };
+      expect(itemDate(entry)?.toISOString()).toBe(PUBLISHED.toISOString());
+      expect(itemDate({ published: 'not a date' })).toBeUndefined();
+      expect(itemDate({})).toBeUndefined();
+    });
+
+    it('sorts by the ISO date when a custom date_format is unparsable', async () => {
+      await renderEntries([
+        { title: 'Older', link: '#older', published: '13.01.2026 10:00', published_iso: '2026-01-13T10:00:00+00:00' },
+        // Later in the day, written with an offset that puts its wall clock earlier.
+        { title: 'Newer', link: '#newer', published: '13.01.2026 11:00', published_iso: '2026-01-13T06:00:00-05:00' },
+      ]);
+      const titles = Array.from(element.shadowRoot?.querySelectorAll('.title-link') ?? []).map((link) =>
+        link.textContent?.trim(),
+      );
+      expect(titles).toEqual(['Newer', 'Older']);
+      // And the date is shown, where the formatted string alone left it out.
+      expect(element.shadowRoot?.querySelectorAll('.item-published')).toHaveLength(2);
+    });
+
+    it('flags an entry as new by the ISO date, not by the display string read as local time', async () => {
+      vi.useFakeTimers();
+      try {
+        const published = new Date(Date.now() - 15 * 60 * 1000);
+        await renderEntries([
+          {
+            title: 'Fresh',
+            link: '#fresh',
+            published: defaultFormat(published),
+            published_iso: published.toISOString().replace('Z', '+00:00'),
+          },
+        ]);
+        expect(element.shadowRoot?.querySelector('.new-pill')).not.toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('reads the channel date from its ISO companion', async () => {
+      await renderEntries([{ title: 'Item', link: '#item', published_iso: PUBLISHED.toISOString() }], {
+        title: 'Channel',
+        updated: '13.01.2026 15:36',
+        updated_iso: '2026-01-13T15:36:00+00:00',
+      });
+      const channelPublished = element.shadowRoot?.querySelector('.channel-published');
+      expect(channelPublished?.textContent).toContain(formatDate(PUBLISHED, hass));
     });
   });
 

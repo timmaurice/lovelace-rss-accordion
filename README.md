@@ -120,7 +120,7 @@ You can now add the card to your dashboard.
 | `show_channel_description`       | boolean | `true`         | If `false`, hides the channel description. Only applicable if `show_channel_info` is true and a description exists.                                                                                                                                                                                    |
 | `max_channel_description_length` | number  | `180`          | The maximum number of characters to display for the channel description. Truncated descriptions will end with an ellipsis. Only applicable if `show_channel_description` is true.                                                                                                                      |
 | `crop_channel_image`             | boolean | `false`        | If `true`, displays the channel image as a 60x60px cropped circle. By default, the image is shown at 50% width without cropping. Only applicable if `show_channel_info` is true and a channel image exists.                                                                                            |
-| `show_published_date`            | boolean | `false`        | If `true`, displays the channel's last update time. Only applicable if `show_channel_info` is true and the sensor has a `channel.published` or `channel.updated` attribute.                                                                                                                            |
+| `show_published_date`            | boolean | `false`        | If `true`, displays the channel's last update time. Only applicable if `show_channel_info` is true and the sensor has a `channel.published` or `channel.updated` attribute (the `_iso` variants are preferred when present).                                                                           |
 
 ### Sensor or event entity?
 
@@ -139,6 +139,10 @@ sensor:
 ```
 
 Then point the card at the sensor (`sensor.my_news`).
+
+#### Dates
+
+Feedparser formats an entry's `published`/`updated` date with its `date_format`, and the default format names no time zone. Recent versions also send `published_iso`/`updated_iso` (ISO 8601 with the UTC offset); the card reads those for the shown date and time, the sort order and the "NEW" pill, so they are correct in any browser time zone and with any `date_format`. With an older Feedparser, or another source, the card parses `published`/`updated` as before: give the sensor a `date_format` that includes the zone (e.g. `%a, %d %b %Y %H:%M:%S %Z`) or the times are read as the browser's local time.
 
 ### Examples
 

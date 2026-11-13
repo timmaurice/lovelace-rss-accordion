@@ -5,6 +5,13 @@ import { feedChannel, feedEntry, feedSensor } from './helpers/feed';
 const FEED = 'sensor.e2e_card_feed';
 
 /**
+ * A browser zone east of UTC and without DST. The entries arrive in the
+ * integration's default `date_format`, which names no zone, so a card that
+ * parsed that string read 10:15 UTC as 10:15 here - 5:30 hours early.
+ */
+test.use({ timezoneId: 'Asia/Kolkata' });
+
+/**
  * Fixed dates in the past, so neither entry earns the "NEW" pill and the order
  * the card sorts them into is a fixed expectation rather than a race with the
  * clock.
@@ -122,15 +129,16 @@ test.describe('The card on a real dashboard', () => {
     await expect(body.locator('.item-link')).toBeVisible();
 
     // The date lives inside the panel, so this is the first point at which it
-    // is painted at all. `published` arrives as feedparser's formatted string
-    // rather than as an ISO timestamp, and the card has to parse and re-render
-    // it - anything it fails to parse comes out as "Invalid Date". The
-    // assertion is on the day it names, not on the whole string: the card
-    // formats with `toLocaleString`, and current ICU puts a narrow no-break
-    // space in front of the AM/PM marker.
+    // is painted at all. `published` arrives as feedparser's zone-less display
+    // string next to `published_iso`, and the card has to render the instant -
+    // 10:15 UTC, which is 15:45 in this browser's zone. The assertion is on the
+    // day and the time it names, not on the whole string: the card formats
+    // with `toLocaleString`, current ICU puts a narrow no-break space in front
+    // of the AM/PM marker, and the user's profile picks 12 or 24 hours.
     const date = body.locator('.item-published');
     await expect(date).toBeVisible();
     await expect(date).toHaveText(/Mar 0?2,? 2026/);
+    await expect(date).toHaveText(/\b(3:45\s*PM|15:45)\b/i);
     await expect(date).not.toHaveText(/invalid/i);
 
     // The other item is untouched: nothing opened it, and it is not the card's

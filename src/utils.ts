@@ -52,6 +52,43 @@ export function formatDate(date: string | Date, hass: HomeAssistant): string {
 }
 
 /**
+ * The keys a feed entry or channel carries its date under. feedparser formats
+ * `published`/`updated` with the user's `date_format`, which may drop the zone
+ * (the default does) or anything else a parser needs, so newer versions add an
+ * ISO 8601 `_iso` companion with the UTC offset next to each.
+ */
+const DATE_KEYS = ['published', 'updated'] as const;
+
+/**
+ * Returns the date of a feed entry or channel, or undefined when it has none
+ * this browser can read. The ISO companion is preferred, as it is the only one
+ * that names its instant; the formatted string is the fallback for older
+ * integration versions and for other sources.
+ *
+ * @param item A feed entry, or the `channel` attribute.
+ * @returns The date, or undefined.
+ */
+export function itemDate(item: Record<string, unknown>): Date | undefined {
+  for (const key of DATE_KEYS) {
+    for (const value of [item[`${key}_iso`], item[key]]) {
+      if (typeof value !== 'string' || !value) continue;
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) return date;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The sort key of a feed entry: its date in milliseconds, NaN when it has none.
+ * @param item A feed entry.
+ * @returns Milliseconds since the epoch, or NaN.
+ */
+export function itemTime(item: Record<string, unknown>): number {
+  return itemDate(item)?.getTime() ?? NaN;
+}
+
+/**
  * Truncates a string to a specified length and adds an ellipsis if needed.
  * @param text The text to truncate.
  * @param maxLength The maximum length of the text.

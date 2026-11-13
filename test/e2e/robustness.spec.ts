@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures/hass';
 import { removeState, setState, useDashboard } from './helpers/homeassistant';
-import { feedEntry, feedSensor, feedparserDate, pngBytes } from './helpers/feed';
+import { feedEntry, feedSensor, pngBytes, zonedFeedparserDate } from './helpers/feed';
 
 /**
  * The behaviour a browser is needed for and a unit test cannot reach.
@@ -62,13 +62,13 @@ const NO_DATE_ENTRY = {
 const NO_TITLE_ENTRY = {
   link: 'https://example.com/no-title',
   summary: '<p>No title either.</p>',
-  published: feedparserDate(OLDER),
+  published: zonedFeedparserDate(OLDER),
   id: 'e2e-robust-no-title',
 };
 
 const NO_LINK_ENTRY = {
   summary: '<p>Neither title nor link.</p>',
-  published: feedparserDate(new Date('2026-02-28T08:00:00Z')),
+  published: zonedFeedparserDate(new Date('2026-02-28T08:00:00Z')),
   id: 'e2e-robust-no-link',
 };
 

@@ -13,22 +13,41 @@ import { deflateSync } from 'node:zlib';
  *  - The body of an entry arrives as `summary`, never as `description`. The
  *    Python `feedparser` library maps RSS `<description>` onto `summary`, so a
  *    seeded `description` would exercise only the card's fallback branch.
- *  - `published` is a *formatted string*, not an ISO timestamp: the integration
- *    runs the parsed date through the sensor's `date_format`. This is the format
- *    the repository's own `configuration.yaml` asks for, and the trailing zone
- *    name is what keeps `new Date()` from reading it as local time.
+ *  - `published` is a *formatted string*: the integration runs the parsed date
+ *    through the sensor's `date_format`, whose default -
+ *    `%a, %b %d %Y %I:%M %p` - names no zone, so `new Date()` would read it as
+ *    the browser's local time. Next to it sits `published_iso`, the same
+ *    instant as ISO 8601 with its UTC offset, which is what the card reads. The
+ *    entries built here carry both, the way an integration on its default
+ *    format sends them; `zonedFeedparserDate` is the older shape, a configured
+ *    format with a zone and no ISO companion, for entries written out by hand.
  *  - Feed categories come through as `tags`, and there is no `category` key.
  */
 
-/** `%a, %d %b %Y %H:%M:%S %Z` - the format `configuration.yaml` configures. */
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const pad = (value: number) => String(value).padStart(2, '0');
+
+/** `%a, %b %d %Y %I:%M %p` in UTC - the integration's default `date_format`, with no zone in it. */
 export function feedparserDate(date: Date): string {
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const pad = (value: number) => String(value).padStart(2, '0');
+  const hours = date.getUTCHours();
   return (
-    `${days[date.getUTCDay()]}, ${pad(date.getUTCDate())} ${months[date.getUTCMonth()]} ` +
+    `${DAYS[date.getUTCDay()]}, ${MONTHS[date.getUTCMonth()]} ${pad(date.getUTCDate())} ` +
+    `${date.getUTCFullYear()} ${pad(hours % 12 || 12)}:${pad(date.getUTCMinutes())} ${hours < 12 ? 'AM' : 'PM'}`
+  );
+}
+
+/** `%a, %d %b %Y %H:%M:%S %Z` - the format `configuration.yaml` configures. */
+export function zonedFeedparserDate(date: Date): string {
+  return (
+    `${DAYS[date.getUTCDay()]}, ${pad(date.getUTCDate())} ${MONTHS[date.getUTCMonth()]} ` +
     `${date.getUTCFullYear()} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())} UTC`
   );
+}
+
+/** Python's `datetime.isoformat(timespec="seconds")` of a UTC date: `2026-03-02T10:15:00+00:00`. */
+export function feedparserIsoDate(date: Date): string {
+  return date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
 }
 
 export interface FeedEntrySeed {
@@ -53,6 +72,7 @@ export function feedEntry(seed: FeedEntrySeed): Record<string, unknown> {
     link: seed.link,
     summary: seed.summary,
     published: feedparserDate(seed.published),
+    published_iso: feedparserIsoDate(seed.published),
     id: seed.id,
     guidislink: false,
     ...(seed.tags ? { tags: seed.tags.map((term) => ({ term, scheme: null, label: null })) } : {}),
@@ -77,6 +97,7 @@ export function feedChannel(seed: FeedChannelSeed): Record<string, unknown> {
     link: seed.link,
     subtitle: seed.subtitle,
     updated: feedparserDate(seed.updated),
+    updated_iso: feedparserIsoDate(seed.updated),
     ...(seed.image ? { image: seed.image } : {}),
   };
 }
