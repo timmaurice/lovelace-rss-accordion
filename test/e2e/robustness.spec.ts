@@ -253,7 +253,8 @@ test.describe('Entries the feed left incomplete', () => {
 
     // A missing link is not rendered as an anchor at all: an empty href points
     // at the dashboard, so clicking it would reload the page.
-    const noLink = card.locator('.accordion-item').last();
+    // Found by its body, not by position: undated entries sort last, so the last row is the dateless one.
+    const noLink = card.locator('.accordion-item', { hasText: 'Neither title nor link' });
     await expect(noLink.locator('span.title-link')).toHaveCount(1);
     await expect(noLink.locator('a.title-link')).toHaveCount(0);
 

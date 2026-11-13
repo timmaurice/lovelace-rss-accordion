@@ -3,7 +3,9 @@ import {
   BASE_URL,
   PASSWORD,
   USERNAME,
+  ensureBundleResource,
   ensureRunning,
+  onboardIfNeeded,
   saveTokens,
   waitForCoreRunning,
   waitForFrontend,
@@ -18,6 +20,7 @@ import {
 export default async function globalSetup(): Promise<void> {
   ensureRunning();
   await waitForFrontend();
+  await onboardIfNeeded();
 
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -45,6 +48,7 @@ export default async function globalSetup(): Promise<void> {
     // Only now can the websocket be used, and only now is it safe to assert on
     // anything that setup registers at startup.
     await waitForCoreRunning();
+    await ensureBundleResource();
   } finally {
     await browser.close();
   }

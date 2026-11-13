@@ -21,7 +21,7 @@
     "lint": "eslint .",
     "test": "NODE_ENV=production vitest run",
     "watch": "rollup -c -w",
-    "pretest:e2e": "node scripts/ensure-deps.mjs",
+    "pretest:e2e": "node scripts/ensure-deps.mjs && npm run build",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

@@ -200,6 +200,15 @@ show_bookmarks: true
 
 4.  In your Home Assistant instance, you will need to configure Lovelace to use the local development version of the card from `dist/rss-accordion.js`.
 
+5.  **Run the end-to-end tests** (Docker and the sibling [`feedparser`](https://github.com/timmaurice/feedparser) checkout at `../feedparser` are required):
+
+    ```bash
+    npx playwright install chromium
+    npm run test:e2e
+    ```
+
+    This installs missing dependencies, builds the card, starts Home Assistant from `docker-compose.yml`, and on a fresh clone seeds `test/ha-config`, creates the test user and registers the card resource itself. The same suite runs in GitHub Actions on every pull request.
+
 </details>
 
 ---
