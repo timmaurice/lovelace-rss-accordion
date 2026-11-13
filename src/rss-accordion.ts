@@ -1175,6 +1175,21 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   }
 
   /**
+   * Turns an entry attribute into HTML text. feedparser exposes `content` as a list of
+   * `{value, type, ...}` objects (Atom can carry several), so the `value` fields are joined.
+   * @param raw The raw attribute value.
+   * @returns The text, or an empty string when the attribute holds none.
+   */
+  private _attributeText(raw: unknown): string {
+    if (typeof raw === 'string') return raw;
+    const parts = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? [raw] : [];
+    return parts
+      .map((part) => (typeof part === 'string' ? part : (part as { value?: unknown } | null)?.value))
+      .filter((value): value is string => typeof value === 'string' && hasReadableText(value))
+      .join('\n');
+  }
+
+  /**
    * Picks the item's body: the configured `description_attribute`, else a summary
    * with readable text, else `description`.
    * @param item The feed entry.
@@ -1182,8 +1197,8 @@ export class RssAccordion extends LitElement implements LovelaceCard {
    */
   private _getItemContent(item: FeedEntry): string {
     const attribute = this._config.description_attribute;
-    const custom = attribute ? item[attribute] : undefined;
-    if (typeof custom === 'string' && hasReadableText(custom)) return custom;
+    const custom = attribute ? this._attributeText(item[attribute]) : '';
+    if (hasReadableText(custom)) return custom;
     if (hasReadableText(item.summary)) return item.summary as string;
     return item.description || item.summary || '';
   }
