@@ -464,7 +464,8 @@ ha-card {
 }
 
 // An image that failed to load paints its alt text (or a broken-file icon)
-// where the picture should be; hiding it is the better fallback.
-img.image-failed {
+// where the picture should be; hiding it is the better fallback. `:host` lifts
+// the specificity above `.accordion-content .item-image { display: block }`.
+:host img.image-failed {
   display: none;
 }
