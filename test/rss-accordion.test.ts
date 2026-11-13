@@ -612,6 +612,43 @@ describe('RssAccordion', () => {
       expect(summary?.textContent).toBe('The article text.');
     });
 
+    it('should join the value fields of a feedparser content list', async () => {
+      const summary = await render(
+        {
+          summary: teaser,
+          content: [
+            { type: 'text/html', value: '<p>First part.</p>' },
+            { type: 'text/html', value: '<p>Second part.</p>' },
+          ],
+        },
+        { description_attribute: 'content' },
+      );
+      expect(summary?.textContent).toContain('First part.');
+      expect(summary?.textContent).toContain('Second part.');
+    });
+
+    it('should sanitize a content list like any other content', async () => {
+      const summary = await render(
+        {
+          content: [
+            { type: 'text/html', value: '<p>Text</p><script>alert(2)</script><img src="x" onerror="alert(1)">' },
+          ],
+        },
+        { description_attribute: 'content', show_item_image: false },
+      );
+      expect(summary?.innerHTML).not.toContain('onerror');
+      expect(summary?.innerHTML).not.toContain('<script');
+      expect(summary?.textContent).toContain('Text');
+    });
+
+    it('should fall back to the summary when the content list has no text', async () => {
+      const summary = await render(
+        { summary: '<p>Summary text.</p>', content: [{ type: 'text/html', value: '' }] },
+        { description_attribute: 'content' },
+      );
+      expect(summary?.textContent).toBe('Summary text.');
+    });
+
     it('should fall back when an item lacks the configured attribute', async () => {
       const summary = await render({ summary: '<p>Summary text.</p>' }, { description_attribute: 'gera_description' });
       expect(summary?.textContent).toBe('Summary text.');
