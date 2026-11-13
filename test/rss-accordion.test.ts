@@ -2914,3 +2914,25 @@ describe('RssAccordion', () => {
     });
   });
 });
+
+describe('failed image stylesheet', () => {
+  it('hides a failed image with a selector that outranks .accordion-content .item-image', async () => {
+    const { compile } = await import('sass');
+    const css = compile('src/styles/card.styles.scss').css;
+    const rules = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].map((m) => ({
+      selector: m[1].trim(),
+      body: m[2],
+    }));
+    const hide = rules.find((r) => /image-failed/.test(r.selector) && /display:\s*none/.test(r.body));
+    expect(hide).toBeDefined();
+    // (id, class/pseudo-class, element) counts of a single compound selector list entry.
+    const specificity = (sel: string) => {
+      const classes = (sel.match(/\.[\w-]+|:[\w-]+(?!\()/g) ?? []).length;
+      const elements = (sel.match(/(^|[\s>+~])[a-z][\w-]*/gi) ?? []).length;
+      return classes * 100 + elements;
+    };
+    const show = rules.find((r) => r.selector === '.accordion-content .item-image');
+    expect(show).toBeDefined();
+    expect(specificity(hide!.selector)).toBeGreaterThan(specificity(show!.selector));
+  });
+});
