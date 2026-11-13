@@ -15,7 +15,7 @@ import {
 } from './types.js';
 import { localize } from './localize';
 import { isSafeUrl, sanitizeHtml } from './sanitize';
-import { formatDate, formatDuration, hasReadableText, itemDate, itemTime, truncate } from './utils';
+import { compareItemsNewestFirst, formatDate, formatDuration, hasReadableText, itemDate, truncate } from './utils';
 import { StorageHelper } from './storage-helper.js';
 import { PROGRESS_SAVE_INTERVAL_MS, PlaybackState, getBrowserAudioPlayer } from './audio-player';
 import { mediaPlayerAvailable, mediaPlayerCanSeek, mediaPlayerState } from './media-player-target';
@@ -930,9 +930,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const allItems = Array.from(itemsMap.values());
 
     // Sort all items by date, newest first
-    allItems.sort((a, b) => {
-      return itemTime(b) - itemTime(a);
-    });
+    allItems.sort(compareItemsNewestFirst);
 
     return allItems;
   }
@@ -953,9 +951,7 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         let entries = [...((entryArray as FeedEntry[]) || [])];
 
         // Ensure entries are sorted newest first BEFORE slicing!
-        entries.sort((a, b) => {
-          return itemTime(b) - itemTime(a);
-        });
+        entries.sort(compareItemsNewestFirst);
 
         if (this._config.max_items_per_entity) {
           entries = entries.slice(0, this._config.max_items_per_entity);
