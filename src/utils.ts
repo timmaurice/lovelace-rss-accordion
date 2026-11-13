@@ -89,6 +89,24 @@ export function itemTime(item: Record<string, unknown>): number {
 }
 
 /**
+ * Comparator sorting feed entries newest first, with undated entries last.
+ * Undated entries keep their relative order (stable sort).
+ * @param a A feed entry.
+ * @param b A feed entry.
+ * @returns A negative, zero or positive number for Array.prototype.sort.
+ */
+export function compareItemsNewestFirst(a: Record<string, unknown>, b: Record<string, unknown>): number {
+  const ta = itemTime(a);
+  const tb = itemTime(b);
+  const aMissing = Number.isNaN(ta);
+  const bMissing = Number.isNaN(tb);
+  if (aMissing || bMissing) {
+    return Number(aMissing) - Number(bMissing);
+  }
+  return tb - ta;
+}
+
+/**
  * Truncates a string to a specified length and adds an ellipsis if needed.
  * @param text The text to truncate.
  * @param maxLength The maximum length of the text.
