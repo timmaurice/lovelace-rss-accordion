@@ -11,7 +11,7 @@
  * dashboards of their own, so that playground stays intact.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -24,6 +24,8 @@ export const BUNDLE_URL = `/local/${BUNDLE_NAME}`;
 const BUNDLE = resolve(REPO_ROOT, `dist/${BUNDLE_NAME}`);
 const PACKAGE_JSON = resolve(REPO_ROOT, 'package.json');
 const TOKEN_FILE = resolve(E2E_DIR, '.auth.json');
+const CONFIG_DIR = resolve(REPO_ROOT, 'test/ha-config');
+const CONFIG_SEED = resolve(E2E_DIR, 'ha-seed/configuration.yaml');
 
 /** Read from the compose file so the suite cannot drift from the environment. */
 function portFromCompose(): string {
@@ -56,6 +58,18 @@ function assertBundleIsCurrent(): void {
   }
 }
 
+/**
+ * `test/ha-config` is gitignored - on the owner's machine it is a long-lived
+ * playground, in a fresh clone or CI it does not exist. Seed a minimal
+ * configuration then, so `docker compose up` boots an instance the suite can
+ * onboard. An existing configuration is left alone.
+ */
+function seedConfig(): void {
+  if (existsSync(resolve(CONFIG_DIR, 'configuration.yaml'))) return;
+  mkdirSync(CONFIG_DIR, { recursive: true });
+  copyFileSync(CONFIG_SEED, resolve(CONFIG_DIR, 'configuration.yaml'));
+}
+
 /** Brings the repository's own compose environment up if it is not running. */
 export function ensureRunning(): void {
   // The container serves the card straight out of dist/. Without a build there
@@ -65,6 +79,7 @@ export function ensureRunning(): void {
     throw new Error(`No ${BUNDLE} - run \`npm run build\` before the end-to-end suite`);
   }
   assertBundleIsCurrent();
+  seedConfig();
   execFileSync('docker', ['compose', 'up', '-d'], { cwd: REPO_ROOT, stdio: 'inherit' });
 }
 
@@ -105,6 +120,71 @@ export async function waitForCoreRunning(timeoutMs = 180_000): Promise<void> {
     await new Promise((r) => setTimeout(r, 2000));
   }
   throw new Error(`Home Assistant never reached RUNNING (last saw ${lastState})`);
+}
+
+/**
+ * Creates the owner account and finishes onboarding through the API, when the
+ * instance is brand new (a clean checkout or CI). On an instance that is already
+ * onboarded `/api/onboarding` is gone (404) and this does nothing.
+ */
+export async function onboardIfNeeded(): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/onboarding`);
+  if (res.status === 404) return;
+  if (!res.ok) throw new Error(`reading onboarding state failed: ${res.status}`);
+  const steps = (await res.json()) as { step: string; done: boolean }[];
+  const pending = (step: string) => steps.some((entry) => entry.step === step && !entry.done);
+  const clientId = `${BASE_URL}/`;
+  const post = async (path: string, body: Record<string, unknown>, token?: string) => {
+    const response = await fetch(`${BASE_URL}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(`onboarding ${path} failed: ${response.status} ${await response.text()}`);
+    return response;
+  };
+
+  if (pending('user')) {
+    const created = await post('/api/onboarding/users', {
+      client_id: clientId,
+      name: 'E2E Admin',
+      username: USERNAME,
+      password: PASSWORD,
+      language: 'en',
+    });
+    const { auth_code } = (await created.json()) as { auth_code: string };
+    const tokenResponse = await fetch(`${BASE_URL}/auth/token`, {
+      method: 'POST',
+      body: new URLSearchParams({ grant_type: 'authorization_code', code: auth_code, client_id: clientId }),
+    });
+    if (!tokenResponse.ok) throw new Error(`onboarding token exchange failed: ${tokenResponse.status}`);
+    const { access_token } = (await tokenResponse.json()) as { access_token: string };
+    // The remaining steps need the new user's token.
+    if (pending('core_config')) await post('/api/onboarding/core_config', {}, access_token);
+    if (pending('analytics')) await post('/api/onboarding/analytics', {}, access_token);
+    if (pending('integration')) {
+      await post(
+        '/api/onboarding/integration',
+        { client_id: clientId, redirect_uri: `${clientId}?auth_callback=1` },
+        access_token,
+      );
+    }
+  }
+}
+
+/**
+ * The card is served from /local/ via the `dist` mount, but Lovelace only loads
+ * it once it is a registered resource. A fresh instance has none, so register
+ * it; an instance that already has an entry for the bundle is left untouched.
+ */
+export async function ensureBundleResource(): Promise<void> {
+  const pathOf = (url: string) => new URL(url, 'http://ha.invalid').pathname;
+  const existing = await resources();
+  if (existing.some((resource) => pathOf(resource.url) === BUNDLE_URL)) return;
+  await callWebsocket({ type: 'lovelace/resources/create', res_type: 'module', url: BUNDLE_URL });
 }
 
 export interface Tokens {

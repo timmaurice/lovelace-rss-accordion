@@ -1,0 +1,8 @@
+# Seed for a clean checkout: copied to test/ha-config/configuration.yaml by the
+# e2e global setup when that directory does not exist yet (it is gitignored, so
+# a fresh clone and CI never have it). Everything the specs need they create
+# themselves - dashboards and sensor states over the API - so this stays minimal
+# and needs no network. An existing test/ha-config is never overwritten.
+default_config:
+
+frontend:
