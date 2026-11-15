@@ -1635,7 +1635,7 @@ describe('RssAccordion', () => {
       document.body.appendChild(element);
       await element.updateComplete;
 
-      // Fast-forward setTimeout in firstUpdated
+      // Fast-forward the setTimeout that opens the latest item
       vi.runAllTimers();
       await element.updateComplete;
 
@@ -1643,6 +1643,37 @@ describe('RssAccordion', () => {
       expect(items?.length).toBe(2);
       expect(items?.[0].open).toBe(true); // Item 1 (newest)
       expect(items?.[1].open).toBe(false); // Item 2
+    });
+
+    it('opens the latest item once entries arrive after the first render', async () => {
+      const feed = hass.states['sensor.test_feed'];
+      // After an HA restart the sensor has no entries until its first poll.
+      element = document.createElement('rss-accordion') as RssAccordion;
+      element.hass = { ...hass, states: { 'sensor.test_feed': { ...feed, attributes: { entries: [] } } } };
+      element.setConfig({ ...config, open_behavior: 'latest' });
+      document.body.appendChild(element);
+      await element.updateComplete;
+      vi.runAllTimers();
+      await element.updateComplete;
+
+      element.hass = hass;
+      await element.updateComplete;
+      vi.runAllTimers();
+      await element.updateComplete;
+
+      const items = element.shadowRoot!.querySelectorAll<HTMLDetailsElement>('.accordion-item');
+      expect(items.length).toBe(2);
+      expect(items[0].open).toBe(true);
+      expect(items[1].open).toBe(false);
+
+      // Once only: an item the user closes stays closed on the next update.
+      items[0].querySelector<HTMLElement>('.accordion-header')!.click();
+      items[0].removeAttribute('open'); // what transitionend would do
+      element.hass = { ...hass, states: { 'sensor.test_feed': { ...feed, state: 'updated' } } };
+      await element.updateComplete;
+      vi.runAllTimers();
+      await element.updateComplete;
+      expect(items[0].open).toBe(false);
     });
 
     it('should fall back to latest if initial_open is true and open_behavior is unset', async () => {
