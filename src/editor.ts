@@ -2,7 +2,7 @@ import { LitElement, html, css, TemplateResult, unsafeCSS } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardEditor, RssAccordionConfig, FeedEntry } from './types';
 import { localize } from './localize';
-import { fireEvent } from './utils';
+import { fireEvent, itemDate } from './utils';
 import editorStyles from './styles/editor.styles.scss';
 
 const EDITOR_ELEMENT_NAME = 'rss-accordion-editor';
@@ -164,7 +164,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
       delete newConfig.show_channel_description;
       delete newConfig.max_channel_description_length;
     } else {
-      if (!channel.published) {
+      if (!itemDate(channel)) {
         delete newConfig.show_published_date;
       }
       if (!channel.image) {
@@ -285,7 +285,7 @@ export class RssAccordionEditor extends LitElement implements LovelaceCardEditor
     const stateObj = firstEntityId ? this.hass.states[firstEntityId] : undefined;
     const channel = stateObj?.attributes.channel as Record<string, unknown> | undefined;
     const channelImage = channel?.image as string | undefined;
-    const channelPublished = channel?.published as string | undefined;
+    const channelPublished = channel ? itemDate(channel) : undefined;
 
     let hasAudio = false;
     for (const entityId of entities) {

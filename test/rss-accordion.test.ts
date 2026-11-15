@@ -2988,6 +2988,34 @@ describe('RssAccordion', () => {
       expect(editor.shadowRoot?.querySelector('.event-hint')).toBeNull();
       editor.remove();
     });
+
+    it('offers and keeps the channel date when the channel carries only `updated`', async () => {
+      // feedparser maps RSS lastBuildDate and the Atom feed date to `updated`.
+      hass.states['sensor.feed'] = {
+        entity_id: 'sensor.feed',
+        state: '1',
+        attributes: { entries: [], channel: { title: 'News', updated_iso: '2023-01-01T10:00:00+00:00' } },
+      } as HassEntity;
+      const editor = await renderEditor({
+        type: 'custom:rss-accordion',
+        entity: 'sensor.feed',
+        show_channel_info: true,
+        show_published_date: true,
+      });
+
+      const switches = [...editor.shadowRoot!.querySelectorAll<HTMLElement & { configValue?: string }>('ha-switch')];
+      expect(switches.some((s) => s.configValue === 'show_published_date')).toBe(true);
+
+      let changed: RssAccordionConfig | undefined;
+      editor.addEventListener('config-changed', (ev) => {
+        changed = (ev as CustomEvent<{ config: RssAccordionConfig }>).detail.config;
+      });
+      editor
+        .shadowRoot!.querySelector('ha-entity-picker')!
+        .dispatchEvent(new CustomEvent('value-changed', { detail: { value: 'sensor.feed' } }));
+      expect(changed?.show_published_date).toBe(true);
+      editor.remove();
+    });
   });
 
   describe('Duplicate resource registration', () => {
