@@ -1095,6 +1095,20 @@ describe('RssAccordion', () => {
       expect(description.textContent?.trim()).toBe('Weekly show about homes & more.');
     });
 
+    it('drops script and style bodies from an HTML channel description', async () => {
+      const state = hass.states['sensor.test_feed'];
+      state.attributes.channel = {
+        title: 'Pod',
+        subtitle: "Channel <script>window.x = 'pwned';</script><style>p{}</style> subtitle",
+      };
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true });
+      await element.updateComplete;
+
+      const description = element.shadowRoot!.querySelector('.channel-description')!;
+      expect(description.textContent?.trim()).toBe('Channel subtitle');
+    });
+
     it('should not render channel published date by default', async () => {
       element.hass = hass;
       element.setConfig({ ...config, show_channel_info: true });

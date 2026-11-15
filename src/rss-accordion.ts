@@ -1068,10 +1068,14 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const channelTitle = channel.title as string | undefined;
     const channelLink = channel.link as string | undefined;
     const rawChannelDescription = (channel.description || channel.subtitle) as string | undefined;
-    // Feeds often put HTML here. It is shown as text, so the tags come off before truncating.
-    const channelDescription = rawChannelDescription
-      ? new DOMParser().parseFromString(rawChannelDescription, 'text/html').body.textContent?.trim()
-      : undefined;
+    // Feeds often put HTML here. It is shown as text, so the tags come off before truncating;
+    // script and style bodies are code, not words, and go with their tags.
+    let channelDescription: string | undefined;
+    if (rawChannelDescription) {
+      const doc = new DOMParser().parseFromString(rawChannelDescription, 'text/html');
+      doc.querySelectorAll('script, style, noscript').forEach((el) => el.remove());
+      channelDescription = doc.body.textContent?.replace(/\s+/g, ' ').trim();
+    }
     const rawChannelImage = channel.image as string | undefined;
     const channelImage = isSafeUrl(rawChannelImage, true) ? rawChannelImage : undefined;
     // Cropping a picture that is not being shown reserves a hole where it would
