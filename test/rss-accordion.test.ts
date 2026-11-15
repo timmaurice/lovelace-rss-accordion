@@ -1079,6 +1079,22 @@ describe('RssAccordion', () => {
       expect(toggleBtn?.textContent?.trim()).toBe('Show less');
     });
 
+    it('shows an HTML channel description as text', async () => {
+      const state = hass.states['sensor.test_feed'];
+      state.attributes.channel = { title: 'Pod', subtitle: '<p>Weekly show about <b>homes</b> &amp; more.</p>' };
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true, max_channel_description_length: 22 });
+      await element.updateComplete;
+
+      const description = element.shadowRoot!.querySelector('.channel-description')!;
+      // Truncated on the text, not halfway through a tag.
+      expect(description.textContent?.trim()).toBe('Weekly show about home...');
+
+      element.shadowRoot!.querySelector<HTMLElement>('.toggle-description')!.click();
+      await element.updateComplete;
+      expect(description.textContent?.trim()).toBe('Weekly show about homes & more.');
+    });
+
     it('should not render channel published date by default', async () => {
       element.hass = hass;
       element.setConfig({ ...config, show_channel_info: true });
