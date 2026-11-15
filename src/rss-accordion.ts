@@ -562,6 +562,13 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     const content = details.querySelector<HTMLElement>('.accordion-content');
     if (!content) return;
 
+    // A panel still waiting for its image was never measured, so it is already
+    // at zero: nothing animates, no transitionend fires, and it would stay open.
+    if (getComputedStyle(content).maxHeight === '0px') {
+      details.removeAttribute('open');
+      return;
+    }
+
     content.style.maxHeight = '0px';
 
     // Marks the panel as mid-animation, so a re-render arriving before the

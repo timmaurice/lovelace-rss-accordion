@@ -2316,6 +2316,33 @@ describe('RssAccordion', () => {
 
       expect(content.style.maxHeight).toBe('0px');
     });
+
+    it('closes at once a panel that never grew, as no transition will end the close', async () => {
+      element.hass = { ...hass, states: { 'sensor.test_feed': feedState('https://example.com/one.png') } };
+      element.setConfig({ ...config, open_behavior: 'none' });
+      await element.updateComplete;
+
+      const details = element.shadowRoot!.querySelector<HTMLDetailsElement>('.accordion-item')!;
+      const content = details.querySelector<HTMLElement>('.accordion-content')!;
+      const header = details.querySelector<HTMLElement>('.accordion-header')!;
+      // An earlier close leaves the inline height at zero.
+      content.style.maxHeight = '0px';
+
+      header.click();
+      await frames();
+      // Still waiting for the picture, so the panel is open at height zero.
+      expect(details.open).toBe(true);
+      expect(content.style.maxHeight).toBe('0px');
+
+      // Closing changes nothing the browser could animate, so transitionend never
+      // fires. The panel used to keep `open` for good and swallow every later tap.
+      header.click();
+      expect(details.hasAttribute('open')).toBe(false);
+      expect(details.classList.contains('closing')).toBe(false);
+
+      header.click();
+      expect(details.open).toBe(true);
+    });
   });
 
   describe('closing a panel while the card re-renders', () => {
