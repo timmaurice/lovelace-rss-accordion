@@ -33,13 +33,21 @@ export class StorageHelper {
   // --- Bookmark Methods ---
 
   public getBookmarkKey(item: FeedEntry): string {
-    // Use a combination of link and published date for a more robust key
+    // The GUID when the feed sends one: status feeds link every entry to one page,
+    // and Atom entries often carry `updated` only.
+    if (typeof item.id === 'string' && item.id) return item.id;
+    return `${item.link}|${item.published ?? item.updated}`;
+  }
+
+  /** The key bookmarks were saved under before entries were keyed by id. */
+  private _legacyBookmarkKey(item: FeedEntry): string {
     return `${item.link}|${item.published}`;
   }
 
   public isBookmarked(item: FeedEntry): boolean {
-    const key = this.getBookmarkKey(item);
-    return localStorage.getItem(`${this.bookmarkStoragePrefix}${key}`) !== null;
+    return [this.getBookmarkKey(item), this._legacyBookmarkKey(item)].some(
+      (key) => localStorage.getItem(`${this.bookmarkStoragePrefix}${key}`) !== null,
+    );
   }
 
   public setBookmark(item: FeedEntry, bookmarked: boolean): void {
@@ -48,6 +56,7 @@ export class StorageHelper {
       localStorage.setItem(`${this.bookmarkStoragePrefix}${key}`, JSON.stringify(item));
     } else {
       localStorage.removeItem(`${this.bookmarkStoragePrefix}${key}`);
+      localStorage.removeItem(`${this.bookmarkStoragePrefix}${this._legacyBookmarkKey(item)}`);
     }
   }
 

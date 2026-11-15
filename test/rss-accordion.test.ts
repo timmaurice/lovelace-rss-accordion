@@ -2600,6 +2600,46 @@ describe('RssAccordion', () => {
         helper.getBookmarkKey({ link: 'https://example.com/a' } as Parameters<StorageHelper['getBookmarkKey']>[0]),
       ).toBe('https://example.com/a|undefined');
     });
+
+    it('keep entries apart that share a link and carry no published date', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [
+            // A status feed: every entry links to the same page, the GUID tells them apart.
+            { title: 'Outage', id: 'urn:status:1', link: 'https://example.com/status' },
+            { title: 'Resolved', id: 'urn:status:2', link: 'https://example.com/status' },
+            // An Atom feed that sends only `updated`.
+            { title: 'Draft', link: 'https://example.com/post', updated: '2023-01-01T10:00:00Z' },
+            { title: 'Final', link: 'https://example.com/post', updated: '2023-01-02T10:00:00Z' },
+          ],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const titles = [...element.shadowRoot!.querySelectorAll('.accordion-item .title-link')].map((t) =>
+        t.textContent?.trim(),
+      );
+      expect(titles).toHaveLength(4);
+      expect(titles).toEqual(expect.arrayContaining(['Outage', 'Resolved', 'Draft', 'Final']));
+    });
+
+    it('still find a bookmark saved under the old link|published key', () => {
+      localStorage.clear();
+      const helper = new StorageHelper('sensor.test_feed');
+      const item = { title: 'A', id: 'urn:a', link: 'https://example.com/a', published: '2023-01-01T10:00:00Z' };
+      const legacyKey = 'rss-accordion-bookmark-sensor.test_feed-https://example.com/a|2023-01-01T10:00:00Z';
+      localStorage.setItem(legacyKey, JSON.stringify(item));
+
+      expect(helper.isBookmarked(item)).toBe(true);
+
+      helper.setBookmark(item, false);
+      expect(helper.isBookmarked(item)).toBe(false);
+      expect(localStorage.getItem(legacyKey)).toBeNull();
+    });
   });
 
   describe('card picker metadata', () => {
