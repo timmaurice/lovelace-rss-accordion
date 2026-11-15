@@ -1079,6 +1079,36 @@ describe('RssAccordion', () => {
       expect(toggleBtn?.textContent?.trim()).toBe('Show less');
     });
 
+    it('shows an HTML channel description as text', async () => {
+      const state = hass.states['sensor.test_feed'];
+      state.attributes.channel = { title: 'Pod', subtitle: '<p>Weekly show about <b>homes</b> &amp; more.</p>' };
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true, max_channel_description_length: 22 });
+      await element.updateComplete;
+
+      const description = element.shadowRoot!.querySelector('.channel-description')!;
+      // Truncated on the text, not halfway through a tag.
+      expect(description.textContent?.trim()).toBe('Weekly show about home...');
+
+      element.shadowRoot!.querySelector<HTMLElement>('.toggle-description')!.click();
+      await element.updateComplete;
+      expect(description.textContent?.trim()).toBe('Weekly show about homes & more.');
+    });
+
+    it('drops script and style bodies from an HTML channel description', async () => {
+      const state = hass.states['sensor.test_feed'];
+      state.attributes.channel = {
+        title: 'Pod',
+        subtitle: "Channel <script>window.x = 'pwned';</script><style>p{}</style> subtitle",
+      };
+      element.hass = hass;
+      element.setConfig({ ...config, show_channel_info: true });
+      await element.updateComplete;
+
+      const description = element.shadowRoot!.querySelector('.channel-description')!;
+      expect(description.textContent?.trim()).toBe('Channel subtitle');
+    });
+
     it('should not render channel published date by default', async () => {
       element.hass = hass;
       element.setConfig({ ...config, show_channel_info: true });
@@ -1619,7 +1649,7 @@ describe('RssAccordion', () => {
       document.body.appendChild(element);
       await element.updateComplete;
 
-      // Fast-forward setTimeout in firstUpdated
+      // Fast-forward the setTimeout that opens the latest item
       vi.runAllTimers();
       await element.updateComplete;
 
@@ -1627,6 +1657,37 @@ describe('RssAccordion', () => {
       expect(items?.length).toBe(2);
       expect(items?.[0].open).toBe(true); // Item 1 (newest)
       expect(items?.[1].open).toBe(false); // Item 2
+    });
+
+    it('opens the latest item once entries arrive after the first render', async () => {
+      const feed = hass.states['sensor.test_feed'];
+      // After an HA restart the sensor has no entries until its first poll.
+      element = document.createElement('rss-accordion') as RssAccordion;
+      element.hass = { ...hass, states: { 'sensor.test_feed': { ...feed, attributes: { entries: [] } } } };
+      element.setConfig({ ...config, open_behavior: 'latest' });
+      document.body.appendChild(element);
+      await element.updateComplete;
+      vi.runAllTimers();
+      await element.updateComplete;
+
+      element.hass = hass;
+      await element.updateComplete;
+      vi.runAllTimers();
+      await element.updateComplete;
+
+      const items = element.shadowRoot!.querySelectorAll<HTMLDetailsElement>('.accordion-item');
+      expect(items.length).toBe(2);
+      expect(items[0].open).toBe(true);
+      expect(items[1].open).toBe(false);
+
+      // Once only: an item the user closes stays closed on the next update.
+      items[0].querySelector<HTMLElement>('.accordion-header')!.click();
+      items[0].removeAttribute('open'); // what transitionend would do
+      element.hass = { ...hass, states: { 'sensor.test_feed': { ...feed, state: 'updated' } } };
+      await element.updateComplete;
+      vi.runAllTimers();
+      await element.updateComplete;
+      expect(items[0].open).toBe(false);
     });
 
     it('should fall back to latest if initial_open is true and open_behavior is unset', async () => {
@@ -2316,6 +2377,33 @@ describe('RssAccordion', () => {
 
       expect(content.style.maxHeight).toBe('0px');
     });
+
+    it('closes at once a panel that never grew, as no transition will end the close', async () => {
+      element.hass = { ...hass, states: { 'sensor.test_feed': feedState('https://example.com/one.png') } };
+      element.setConfig({ ...config, open_behavior: 'none' });
+      await element.updateComplete;
+
+      const details = element.shadowRoot!.querySelector<HTMLDetailsElement>('.accordion-item')!;
+      const content = details.querySelector<HTMLElement>('.accordion-content')!;
+      const header = details.querySelector<HTMLElement>('.accordion-header')!;
+      // An earlier close leaves the inline height at zero.
+      content.style.maxHeight = '0px';
+
+      header.click();
+      await frames();
+      // Still waiting for the picture, so the panel is open at height zero.
+      expect(details.open).toBe(true);
+      expect(content.style.maxHeight).toBe('0px');
+
+      // Closing changes nothing the browser could animate, so transitionend never
+      // fires. The panel used to keep `open` for good and swallow every later tap.
+      header.click();
+      expect(details.hasAttribute('open')).toBe(false);
+      expect(details.classList.contains('closing')).toBe(false);
+
+      header.click();
+      expect(details.open).toBe(true);
+    });
   });
 
   describe('closing a panel while the card re-renders', () => {
@@ -2572,6 +2660,74 @@ describe('RssAccordion', () => {
       expect(
         helper.getBookmarkKey({ link: 'https://example.com/a' } as Parameters<StorageHelper['getBookmarkKey']>[0]),
       ).toBe('https://example.com/a|undefined');
+    });
+
+    it('keep entries apart that share a link and carry no published date', async () => {
+      hass.states['sensor.test_feed'] = {
+        entity_id: 'sensor.test_feed',
+        state: 'ok',
+        attributes: {
+          entries: [
+            // A status feed: every entry links to the same page, the GUID tells them apart.
+            { title: 'Outage', id: 'urn:status:1', link: 'https://example.com/status' },
+            { title: 'Resolved', id: 'urn:status:2', link: 'https://example.com/status' },
+            // An Atom feed that sends only `updated`.
+            { title: 'Draft', link: 'https://example.com/post', updated: '2023-01-01T10:00:00Z' },
+            { title: 'Final', link: 'https://example.com/post', updated: '2023-01-02T10:00:00Z' },
+          ],
+        },
+      } as HassEntity;
+      element.hass = hass;
+      element.setConfig(config);
+      await element.updateComplete;
+
+      const titles = [...element.shadowRoot!.querySelectorAll('.accordion-item .title-link')].map((t) =>
+        t.textContent?.trim(),
+      );
+      expect(titles).toHaveLength(4);
+      expect(titles).toEqual(expect.arrayContaining(['Outage', 'Resolved', 'Draft', 'Final']));
+    });
+
+    it('still find a bookmark saved under the old link|published key', () => {
+      localStorage.clear();
+      const helper = new StorageHelper('sensor.test_feed');
+      const item = { title: 'A', id: 'urn:a', link: 'https://example.com/a', published: '2023-01-01T10:00:00Z' };
+      const legacyKey = 'rss-accordion-bookmark-sensor.test_feed-https://example.com/a|2023-01-01T10:00:00Z';
+      localStorage.setItem(legacyKey, JSON.stringify(item));
+
+      expect(helper.isBookmarked(item)).toBe(true);
+
+      helper.setBookmark(item, false);
+      expect(helper.isBookmarked(item)).toBe(false);
+      expect(localStorage.getItem(legacyKey)).toBeNull();
+    });
+
+    it('still render when localStorage throws, as with blocked site data', async () => {
+      const blocked = () => {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      };
+      const spies = (['getItem', 'setItem', 'removeItem', 'key'] as const).map((method) =>
+        vi.spyOn(localStorage, method).mockImplementation(blocked),
+      );
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        hass.states['sensor.test_feed'] = {
+          entity_id: 'sensor.test_feed',
+          state: 'ok',
+          attributes: { entries: [{ title: 'A', link: 'https://example.com/a' }] },
+        } as HassEntity;
+        element.hass = hass;
+        element.setConfig({ ...config, show_bookmarks: true });
+        await element.updateComplete;
+
+        expect(element.shadowRoot!.querySelectorAll('.accordion-item')).toHaveLength(1);
+        element.shadowRoot!.querySelector<HTMLElement>('.bookmark-button')!.click();
+        await element.updateComplete;
+        expect(element.shadowRoot!.querySelectorAll('.accordion-item')).toHaveLength(1);
+      } finally {
+        spies.forEach((spy) => spy.mockRestore());
+        vi.mocked(console.error).mockRestore();
+      }
     });
   });
 
@@ -2919,6 +3075,34 @@ describe('RssAccordion', () => {
       const editor = await renderEditor({ type: 'custom:rss-accordion', entity: 'sensor.feed' });
 
       expect(editor.shadowRoot?.querySelector('.event-hint')).toBeNull();
+      editor.remove();
+    });
+
+    it('offers and keeps the channel date when the channel carries only `updated`', async () => {
+      // feedparser maps RSS lastBuildDate and the Atom feed date to `updated`.
+      hass.states['sensor.feed'] = {
+        entity_id: 'sensor.feed',
+        state: '1',
+        attributes: { entries: [], channel: { title: 'News', updated_iso: '2023-01-01T10:00:00+00:00' } },
+      } as HassEntity;
+      const editor = await renderEditor({
+        type: 'custom:rss-accordion',
+        entity: 'sensor.feed',
+        show_channel_info: true,
+        show_published_date: true,
+      });
+
+      const switches = [...editor.shadowRoot!.querySelectorAll<HTMLElement & { configValue?: string }>('ha-switch')];
+      expect(switches.some((s) => s.configValue === 'show_published_date')).toBe(true);
+
+      let changed: RssAccordionConfig | undefined;
+      editor.addEventListener('config-changed', (ev) => {
+        changed = (ev as CustomEvent<{ config: RssAccordionConfig }>).detail.config;
+      });
+      editor
+        .shadowRoot!.querySelector('ha-entity-picker')!
+        .dispatchEvent(new CustomEvent('value-changed', { detail: { value: 'sensor.feed' } }));
+      expect(changed?.show_published_date).toBe(true);
       editor.remove();
     });
   });

@@ -40,9 +40,9 @@ const HOSTILE_TITLE = "Payload <script>window.__e2eXssExecuted = 'title';</scrip
 const CHANNEL = feedChannel({
   title: 'Hostile Feed',
   link: 'https://example.com/',
-  // The channel description travels a different path than the item summary - it
-  // is bound as text, not as innerHTML - so a payload here must come out as
-  // visible characters rather than as markup.
+  // The channel description travels a different path than the item summary: the
+  // card turns its HTML into plain text (tags and script bodies dropped) and binds
+  // that as text, so a payload here must neither run nor show up as code.
   subtitle: `Channel <script>window.${FLAG} = 'channel';</script> subtitle`,
   updated: PUBLISHED,
 });
@@ -189,7 +189,7 @@ test.describe('Hostile feed HTML', () => {
     await expect(safeLink).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
-  test('shows a hostile title and channel description as text, not as markup', async ({ page }) => {
+  test('shows a hostile title as text and a hostile channel description as plain text', async ({ page }) => {
     await page.addInitScript((flag) => {
       (window as unknown as Record<string, unknown>)[flag] = undefined;
     }, FLAG);
@@ -199,11 +199,15 @@ test.describe('Hostile feed HTML', () => {
     const title = card.locator('.accordion-header .title-link');
     await expect(title).toBeVisible({ timeout: 60_000 });
 
-    // Lit binds these as text nodes, so the payload has to be readable on
+    // Lit binds the title as a text node, so the payload has to be readable on
     // screen. If it were ever bound as HTML instead, the text would be gone and
     // this assertion would be the one that notices.
     await expect(title).toContainText('<script>');
-    await expect(card.locator('.channel-description')).toContainText('<script>');
+    // The channel description is reduced to its words: no element, no code.
+    const description = card.locator('.channel-description');
+    await expect(description).toContainText('Channel subtitle');
+    await expect(description).not.toContainText(FLAG);
+    await expect(description.locator('script')).toHaveCount(0);
     expect(await page.evaluate((flag) => (window as unknown as Record<string, unknown>)[flag], FLAG)).toBeUndefined();
   });
 });

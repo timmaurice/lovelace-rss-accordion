@@ -150,6 +150,8 @@ export class RssAccordion extends LitElement implements LovelaceCard {
   private _openKeys = new Set<string>();
   /** Keys already rendered once, so `open_behavior: all` can expand new arrivals. */
   private _seenKeys = new Set<string>();
+  /** Whether `open_behavior: latest` has opened its item yet. */
+  private _latestOpened = false;
   private _storageHelper!: StorageHelper;
   private _refreshTimer?: number;
 
@@ -468,6 +470,18 @@ export class RssAccordion extends LitElement implements LovelaceCard {
         content.style.maxHeight = '0px';
       }
     });
+
+    // Not in firstUpdated: after an HA restart the feed can still be empty on the
+    // first render, and the latest item has to open once the entries arrive.
+    if (this._openBehavior() === 'latest' && !this._latestOpened) {
+      // A timeout of 0 lets the DOM settle before the panel is measured.
+      setTimeout(() => {
+        const firstItem = this.shadowRoot?.querySelector<HTMLDetailsElement>('.accordion-item');
+        if (!firstItem || this._latestOpened) return;
+        this._latestOpened = true;
+        if (!firstItem.open) void this._openAccordion(firstItem);
+      }, 0);
+    }
   }
 
   /**
@@ -519,21 +533,6 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     this._openKeys = new Set([keys[keys.length - 1]]);
   }
 
-  protected firstUpdated(): void {
-    const openBehavior = this._openBehavior();
-
-    if (openBehavior === 'latest') {
-      // We need to wait for the DOM to be fully settled before we can measure scrollHeight for the animation.
-      // A timeout of 0 pushes this to the end of the event queue, after the current render cycle.
-      setTimeout(() => {
-        const firstItem = this.shadowRoot?.querySelector<HTMLDetailsElement>('.accordion-item');
-        if (firstItem && !firstItem.open) {
-          this._openAccordion(firstItem);
-        }
-      }, 0);
-    }
-  }
-
   private async _onSummaryClick(e: MouseEvent): Promise<void> {
     const target = e.target as Element;
     // If the click is on the link itself, or a child of the link, let the browser handle it.
@@ -561,6 +560,13 @@ export class RssAccordion extends LitElement implements LovelaceCard {
     }
     const content = details.querySelector<HTMLElement>('.accordion-content');
     if (!content) return;
+
+    // A panel still waiting for its image was never measured, so it is already
+    // at zero: nothing animates, no transitionend fires, and it would stay open.
+    if (getComputedStyle(content).maxHeight === '0px') {
+      details.removeAttribute('open');
+      return;
+    }
 
     content.style.maxHeight = '0px';
 
@@ -1061,7 +1067,15 @@ export class RssAccordion extends LitElement implements LovelaceCard {
 
     const channelTitle = channel.title as string | undefined;
     const channelLink = channel.link as string | undefined;
-    const channelDescription = (channel.description || channel.subtitle) as string | undefined;
+    const rawChannelDescription = (channel.description || channel.subtitle) as string | undefined;
+    // Feeds often put HTML here. It is shown as text, so the tags come off before truncating;
+    // script and style bodies are code, not words, and go with their tags.
+    let channelDescription: string | undefined;
+    if (rawChannelDescription) {
+      const doc = new DOMParser().parseFromString(rawChannelDescription, 'text/html');
+      doc.querySelectorAll('script, style, noscript').forEach((el) => el.remove());
+      channelDescription = doc.body.textContent?.replace(/\s+/g, ' ').trim();
+    }
     const rawChannelImage = channel.image as string | undefined;
     const channelImage = isSafeUrl(rawChannelImage, true) ? rawChannelImage : undefined;
     // Cropping a picture that is not being shown reserves a hole where it would
