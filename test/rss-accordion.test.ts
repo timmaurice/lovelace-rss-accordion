@@ -2701,6 +2701,34 @@ describe('RssAccordion', () => {
       expect(helper.isBookmarked(item)).toBe(false);
       expect(localStorage.getItem(legacyKey)).toBeNull();
     });
+
+    it('still render when localStorage throws, as with blocked site data', async () => {
+      const blocked = () => {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      };
+      const spies = (['getItem', 'setItem', 'removeItem', 'key'] as const).map((method) =>
+        vi.spyOn(localStorage, method).mockImplementation(blocked),
+      );
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        hass.states['sensor.test_feed'] = {
+          entity_id: 'sensor.test_feed',
+          state: 'ok',
+          attributes: { entries: [{ title: 'A', link: 'https://example.com/a' }] },
+        } as HassEntity;
+        element.hass = hass;
+        element.setConfig({ ...config, show_bookmarks: true });
+        await element.updateComplete;
+
+        expect(element.shadowRoot!.querySelectorAll('.accordion-item')).toHaveLength(1);
+        element.shadowRoot!.querySelector<HTMLElement>('.bookmark-button')!.click();
+        await element.updateComplete;
+        expect(element.shadowRoot!.querySelectorAll('.accordion-item')).toHaveLength(1);
+      } finally {
+        spies.forEach((spy) => spy.mockRestore());
+        vi.mocked(console.error).mockRestore();
+      }
+    });
   });
 
   describe('card picker metadata', () => {
