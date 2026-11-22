@@ -33,9 +33,9 @@ A custom Lovelace card for Home Assistant to display RSS feed items from a senso
 - **Play on a Speaker**: Set `audio_target` to send episodes to a `media_player` entity instead of the browser.
 - **Playback Persistence**: Remembers your listening progress. Audio resumes where you left off after a refresh, and a "Listened" icon with a completion timestamp appears for finished tracks.
 
-| The New York Times RSS                                                                                                                         | The Daily Audio Podcast RSS                                                                                                                               |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ![RSS Accordion Card - The New York Times Screenshot](https://raw.githubusercontent.com/timmaurice/lovelace-rss-accordion/main/screenshot.png) | ![RSS Accordion Card - The Daily Audio Podcast Screenshot](https://raw.githubusercontent.com/timmaurice/lovelace-rss-accordion/main/screenshot-audio.png) |
+| Home Assistant Blog                                                                                                                                                       | The Daily Audio Podcast RSS                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="https://raw.githubusercontent.com/timmaurice/lovelace-rss-accordion/main/screenshot.png" alt="RSS Accordion Card - Home Assistant Blog Screenshot" width="460"> | ![RSS Accordion Card - The Daily Audio Podcast Screenshot](https://raw.githubusercontent.com/timmaurice/lovelace-rss-accordion/main/screenshot-audio.png) |
 
 ## Localization
 
